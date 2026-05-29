@@ -48,8 +48,8 @@ development_status:
   epic-1: in-progress
   1-1-initialize-turborepo-monorepo-with-pnpm-workspaces: review
   1-2-configure-shared-tooling-typescript-strict-eslint-prettier: review
-  1-3-set-up-environment-config-package-with-zod-validation: in-progress
-  1-4-set-up-database-package-drizzle-orm-supabase: ready-for-dev
+  1-3-set-up-environment-config-package-with-zod-validation: review
+  1-4-set-up-database-package-drizzle-orm-supabase: in-progress
   1-5-set-up-shared-ui-package-shadcn-ui-leedi-design-tokens: ready-for-dev
   1-6-create-application-shells-web-dashboard-admin-api: ready-for-dev
   1-7-configure-observability-stubs-sentry-posthog-better-stack: ready-for-dev
