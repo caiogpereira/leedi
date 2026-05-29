@@ -1,6 +1,6 @@
 # Story 1.7: Configure Observability Stubs (Sentry, PostHog, Better Stack)
 
-Status: done
+Status: review
 
 ## Story
 

@@ -1,6 +1,6 @@
 # Story 1.8: Set Up CI Pipeline (Lint + Typecheck + Build + Migrations)
 
-Status: done
+Status: review
 
 ## Story
 
