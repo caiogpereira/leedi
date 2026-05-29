@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "@leedi/web",
   "version": "0.0.1",
   "private": true,
@@ -6,7 +6,11 @@
   "scripts": {
     "build": "echo 'stub'",
     "dev": "echo 'stub'",
-    "lint": "echo 'stub'",
-    "typecheck": "echo 'stub'"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@leedi/tsconfig": "workspace:*",
+    "@leedi/eslint-config": "workspace:*"
   }
 }

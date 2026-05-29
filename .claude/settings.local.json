@@ -1,0 +1,5 @@
+{
+  "permissions": {
+    "allow": ["Bash(python3 *)", "PowerShell(Get-Content *)", "Bash(Get-ChildItem *)"]
+  }
+}

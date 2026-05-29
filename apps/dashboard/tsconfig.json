@@ -1,0 +1,5 @@
+﻿{
+  "extends": "@leedi/tsconfig/nextjs.json",
+  "include": ["src", "next.config.ts", "tailwind.config.ts"],
+  "exclude": ["node_modules", ".next", "dist"]
+}

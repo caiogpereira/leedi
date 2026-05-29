@@ -1,0 +1,244 @@
+# generated: 2026-05-29
+# last_updated: 2026-05-29
+# project: leedi
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-05-29
+last_updated: 2026-05-29
+project: leedi
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 1: Project Foundation & Developer Infrastructure
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-1: in-progress
+  1-1-initialize-turborepo-monorepo-with-pnpm-workspaces: review
+  1-2-configure-shared-tooling-typescript-strict-eslint-prettier: in-progress
+  1-3-set-up-environment-config-package-with-zod-validation: ready-for-dev
+  1-4-set-up-database-package-drizzle-orm-supabase: ready-for-dev
+  1-5-set-up-shared-ui-package-shadcn-ui-leedi-design-tokens: ready-for-dev
+  1-6-create-application-shells-web-dashboard-admin-api: ready-for-dev
+  1-7-configure-observability-stubs-sentry-posthog-better-stack: ready-for-dev
+  1-8-set-up-ci-pipeline-lint-typecheck-build-migrations: ready-for-dev
+  epic-1-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 2: Multi-Tenant Identity & Access
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-2: in-progress
+  2-1-user-registration-email-verification: ready-for-dev
+  2-2-user-login-persistent-session: ready-for-dev
+  2-3-password-recovery-via-email: ready-for-dev
+  2-4-tenant-schema-workspace-membership-with-rls: ready-for-dev
+  2-5-role-based-access-control-rbac: ready-for-dev
+  2-6-team-member-invitation-flow: ready-for-dev
+  2-7-multi-tenant-switching: ready-for-dev
+  2-8-super-admin-workspace-tenant-impersonation: ready-for-dev
+  epic-2-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 3: Design System & UI Shell
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-3: in-progress
+  3-1-dashboard-navigation-shell-layout: ready-for-dev
+  3-2-admin-shell-navigation: ready-for-dev
+  3-3-ai-assisted-textarea-component: ready-for-dev
+  3-4-accessibility-foundations-wcag-aa-compliance: ready-for-dev
+  epic-3-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 4: WhatsApp Channel Connection
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-4: in-progress
+  4-1-whatsapp-connection-schema-encrypted-credential-storage: ready-for-dev
+  4-2-connect-whatsapp-number-tenant-configuration: ready-for-dev
+  4-3-connection-health-display-status-quality-tier: ready-for-dev
+  4-4-inbound-webhook-message-reception-routing: ready-for-dev
+  4-5-outbound-message-sending-via-meta-cloud-api: ready-for-dev
+  epic-4-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 5: Lead Management & Conversation Tracking
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-5: backlog
+  5-1-lead-database-schema-list-view: backlog
+  5-2-lead-detail-page-journey-timeline: backlog
+  5-3-csv-lead-import: backlog
+  5-4-lead-tags-opt-out-management: backlog
+  5-5-conversation-window-tracking-24h-billing-unit: backlog
+  epic-5-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 6: Product Knowledge Base & Sales Methods
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-6: backlog
+  6-1-product-catalog-crud: backlog
+  6-2-sales-arguments-differentials-social-proofs: backlog
+  6-3-faq-objection-counter-library: backlog
+  6-4-sales-methods-seed-selection: backlog
+  epic-6-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 7: Intelligent Sales Agent
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-7: backlog
+  7-1-agent-configuration-panel: backlog
+  7-2-agent-core-processing-loop: backlog
+  7-3-lead-context-tools-history-offers-eligibility: backlog
+  7-4-sales-conversion-tools-checkout-intent-tagging: backlog
+  7-5-objection-handling-knowledge-base-consultation: backlog
+  7-6-human-transfer-tool: backlog
+  7-7-multimodal-input-processing-audio-image: backlog
+  7-8-model-routing-cost-optimization: backlog
+  epic-7-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 8: Agent Playground
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-8: backlog
+  8-1-playground-chat-interface: backlog
+  8-2-scenario-simulation-tool-transparency: backlog
+  epic-8-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 9: Documentation Quality Corrections
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-9: backlog
+  9-1-prd-nfrs-success-metrics-lgpd-requirements: backlog
+  9-2-prd-onboarding-edge-case-architecture-webhook-retry-dlq: backlog
+  9-3-architecture-redis-ttl-byok-enterprise-audit-log-retention: backlog
+  9-4-execution-plan-time-estimates-rollback-strategy-cicd-detail: backlog
+  epic-9-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 10: Campaign Management
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-10: backlog
+  10-1-campaign-crud-phase-schema: backlog
+  10-2-campaign-activation-phase-transitions: backlog
+  10-3-active-campaign-as-agent-context: backlog
+  epic-10-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 11: Hotmart Gateway Integration
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-11: backlog
+  11-1-hotmart-webhook-receiver-canonical-event-normalization: backlog
+  11-2-purchase-approved-lead-status-update: backlog
+  11-3-recovery-flow-triggers-abandoned-cart-boleto-pix: backlog
+  epic-11-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 12: Meta Template Management
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-12: backlog
+  12-1-template-builder-meta-submission: backlog
+  12-2-template-status-tracking-suggested-library: backlog
+  epic-12-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 13: Smart Message Dispatch
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-13: backlog
+  13-1-lead-segment-builder: backlog
+  13-2-manual-template-dispatch: backlog
+  13-3-automatic-dispatch-rules: backlog
+  13-4-24h-window-followup-reengagement: backlog
+  epic-13-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 14: Human Inbox & Handoff
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-14: backlog
+  14-1-real-time-conversation-list-filters: backlog
+  14-2-conversation-detail-ai-handoff-summary: backlog
+  14-3-human-takeover-manual-reply-return-to-bot: backlog
+  epic-14-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 15: Tenant Analytics Dashboard
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-15: backlog
+  15-1-core-sales-metrics-dashboard: backlog
+  15-2-conversation-health-objection-analytics: backlog
+  15-3-number-health-campaign-status-widgets: backlog
+  epic-15-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 16: Usage Metering & Overage
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-16: backlog
+  16-1-conversation-counting-usage-counter: backlog
+  16-2-usage-dashboard-widget-threshold-alerts: backlog
+  16-3-overage-handling-tenant-configuration: backlog
+  epic-16-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 17: Billing & Subscription Management
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-17: backlog
+  17-1-asaas-integration-subscription-creation: backlog
+  17-2-payment-webhook-tenant-lock-unlock: backlog
+  17-3-tenant-billing-panel: backlog
+  epic-17-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 18: Notifications
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-18: backlog
+  18-1-notification-infrastructure-push-email: backlog
+  18-2-event-driven-notifications-user-preferences: backlog
+  epic-18-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 19: Assisted Onboarding Wizard
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-19: backlog
+  19-1-wizard-infrastructure-progress-persistence: backlog
+  19-2-wizard-steps-1-2-company-data-whatsapp-connection: backlog
+  19-3-wizard-steps-3-4-gateway-connection-agent-configuration: backlog
+  19-4-wizard-step-5-playground-test-completion: backlog
+  epic-19-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Epic 20: Super-Admin Financial & Operational Dashboard
+  # ─────────────────────────────────────────────────────────────────────────────
+  epic-20: backlog
+  20-1-financial-health-dashboard-mrr-revenue-delinquencies: backlog
+  20-2-tenant-list-lifecycle-management: backlog
+  20-3-operational-health-conversations-ai-cost-risk-signals: backlog
+  epic-20-retrospective: optional
