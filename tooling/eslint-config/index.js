@@ -4,6 +4,11 @@ import tseslint from 'typescript-eslint';
 /** @type {import('typescript-eslint').ConfigArray} */
 export const base = tseslint.config(...tseslint.configs.recommended, eslintConfigPrettier, {
   rules: {
+    // Allow _-prefixed variables as intentionally unused (destructuring patterns, etc.)
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      { varsIgnorePattern: '^_', argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+    ],
     // Ban cross-domain internal imports — only import from package public API
     'no-restricted-imports': [
       'error',

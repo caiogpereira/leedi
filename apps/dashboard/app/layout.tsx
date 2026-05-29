@@ -2,7 +2,7 @@
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { ThemeProvider } from "@leedi/ui";
-import "@leedi/ui/src/styles/globals.css";
+import "@leedi/ui/globals.css";
 
 export const metadata: Metadata = {
   title: "Leedi",
