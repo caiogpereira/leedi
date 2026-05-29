@@ -1,0 +1,9 @@
+﻿{
+  "app": {
+    "title": "Leedi",
+    "description": "Plataforma de vendas inteligente via WhatsApp"
+  },
+  "home": {
+    "heading": "Bem-vindo ao Leedi"
+  }
+}
