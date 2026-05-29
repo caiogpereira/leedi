@@ -1,6 +1,6 @@
 # Story 1.7: Configure Observability Stubs (Sentry, PostHog, Better Stack)
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -83,4 +83,16 @@ claude-sonnet-4-6
 
 ### Completion Notes List
 
+- AC 1 verified: Sentry project `leedi-api` (DSN: `***REDACTED-SENTRY-DSN***`) captured the test error with full stack trace showing AsyncLocalStorage propagation through `requestContextMiddleware` → `runWithContext`. EADDRINUSE error from a double-start was also auto-captured, confirming Sentry's automatic instrumentation is working.
+- AC 2 verified: Better Stack source token `***REDACTED-BETTERSTACK-TOKEN***` configured. `logger.info('boot', {request_id})` emitted on startup; logs sent in production mode.
+- `initSentry()` added to `apps/api/src/index.ts` at startup; `app.onError(errorHandler)` registered for explicit context-aware capture.
+- Graceful shutdown added: `flushLogger()` called on SIGTERM/SIGINT before process exit.
+- Sentry DSNs for all 4 apps documented in `.env.example`. Next.js apps will use their own DSNs when Sentry/NextJS integration is added (Epic 3+).
+- Debug route `/debug/error` was added temporarily for verification and removed before commit.
+- **Lesson:** Always kill the existing API process before starting a new one (EADDRINUSE). Check port with `netstat -ano | findstr :3003` first.
+
 ### File List
+
+- apps/api/src/index.ts (modified: initSentry, boot log, graceful shutdown)
+- apps/api/src/app.ts (modified: app.onError registered)
+- .env (updated: real SENTRY_DSN and BETTER_STACK_TOKEN)

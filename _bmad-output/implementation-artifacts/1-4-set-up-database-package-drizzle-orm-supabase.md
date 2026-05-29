@@ -1,6 +1,6 @@
 # Story 1.4: Set Up Database Package (Drizzle ORM + Supabase)
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -77,4 +77,11 @@ claude-sonnet-4-6
 
 ### Completion Notes List
 
+- AC 1 verified: `pnpm --filter @leedi/db migrate:run` applied successfully against real Supabase (rmhttrkfjktbjdzehiwk). `__drizzle_migrations` bookkeeping table created with empty journal (schema is empty for Epic 1).
+- Required creating `migrations/meta/_journal.json` manually (`{"version":"7","dialect":"postgresql","entries":[]}`) since `drizzle-kit generate` on empty schema does not create the journal file — this is expected Drizzle behavior.
+- AC 2 verified: typecheck passes, `db` and `schema` exports resolve correctly.
+- AC 3 verified: CI `migrate-check` job runs `drizzle-kit check` offline without DB connection.
+
 ### File List
+
+- packages/db/migrations/meta/_journal.json (new)
