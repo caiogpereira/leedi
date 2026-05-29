@@ -2,10 +2,11 @@
 import '@leedi/config';
 
 import { Hono } from 'hono';
-import { requestContextMiddleware } from './middleware/request-context.js';
+import { errorHandler, requestContextMiddleware } from './middleware/request-context.js';
 import { healthRouter } from './routes/health.js';
 
 export const app = new Hono();
 
 app.use('*', requestContextMiddleware);
+app.onError(errorHandler);
 app.route('/health', healthRouter);
