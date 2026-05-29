@@ -12,3 +12,4 @@ dist/
 *.log
 coverage/
 .vercel/
+subagents-claude-code/

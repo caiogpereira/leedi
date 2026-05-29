@@ -22,7 +22,7 @@ describe('validateEnv', () => {
   });
 
   it('fails when DATABASE_URL is missing and names the field', () => {
-    const { DATABASE_URL: _removed, ...withoutDb } = validEnv;
+    const { DATABASE_URL: _, ...withoutDb } = validEnv;
     const result = validateEnv(withoutDb as NodeJS.ProcessEnv);
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -47,7 +47,7 @@ describe('validateEnv', () => {
   });
 
   it('uses default API_PORT when not provided', () => {
-    const { API_PORT: _removed, ...withoutPort } = validEnv;
+    const { API_PORT: _, ...withoutPort } = validEnv;
     const result = validateEnv(withoutPort as NodeJS.ProcessEnv);
     expect(result.success).toBe(true);
     if (result.success) {
