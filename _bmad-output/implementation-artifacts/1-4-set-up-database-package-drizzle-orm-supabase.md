@@ -1,6 +1,6 @@
 # Story 1.4: Set Up Database Package (Drizzle ORM + Supabase)
 
-Status: done
+Status: review
 
 ## Story
 
