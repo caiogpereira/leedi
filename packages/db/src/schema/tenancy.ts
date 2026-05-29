@@ -1,0 +1,82 @@
+import {
+  pgTable,
+  pgEnum,
+  uuid,
+  text,
+  boolean,
+  timestamp,
+  jsonb,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
+
+export const tenantRoleEnum = pgEnum('tenant_role', ['owner', 'admin', 'operator', 'viewer']);
+export const workspaceRoleEnum = pgEnum('workspace_role', ['super_admin', 'support']);
+export const tenantStatusEnum = pgEnum('tenant_status', ['active', 'trial', 'blocked', 'cancelled']);
+export const tenantPlanEnum = pgEnum('tenant_plan', ['starter', 'pro', 'enterprise']);
+
+export const workspaces = pgTable('workspaces', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const tenants = pgTable('tenants', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id')
+    .references(() => workspaces.id)
+    .notNull(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  status: tenantStatusEnum('status').default('trial').notNull(),
+  plan: tenantPlanEnum('plan').default('starter').notNull(),
+  logoUrl: text('logo_url'),
+  colors: jsonb('colors'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  email: text('email').notNull().unique(),
+  emailVerified: boolean('email_verified').default(false).notNull(),
+  passwordHash: text('password_hash').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const memberships = pgTable(
+  'memberships',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id)
+      .notNull(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    role: tenantRoleEnum('role').notNull(),
+    invitedBy: uuid('invited_by').references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex('memberships_user_tenant_idx').on(t.userId, t.tenantId)]
+);
+
+export const workspaceAdmins = pgTable('workspace_admins', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .references(() => users.id)
+    .notNull(),
+  workspaceId: uuid('workspace_id')
+    .references(() => workspaces.id)
+    .notNull(),
+  role: workspaceRoleEnum('role').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const auditLogs = pgTable('audit_logs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').notNull(),
+  actorUserId: uuid('actor_user_id').notNull(),
+  targetTenantId: uuid('target_tenant_id'),
+  acao: text('acao').notNull(),
+  detalhes: jsonb('detalhes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
