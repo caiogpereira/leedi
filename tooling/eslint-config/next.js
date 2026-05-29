@@ -8,6 +8,7 @@ import { base } from './index.js';
 
 /** @type {import('typescript-eslint').ConfigArray} */
 export const nextConfig = tseslint.config(
+  { ignores: ['next-env.d.ts', '.next/**'] },
   ...base,
   {
     plugins: {
