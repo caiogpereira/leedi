@@ -7,6 +7,18 @@
     "heading": "Bem-vindo ao Leedi"
   },
   "auth": {
+    "login": {
+      "title": "Entrar",
+      "emailLabel": "E-mail",
+      "passwordLabel": "Senha",
+      "rememberMe": "Manter conectado",
+      "submitButton": "Entrar",
+      "forgotPassword": "Esqueci minha senha",
+      "registerLink": "Criar conta",
+      "errors": {
+        "generic": "E-mail ou senha incorretos"
+      }
+    },
     "register": {
       "title": "Criar conta",
       "emailLabel": "E-mail",

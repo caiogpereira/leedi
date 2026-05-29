@@ -5,5 +5,8 @@
   },
   "home": {
     "heading": "Bem-vindo ao Leedi"
+  },
+  "nav": {
+    "logout": "Sair"
   }
 }
