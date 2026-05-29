@@ -16,6 +16,8 @@ type TemplateLoader = () => Promise<TemplateModule>;
 const TEMPLATES: Record<string, TemplateLoader> = {
   'email-verification': () =>
     import('./templates/email-verification.js') as unknown as Promise<TemplateModule>,
+  'password-reset': () =>
+    import('./templates/password-reset.js') as unknown as Promise<TemplateModule>,
 };
 
 export async function renderTemplate(

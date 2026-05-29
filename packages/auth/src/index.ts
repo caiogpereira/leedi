@@ -5,4 +5,7 @@ export type { RegisterInput, RegisterResult } from './use-cases/register-user.js
 export { loginUser } from './use-cases/login-user.js';
 export type { LoginResult } from './use-cases/login-user.js';
 export { logoutUser } from './use-cases/logout-user.js';
+export { requestPasswordReset } from './use-cases/request-password-reset.js';
+export { resetPassword } from './use-cases/reset-password.js';
+export type { ResetPasswordResult } from './use-cases/reset-password.js';
 export { passwordSchema } from './schemas/password.js';

@@ -35,6 +35,20 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: true,
     autoSignIn: false,
+    // Reset-password token lifetime (Story 2.3 AC#1): 60 minutes, in seconds.
+    resetPasswordTokenExpiresIn: 60 * 60,
+    // AC#2: invalidate ALL existing sessions after a successful reset. This is
+    // OFF by default in Better-Auth — the reset would otherwise succeed silently
+    // while leaving stale sessions valid. Verified against the route source:
+    // `if (...revokeSessionsOnPasswordReset) await ...deleteSessions(userId)`.
+    revokeSessionsOnPasswordReset: true,
+    // Called by Better-Auth's /request-password-reset endpoint ONLY when an
+    // account exists for the email — the enumeration-safe success message is
+    // returned by the endpoint regardless (AC#1). Never logs `url` (token).
+    sendResetPassword: async ({ user, url }) => {
+      const { sendResetPasswordEmail } = await import('./email-senders.js');
+      await sendResetPasswordEmail(user.email, url);
+    },
   },
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days default — AC#1 persistent session
