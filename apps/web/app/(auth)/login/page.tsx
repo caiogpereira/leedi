@@ -45,6 +45,16 @@ export default function LoginPage() {
               className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
+          <label className="flex items-center gap-2 text-sm text-gray-600">
+            <input
+              id="rememberMe"
+              name="rememberMe"
+              type="checkbox"
+              defaultChecked
+              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            {t('rememberMe')}
+          </label>
           <button
             type="submit"
             disabled={isPending}

@@ -41,13 +41,21 @@ describe('loginUser', () => {
     expect(result).toEqual({ success: false, error: GENERIC_LOGIN_ERROR });
   });
 
-  it('forwards email, password and headers to Better-Auth', async () => {
+  it('forwards email, password, headers and rememberMe to Better-Auth', async () => {
     signInEmail.mockResolvedValueOnce({ token: 'abc' });
     const headers = new Headers({ 'x-forwarded-for': '1.2.3.4' });
-    await loginUser('user@example.com', 'Password1', headers);
+    await loginUser('user@example.com', 'Password1', { headers, rememberMe: true });
+    expect(signInEmail).toHaveBeenCalledWith({
+      body: { email: 'user@example.com', password: 'Password1', rememberMe: true },
+      headers,
+    });
+  });
+
+  it('omits rememberMe from the body when not provided', async () => {
+    signInEmail.mockResolvedValueOnce({ token: 'abc' });
+    await loginUser('user@example.com', 'Password1');
     expect(signInEmail).toHaveBeenCalledWith({
       body: { email: 'user@example.com', password: 'Password1' },
-      headers,
     });
   });
 });

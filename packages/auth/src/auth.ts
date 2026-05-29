@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { getSessionCookie } from 'better-auth/cookies';
+import { nextCookies } from 'better-auth/next-js';
 import { db, schema } from '@leedi/db';
 import { env } from '@leedi/config';
 
@@ -56,6 +57,10 @@ export const auth = betterAuth({
       await sendVerificationEmail(user.email, url);
     },
   },
+  // nextCookies bridges Better-Auth's Set-Cookie headers into next/headers
+  // cookies() so that auth.api.* calls made from Server Actions (login/logout)
+  // actually persist/clear the session cookie. MUST be the last plugin.
+  plugins: [nextCookies()],
 });
 
 export type Auth = typeof auth;
