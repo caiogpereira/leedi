@@ -11,6 +11,14 @@ vi.mock('@leedi/config', () => ({
   },
 }));
 
+vi.mock('@leedi/observability', () => ({
+  runWithContext: vi.fn((ctx: unknown, fn: () => unknown) => fn()),
+  getContext: vi.fn(() => ({ request_id: 'test-req-id' })),
+  captureException: vi.fn(),
+  initSentry: vi.fn(),
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
 describe('GET /health', () => {
   it('returns 200 with status ok and env', async () => {
     const { app } = await import('../app.js');
