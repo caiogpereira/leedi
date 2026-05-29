@@ -1,6 +1,6 @@
 # Story 1.8: Set Up CI Pipeline (Lint + Typecheck + Build + Migrations)
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -77,4 +77,21 @@ claude-sonnet-4-6
 
 ### Completion Notes List
 
+- AC 1 verified: CI pipeline at https://github.com/caiogpereira/leedi passes all 5 jobs (Install → Lint → Typecheck → Build → Migration Check). Branch protection configured on `main` requiring all 4 status checks.
+- AC 2 verified: CI run `26662518xxx` (commit `14946e2`) green end-to-end.
+- Repo is public (branch protection requires public repo or GitHub Pro on free plan).
+- Multiple CI fixes needed before green: BOM in Windows-written files, `@types/node` missing from workspace root, `postcss.config.js` → `.cjs` rename (type:module conflict), `next-intl` plugin missing from `next.config.ts`, webpack `extensionAlias` for `.js`→`.ts` resolution in transpiled packages, `next-env.d.ts` excluded from ESLint.
+- **Lesson:** On Windows, never use `Set-Content` for code files — use `[System.IO.File]::WriteAllText` with `new($false)` (no BOM). The BOM broke Next.js JSON parsing.
+- **Lesson:** TypeScript packages imported via `transpilePackages` in Next.js need webpack `extensionAlias` to resolve `.js` imports to `.ts` source files.
+
 ### File List
+
+- .github/workflows/ci.yml
+- .github/BRANCH_PROTECTION.md
+- tooling/eslint-config/next.js (next-env.d.ts ignored)
+- tooling/eslint-config/index.js (varsIgnorePattern for _ prefix)
+- packages/config/package.json (@types/node added)
+- package.json (@types/node at workspace root)
+- apps/*/next.config.ts (next-intl plugin + extensionAlias)
+- apps/*/postcss.config.cjs (renamed from .js)
+- .editorconfig (new, UTF-8 no BOM enforcement)
