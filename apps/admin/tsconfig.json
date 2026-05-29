@@ -1,5 +1,22 @@
 {
   "extends": "@leedi/tsconfig/nextjs.json",
-  "include": ["src", "next.config.ts", "tailwind.config.ts"],
-  "exclude": ["node_modules", ".next", "dist"]
+  "include": [
+    "next.config.ts",
+    "src",
+    "tailwind.config.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "dist"
+  ],
+  "compilerOptions": {
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "incremental": true
+  }
 }
