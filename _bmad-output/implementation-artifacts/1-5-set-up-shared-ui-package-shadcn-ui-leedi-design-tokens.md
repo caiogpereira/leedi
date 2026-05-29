@@ -1,6 +1,6 @@
-# Story 1.5: Set Up Shared UI Package (shadcn/ui + Leedi Design Tokens)
+﻿# Story 1.5: Set Up Shared UI Package (shadcn/ui + Leedi Design Tokens)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -17,12 +17,12 @@ so that the platform looks consistent from the very first screen.
 ## Tasks / Subtasks
 
 - [ ] Task 1: Define the design token system in the shared Tailwind config (AC: #1)
-  - [ ] In `tooling/tailwind-config/index.js` (named `@leedi/tailwind-config`), define the token scales: `neutral-50…950` (12 gray tones), `primary` indigo (10 tones), `accent-ai` violet (10 tones, reserved for AI badges/indicators ONLY), semantic `success`/`warning`/`error`/`info`, and a single `whatsapp` green (used ONLY on the channel icon)
+  - [ ] In `tooling/tailwind-config/index.js` (named `@leedi/tailwind-config`), define the token scales: `neutral-50â€¦950` (12 gray tones), `primary` indigo (10 tones), `accent-ai` violet (10 tones, reserved for AI badges/indicators ONLY), semantic `success`/`warning`/`error`/`info`, and a single `whatsapp` green (used ONLY on the channel icon)
   - [ ] Set the dark-mode base background to off-black `#0A0A0F` (NOT `#000`)
   - [ ] Configure `darkMode: "class"`, `content` globs covering apps + `packages/ui`, and map tokens to CSS variables (HSL) so shadcn theming works
   - [ ] Export the config as a Tailwind preset so apps consume it via `presets: [require('@leedi/tailwind-config')]`
 - [ ] Task 2: Define the CSS variable theme layer (AC: #1, #3)
-  - [ ] Create `packages/ui/src/styles/globals.css` declaring CSS custom properties for light (`:root`) and dark (`.dark`) — both the shadcn semantic vars (`--background`, `--foreground`, `--primary`, etc.) and the Leedi token vars
+  - [ ] Create `packages/ui/src/styles/globals.css` declaring CSS custom properties for light (`:root`) and dark (`.dark`) â€” both the shadcn semantic vars (`--background`, `--foreground`, `--primary`, etc.) and the Leedi token vars
   - [ ] Verify color choices meet WCAG AA contrast (>= 4.5:1 for normal text) in BOTH themes; document the contrast pairs checked
 - [ ] Task 3: Install shadcn/ui components into `packages/ui` (AC: #2)
   - [ ] Initialize shadcn/ui in `packages/ui` (configure `components.json` with the alias pointing at `src/components/ui`, the shared Tailwind preset, and `globals.css`)
@@ -40,10 +40,10 @@ so that the platform looks consistent from the very first screen.
 ## Dev Notes
 
 - Token system rules from the story spec (treat as hard constraints):
-  - `accent-ai` (violet) is reserved EXCLUSIVELY for AI badges/indicators — do not use it for generic primary actions.
-  - `whatsapp` green appears ONLY on the channel icon — never as a general accent.
+  - `accent-ai` (violet) is reserved EXCLUSIVELY for AI badges/indicators â€” do not use it for generic primary actions.
+  - `whatsapp` green appears ONLY on the channel icon â€” never as a general accent.
   - Dark base is off-black `#0A0A0F`, never pure black.
-  - `primary` is indigo; neutrals are a 12-tone gray ramp `50…950`.
+  - `primary` is indigo; neutrals are a 12-tone gray ramp `50â€¦950`.
 - Architecture: `packages/ui` is the design system (shadcn/ui + Leedi tokens). The Tailwind base lives in `tooling/tailwind-config`; `packages/ui` consumes it and re-exports components. `src/index.ts` is the only public entry (contract).
 - Dependencies: `tailwindcss`, `class-variance-authority`, `clsx`, `tailwind-merge`, `next-themes`, Radix primitives pulled in by shadcn, and dev: `vitest`, `@testing-library/react`, `jsdom`.
 - i18n note: components must not hardcode user-facing strings (Architecture: next-intl, no hardcoded UI strings). For these primitives, keep them label-agnostic (labels passed as props/children).
@@ -52,17 +52,17 @@ so that the platform looks consistent from the very first screen.
 ### Pitfalls to avoid
 
 - Do NOT define tokens in two places. Single source of truth = `tooling/tailwind-config` preset + the matching CSS variables in `packages/ui/globals.css`. Drift here causes `bg-primary` to render the wrong color.
-- Do NOT use `accent-ai` violet for buttons/links — it is AI-only. A reviewer will reject misuse.
+- Do NOT use `accent-ai` violet for buttons/links â€” it is AI-only. A reviewer will reject misuse.
 - Do NOT set dark background to `#000`; AC #3 explicitly requires off-black `#0A0A0F`.
 - shadcn components copy source INTO the repo; make sure they import `cn` from the package's own util, and that the package's `content` glob includes them or Tailwind purges their classes.
 - Ensure the Tailwind config is exported as a CommonJS/ESM module compatible with how apps' `tailwind.config` import it (preset usage). Mismatched module formats break the build silently (classes resolve to nothing).
-- Verify contrast with actual computed values, not by eye — AC #2 requires WCAG AA in BOTH themes.
+- Verify contrast with actual computed values, not by eye â€” AC #2 requires WCAG AA in BOTH themes.
 
 ### Project Structure Notes
 
 - Token preset: `tooling/tailwind-config/index.js`.
 - UI package files: `packages/ui/components.json`, `packages/ui/src/components/ui/*` (shadcn), `packages/ui/src/styles/globals.css`, `packages/ui/src/lib/utils.ts` (`cn`), `packages/ui/src/theme/` (provider + toggle), `packages/ui/src/index.ts` (barrel).
-- `packages/ui` is an infra/design package — not the domain anatomy.
+- `packages/ui` is an infra/design package â€” not the domain anatomy.
 
 ### References
 
