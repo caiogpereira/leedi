@@ -1,0 +1,12 @@
+{
+  "name": "@leedi/web",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "echo 'stub'",
+    "dev": "echo 'stub'",
+    "lint": "echo 'stub'",
+    "typecheck": "echo 'stub'"
+  }
+}
