@@ -265,6 +265,12 @@ importers:
       '@leedi/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
+      '@types/react':
+        specifier: ^19.2.15
+        version: 19.2.15
+      vitest:
+        specifier: ^4.1.7
+        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@25.9.1)(jsdom@29.1.1(@noble/hashes@2.2.0))(vite@8.0.14(@types/node@25.9.1)(esbuild@0.28.0)(jiti@2.4.2)(tsx@4.22.3))
 
   packages/billing:
     devDependencies:
@@ -387,6 +393,9 @@ importers:
 
   packages/notification:
     dependencies:
+      '@leedi/config':
+        specifier: workspace:*
+        version: link:../config
       '@react-email/components':
         specifier: ^1.0.12
         version: 1.0.12(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -406,6 +415,9 @@ importers:
       '@leedi/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
+      '@types/react':
+        specifier: ^19.2.15
+        version: 19.2.15
 
   packages/observability:
     dependencies:

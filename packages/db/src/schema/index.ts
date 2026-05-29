@@ -1,2 +1,3 @@
 // Schema barrel — tables are added here as domain packages define them
 export * from './tenancy.js';
+export * from './auth.js';

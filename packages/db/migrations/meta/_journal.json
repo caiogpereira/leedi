@@ -8,6 +8,13 @@
       "when": 1780095100478,
       "tag": "0000_opposite_mephisto",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1780097046090,
+      "tag": "0001_striped_purifiers",
+      "breakpoints": true
     }
   ]
 }

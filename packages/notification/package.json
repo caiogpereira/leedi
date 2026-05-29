@@ -12,9 +12,11 @@
   },
   "devDependencies": {
     "@leedi/eslint-config": "workspace:*",
-    "@leedi/tsconfig": "workspace:*"
+    "@leedi/tsconfig": "workspace:*",
+    "@types/react": "^19.2.15"
   },
   "dependencies": {
+    "@leedi/config": "workspace:*",
     "@react-email/components": "^1.0.12",
     "react": "^19.2.6",
     "react-email": "^6.5.0",

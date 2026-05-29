@@ -5,5 +5,20 @@
   },
   "home": {
     "heading": "Bem-vindo ao Leedi"
+  },
+  "auth": {
+    "register": {
+      "title": "Criar conta",
+      "emailLabel": "E-mail",
+      "passwordLabel": "Senha",
+      "confirmPasswordLabel": "Confirmar senha",
+      "submitButton": "Criar conta",
+      "successMessage": "Verifique seu e-mail para ativar sua conta.",
+      "loginLink": "Já tem conta? Faça login",
+      "errors": {
+        "passwordMismatch": "As senhas não coincidem",
+        "generic": "Erro ao criar conta. Tente novamente."
+      }
+    }
   }
 }

@@ -38,8 +38,14 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: text('email').notNull().unique(),
   emailVerified: boolean('email_verified').default(false).notNull(),
-  passwordHash: text('password_hash').notNull(),
+  // Better-Auth stores credential password hashes in `accounts`, not here.
+  // Kept nullable for legacy/seed rows and future non-Better-Auth flows.
+  passwordHash: text('password_hash'),
+  // Required by Better-Auth's default `user` model.
+  name: text('name'),
+  image: text('image'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const memberships = pgTable(
