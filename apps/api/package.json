@@ -18,8 +18,10 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.0.4",
+    "@leedi/auth": "workspace:*",
     "@leedi/config": "workspace:*",
     "@leedi/observability": "workspace:*",
+    "@upstash/redis": "^1.38.0",
     "hono": "^4.12.23"
   }
 }

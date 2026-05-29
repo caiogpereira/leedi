@@ -11,7 +11,13 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@leedi/tsconfig": "workspace:*",
-    "@leedi/eslint-config": "workspace:*"
+    "@leedi/eslint-config": "workspace:*",
+    "@leedi/tsconfig": "workspace:*"
+  },
+  "dependencies": {
+    "@react-email/components": "^1.0.12",
+    "react": "^19.2.6",
+    "react-email": "^6.5.0",
+    "resend": "^6.12.4"
   }
 }

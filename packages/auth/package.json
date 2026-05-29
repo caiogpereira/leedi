@@ -11,7 +11,14 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@leedi/tsconfig": "workspace:*",
-    "@leedi/eslint-config": "workspace:*"
+    "@leedi/eslint-config": "workspace:*",
+    "@leedi/tsconfig": "workspace:*"
+  },
+  "dependencies": {
+    "@leedi/config": "workspace:*",
+    "@leedi/db": "workspace:*",
+    "@leedi/notification": "workspace:*",
+    "better-auth": "^1.6.12",
+    "zod": "^4.4.3"
   }
 }
