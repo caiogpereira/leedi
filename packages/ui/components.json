@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "../../tooling/tailwind-config/index.js",
+    "css": "src/styles/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@leedi/ui/src/components",
+    "utils": "@leedi/ui/src/lib/utils",
+    "ui": "@leedi/ui/src/components/ui",
+    "lib": "@leedi/ui/src/lib",
+    "hooks": "@leedi/ui/src/hooks"
+  }
+}
