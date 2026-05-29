@@ -1,2 +1,2 @@
-﻿import { nodeConfig } from '@leedi/eslint-config/node.js';
+import { nodeConfig } from '@leedi/eslint-config/node.js';
 export default nodeConfig;

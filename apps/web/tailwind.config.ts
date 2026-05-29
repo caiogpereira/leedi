@@ -1,4 +1,4 @@
-﻿import type { Config } from 'tailwindcss';
+import type { Config } from 'tailwindcss';
 import leediConfig from '@leedi/tailwind-config';
 
 const config: Config = {
