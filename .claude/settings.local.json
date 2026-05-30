@@ -1,5 +1,13 @@
 {
   "permissions": {
-    "allow": ["Bash(python3 *)", "PowerShell(Get-Content *)", "Bash(Get-ChildItem *)"]
+    "allow": [
+      "Bash(python3 *)",
+      "PowerShell(Get-Content *)",
+      "Bash(Get-ChildItem *)",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__execute_sql",
+      "Bash(git check-ignore *)",
+      "Bash(git add *)"
+    ]
   }
 }

@@ -3,6 +3,7 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { logoutUser } from '@leedi/auth';
+import { env } from '@leedi/config';
 
 /**
  * Logs the user out by destroying the session server-side (AC#2), then redirects
@@ -16,5 +17,5 @@ import { logoutUser } from '@leedi/auth';
 export async function logoutAction(): Promise<void> {
   const requestHeaders = await headers();
   await logoutUser(requestHeaders);
-  redirect('/login');
+  redirect(`${env.BETTER_AUTH_URL}/login`);
 }

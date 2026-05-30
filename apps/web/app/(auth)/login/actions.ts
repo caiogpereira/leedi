@@ -3,6 +3,7 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { loginUser } from '@leedi/auth';
+import { env } from '@leedi/config';
 
 export interface LoginActionState {
   error?: string;
@@ -39,5 +40,5 @@ export async function loginAction(
   // redirect in apps/dashboard/app/actions.ts. Switch to an absolute dashboard
   // URL from env when multi-origin config lands.
   // redirect() throws internally (NEXT_REDIRECT) — never wrap it in try/catch.
-  redirect('/dashboard');
+  redirect(env.DASHBOARD_URL);
 }

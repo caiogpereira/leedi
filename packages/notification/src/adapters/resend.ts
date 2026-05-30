@@ -12,7 +12,7 @@ export interface SendEmailOptions {
 
 // TODO(Story 2.x): make the `from` address configurable via env once the
 // verified sending domain is provisioned in Resend.
-const FROM_ADDRESS = 'Leedi <noreply@leedi.com.br>';
+const FROM_ADDRESS = 'Leedi <noreply@leedi.digital>';
 
 export async function sendEmailViaResend(options: SendEmailOptions): Promise<void> {
   // Dynamic import keeps React Email rendering out of the module's eager graph.

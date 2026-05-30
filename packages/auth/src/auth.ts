@@ -21,6 +21,13 @@ import { env } from '@leedi/config';
 export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
+  advanced: {
+    database: {
+      generateId: 'uuid',
+    },
+    // Secure cookies + __Secure- prefix only in production (HTTPS).
+    useSecureCookies: env.NODE_ENV === 'production',
+  },
   database: drizzleAdapter(db, {
     provider: 'pg',
     // Explicit model→table mapping below is authoritative; no name inference needed.
@@ -58,15 +65,9 @@ export const auth = betterAuth({
       maxAge: 60 * 5, // 5 minutes client cache
     },
   },
-  advanced: {
-    // Secure cookies + __Secure- prefix only in production (HTTPS).
-    useSecureCookies: env.NODE_ENV === 'production',
-  },
   emailVerification: {
     sendOnSignUp: true,
     sendVerificationEmail: async ({ user, url }) => {
-      // Dynamic import avoids pulling the notification/render graph into the
-      // module's eager import chain.
       const { sendVerificationEmail } = await import('./email-senders.js');
       await sendVerificationEmail(user.email, url);
     },
