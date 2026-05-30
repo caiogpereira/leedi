@@ -23,6 +23,7 @@
         "@leedi/auth": "workspace:*",
         "@leedi/config": "workspace:*",
         "@leedi/tailwind-config": "workspace:*",
+        "@leedi/tenancy": "workspace:*",
         "@leedi/ui": "workspace:*",
         "@upstash/redis": "^1.38.0",
         "next": "^15.5.18",

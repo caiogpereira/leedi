@@ -6,3 +6,7 @@ export type {
   GetInvitationResult,
   InvitationView,
 } from './use-cases/accept-invitation.js';
+export { listUserTenants } from './use-cases/list-user-tenants.js';
+export type { UserTenant } from './use-cases/list-user-tenants.js';
+export { switchTenant } from './use-cases/switch-tenant.js';
+export type { SwitchTenantResult } from './use-cases/switch-tenant.js';

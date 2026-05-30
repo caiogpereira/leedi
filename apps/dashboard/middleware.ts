@@ -58,7 +58,22 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  // Forward the active tenant (Story 2.7) to Server Components via a request
+  // header so they can read it without parsing cookies themselves. This is a
+  // routing convenience ONLY — the Edge runtime cannot hit the DB to verify the
+  // membership, so the value is attacker-controllable. Every consumer MUST
+  // re-validate it against the user's memberships before using it for data
+  // access (the dashboard layout does this against `listUserTenants`).
+  const requestHeaders = new Headers(request.headers);
+  const tenantCookie = request.cookies.get('leedi_tenant');
+  if (tenantCookie?.value) {
+    requestHeaders.set('x-leedi-tenant-id', tenantCookie.value);
+  } else {
+    // Strip any client-injected header so it can never be spoofed without the cookie.
+    requestHeaders.delete('x-leedi-tenant-id');
+  }
+
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export const config = {

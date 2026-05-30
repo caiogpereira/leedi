@@ -9,6 +9,16 @@
   "nav": {
     "logout": "Sair"
   },
+  "tenantSwitcher": {
+    "label": "Selecionar empresa",
+    "switching": "Trocando...",
+    "roles": {
+      "owner": "Proprietário",
+      "admin": "Administrador",
+      "operator": "Operador",
+      "viewer": "Visualizador"
+    }
+  },
   "team": {
     "title": "Equipe",
     "membersHeading": "Membros",

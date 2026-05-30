@@ -115,6 +115,9 @@ importers:
       '@leedi/tailwind-config':
         specifier: workspace:*
         version: link:../../tooling/tailwind-config
+      '@leedi/tenancy':
+        specifier: workspace:*
+        version: link:../../packages/tenancy
       '@leedi/ui':
         specifier: workspace:*
         version: link:../../packages/ui
