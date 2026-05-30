@@ -8,11 +8,14 @@
   "scripts": {
     "build": "echo 'stub'",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@leedi/eslint-config": "workspace:*",
-    "@leedi/tsconfig": "workspace:*"
+    "@leedi/tsconfig": "workspace:*",
+    "@types/react": "^19.2.15",
+    "vitest": "^4.1.7"
   },
   "dependencies": {
     "@leedi/auth": "workspace:*",

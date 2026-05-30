@@ -48,5 +48,12 @@
       "expiredMessage": "Este link expirou. Solicite um novo link de recuperação.",
       "requestNewLink": "Solicitar novo link"
     }
+  },
+  "invite": {
+    "title": "Aceitar convite",
+    "passwordLabel": "Criar senha",
+    "submitButton": "Aceitar e entrar",
+    "expiredMessage": "Este convite expirou. Solicite um novo ao administrador.",
+    "invalidMessage": "Convite inválido ou já utilizado."
   }
 }
