@@ -4,7 +4,7 @@ import type { NextConfig } from 'next';
 const withNextIntl = createNextIntlPlugin('./i18n.ts');
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@leedi/ui'],
+  transpilePackages: ['@leedi/ui', '@leedi/tenancy'],
   webpack(config) {
     config.resolve = {
       ...config.resolve,

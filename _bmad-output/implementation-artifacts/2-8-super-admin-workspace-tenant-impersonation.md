@@ -1,6 +1,6 @@
 # Story 2.8: Super-Admin Workspace & Tenant Impersonation
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -86,10 +86,96 @@ so that I can troubleshoot issues without asking tenants to share credentials.
 
 ### Agent Model Used
 
-claude-sonnet-4-6
+claude-opus-4-8
 
 ### Debug Log References
 
+- Local `pnpm build` fails with a `better-auth`/`kysely` "Attempted import error"
+  (`DEFAULT_MIGRATION_TABLE`/`DEFAULT_MIGRATION_LOCK_TABLE` not exported). Verified
+  PRE-EXISTING and environment-specific: the untouched `apps/web` build fails
+  identically on this machine (Node 24 local), while CI (Node 22, `pnpm install
+  --frozen-lockfile`) is green on `main` with `apps/web` importing the full `auth`
+  object. Not introduced by this story.
+- Local `pnpm --filter @leedi/db typecheck` fails with `TS18048` strict-null errors
+  in the untouched `packages/db/src/__tests__/rls.test.ts`. Verified PRE-EXISTING
+  via `git stash` (fails identically on clean `main`) and confirmed CI executed
+  `@leedi/db:typecheck` (cache miss → `tsc --noEmit`) and PASSED. Local-only TS
+  resolution discrepancy; not introduced by this story (lockfile diff is only the
+  6 `workspace:*` link lines for admin's new deps — no toolchain version moved).
+
 ### Completion Notes List
 
+Implemented (verified via package typecheck + lint + unit tests; CI is the build authority):
+
+- AC#1 (impersonate_start + context switch + banner): DONE.
+  - `startImpersonation` (super_admin-only; `support` and non-admins rejected),
+    writes `impersonate_start` audit log with the REAL workspace UUID resolved from
+    `workspace_admins` (fixes the `'default-workspace'` placeholder that would have
+    thrown on the `uuid` column).
+  - Admin `/tenants` page (super_admin-gated, service-role tenant list) + confirm
+    dialog + `POST /api/admin/impersonate` route sets `leedi_impersonating`,
+    `leedi_real_user_id`, and `leedi_tenant` (1h httpOnly cookies).
+  - Dashboard layout server-verifies the actor is a super_admin before honoring the
+    impersonation cookie (fail-closed on forged/expired cookie), looks up the tenant
+    name via service-role, and renders the orange `ImpersonationBanner`.
+- AC#3 (impersonate_end): DONE. `POST /api/admin/stop-impersonation` writes the
+  `impersonate_end` audit log (attributed to the REAL super-admin) and clears ALL
+  three cookies — including `leedi_tenant` (the story's explicit pitfall: leaving it
+  set would keep the admin scoped to the tenant after exit).
+
+Data-context switch (Task 6): MECHANICALLY WIRED, not yet demonstrated by a real
+read. The `leedi_tenant` cookie → Edge middleware `x-leedi-tenant-id` → `withTenant`
+chain is in place, so tenant-scoped reads WILL run under the impersonated tenant.
+No dashboard page performs a tenant-scoped data read yet (the team page is a Story
+2.7 scaffold), so "admin sees tenant data" rests on the mechanism, not an exercised
+path. The tenant switcher is hidden during impersonation (active tenant is fixed).
+
+Deferred (out of the implemented MVP slice — NOT done):
+
+- AC#2 audit-on-mutation middleware (Task 4): `writeAuditLog` is implemented and
+  exported, but `apps/api` currently exposes only `/health` with no mutating routes
+  and no auth middleware (populated in a later epic), so there is no real mutation
+  path to wire it into. Follow-up: add the Hono audit middleware that records every
+  mutating route as an audit entry (`actor_user_id` = real_user_id, `target_tenant_id`
+  = impersonating tenant) once mutating API routes exist.
+- Integration tests (audit-on-mutation, append-only UPDATE/DELETE rejection, RLS
+  scoping during impersonation) and the Playwright E2E (Task 7): deferred with the
+  AC#2 middleware — they require a live DB harness and real mutating routes.
+- `requireWorkspaceAdmin` route guard + dashboard→admin redirect for super-admins
+  (Task 1): the page-level super_admin gate is implemented inline; a shared
+  `requireWorkspaceAdmin` helper and the cross-app redirect were not extracted.
+- During impersonation, `/settings/*` routes still 403 because the dashboard
+  middleware hard-codes `userRole = undefined` (Story 2.7 deferral). Not a regression
+  (those pages are scaffolds), but the impersonating admin cannot reach them until
+  per-tenant role resolution lands.
+
 ### File List
+
+Created:
+- `packages/auth/src/workspace-guard.ts`
+- `packages/auth/src/use-cases/start-impersonation.ts`
+- `packages/auth/src/use-cases/start-impersonation.test.ts`
+- `packages/auth/src/use-cases/stop-impersonation.ts`
+- `packages/auth/src/use-cases/stop-impersonation.test.ts`
+- `packages/tenancy/src/use-cases/list-all-tenants.ts`
+- `packages/tenancy/src/use-cases/write-audit-log.ts`
+- `packages/tenancy/src/use-cases/get-tenant-by-id.ts`
+- `apps/admin/app/(admin)/tenants/page.tsx`
+- `apps/admin/app/(admin)/tenants/ImpersonateButton.tsx`
+- `apps/admin/app/403/page.tsx`
+- `apps/admin/app/api/admin/impersonate/route.ts`
+- `apps/dashboard/app/api/admin/stop-impersonation/route.ts`
+- `apps/dashboard/components/ImpersonationBanner.tsx`
+
+Modified:
+- `packages/auth/src/index.ts` (exports)
+- `packages/tenancy/src/index.ts` (exports)
+- `apps/admin/package.json` (+ `@leedi/auth`, `@leedi/tenancy` deps)
+- `apps/admin/next.config.ts` (transpilePackages + `@leedi/tenancy`)
+- `apps/admin/tsconfig.json` (include `app`)
+- `apps/admin/messages/pt-BR.json` (tenants strings)
+- `apps/dashboard/app/layout.tsx` (impersonation resolution + banner)
+- `apps/dashboard/next.config.ts` (transpilePackages + `@leedi/tenancy`)
+- `apps/dashboard/tsconfig.json` (include `app`, `components`, `middleware.ts`)
+- `apps/dashboard/messages/pt-BR.json` (impersonation strings)
+- `pnpm-lock.yaml` (admin workspace links)

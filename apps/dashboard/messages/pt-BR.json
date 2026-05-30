@@ -9,6 +9,11 @@
   "nav": {
     "logout": "Sair"
   },
+  "impersonation": {
+    "banner": "Você está em modo de suporte para {tenantName}. Suas ações estão sendo registradas.",
+    "exit": "Sair do modo suporte",
+    "exiting": "Saindo..."
+  },
   "tenantSwitcher": {
     "label": "Selecionar empresa",
     "switching": "Trocando...",

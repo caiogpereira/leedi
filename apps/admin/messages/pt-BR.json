@@ -5,5 +5,21 @@
   },
   "home": {
     "heading": "Bem-vindo ao Leedi"
+  },
+  "tenants": {
+    "title": "Tenants",
+    "subtitle": "Todos os tenants do workspace. Impersone para prestar suporte.",
+    "columns": {
+      "name": "Nome",
+      "slug": "Slug",
+      "status": "Status",
+      "plan": "Plano",
+      "actions": "Ações"
+    },
+    "empty": "Nenhum tenant encontrado.",
+    "impersonate": "Impersonar",
+    "impersonating": "Impersonando...",
+    "confirm": "Iniciar modo de suporte para \"{name}\"? Todas as suas ações serão registradas em auditoria.",
+    "error": "Não foi possível iniciar a impersonação. Tente novamente."
   }
 }

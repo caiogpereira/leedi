@@ -16,3 +16,9 @@ export {
   ROUTE_PERMISSION_MAP,
 } from './rbac.js';
 export type { TenantRole, WorkspaceRole, Permission } from './rbac.js';
+export { getWorkspaceAdmin, getWorkspaceAdminRole } from './workspace-guard.js';
+export type { WorkspaceAdmin } from './workspace-guard.js';
+export { startImpersonation } from './use-cases/start-impersonation.js';
+export type { StartImpersonationResult } from './use-cases/start-impersonation.js';
+export { stopImpersonation } from './use-cases/stop-impersonation.js';
+export type { StopImpersonationResult } from './use-cases/stop-impersonation.js';

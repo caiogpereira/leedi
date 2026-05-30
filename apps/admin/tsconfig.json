@@ -2,6 +2,7 @@
   "extends": "@leedi/tsconfig/nextjs.json",
   "include": [
     "next.config.ts",
+    "app",
     "src",
     "tailwind.config.ts",
     ".next/types/**/*.ts"
