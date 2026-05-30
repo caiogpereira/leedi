@@ -15,6 +15,13 @@
       "when": 1780097046090,
       "tag": "0001_striped_purifiers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780100356821,
+      "tag": "0002_mute_havok",
+      "breakpoints": true
     }
   ]
 }

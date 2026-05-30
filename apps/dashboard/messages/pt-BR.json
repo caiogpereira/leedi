@@ -8,5 +8,21 @@
   },
   "nav": {
     "logout": "Sair"
+  },
+  "team": {
+    "title": "Equipe",
+    "membersHeading": "Membros",
+    "inviteHeading": "Convidar membro",
+    "emailLabel": "E-mail",
+    "roleLabel": "Papel",
+    "submitButton": "Enviar convite",
+    "emptyMembers": "Nenhum membro encontrado.",
+    "noPermission": "Você não tem permissão para gerenciar a equipe.",
+    "roles": {
+      "owner": "Proprietário",
+      "admin": "Administrador",
+      "operator": "Operador",
+      "viewer": "Visualizador"
+    }
   }
 }
