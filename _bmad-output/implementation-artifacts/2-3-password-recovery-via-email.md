@@ -1,6 +1,6 @@
 # Story 2.3: Password Recovery via Email
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -83,4 +83,18 @@ claude-sonnet-4-6
 
 ### Completion Notes List
 
+- Better-Auth `resetPasswordTokenExpiresIn: 3600` (60 min) + `revokeSessionsOnPasswordReset: true` (critical for AC#2).
+- Anti-enumeration: `forgotPasswordAction` always returns `submitted: true` regardless of email existence.
+- CORRECTION: Better-Auth API is `auth.api.requestPasswordReset` (not `forgetPassword` as in the original spec).
+- CORRECTION: Reset flow uses query params (`?token=` or `?error=INVALID_TOKEN`), not a `[token]` path segment.
+- All existing sessions invalidated after a successful reset (`revokeSessionsOnPasswordReset`).
+
 ### File List
+
+- `packages/auth/src/use-cases/request-password-reset.ts`
+- `packages/auth/src/use-cases/reset-password.ts`
+- `packages/auth/src/use-cases/reset-password.test.ts`
+- `packages/notification/src/templates/password-reset.tsx`
+- `apps/web/app/(auth)/forgot-password/page.tsx`
+- `apps/web/app/(auth)/forgot-password/actions.ts`
+- `apps/web/app/(auth)/reset-password/page.tsx`

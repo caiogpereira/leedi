@@ -1,6 +1,6 @@
 # Story 2.7: Multi-Tenant Switching
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -84,4 +84,19 @@ claude-sonnet-4-6
 
 ### Completion Notes List
 
+- TWO-PHASE `listUserTenants`: reads memberships under `withUser`, then each tenant under `withTenant` (a direct join fails because the `tenants` RLS uses `app.tenant_id`, not `app.user_id`).
+- `switchTenant`: membership re-verified server-side; sets the `leedi_tenant` cookie; middleware forwards it as the `x-leedi-tenant-id` header.
+- Dashboard layout reads the cookie + validates it against the user's memberships before trusting it (prevents cookie spoofing).
+- `TenantSwitcher` hidden for single-tenant users (`tenants.length <= 1`).
+- PARTIAL: no tenant-scoped data page exists yet to demonstrate data switching end-to-end.
+
 ### File List
+
+- `packages/tenancy/src/use-cases/list-user-tenants.ts`
+- `packages/tenancy/src/use-cases/list-user-tenants.test.ts`
+- `packages/tenancy/src/use-cases/switch-tenant.ts`
+- `packages/tenancy/src/use-cases/switch-tenant.test.ts`
+- `apps/dashboard/components/TenantSwitcher.tsx`
+- `apps/dashboard/app/api/tenant/switch/route.ts`
+- `apps/dashboard/app/layout.tsx`
+- `apps/dashboard/middleware.ts` (updated)

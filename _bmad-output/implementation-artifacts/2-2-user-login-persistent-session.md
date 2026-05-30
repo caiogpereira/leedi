@@ -1,6 +1,6 @@
 # Story 2.2: User Login & Persistent Session
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -88,4 +88,20 @@ claude-sonnet-4-6
 
 ### Completion Notes List
 
+- Better-Auth session: 7-day expiry, daily refresh, HttpOnly+Secure cookie.
+- CRITICAL FIX: `nextCookies()` plugin required for Server Actions to persist the session cookie (without it, login succeeds but the cookie is not set).
+- CRITICAL FIX: Edge runtime cannot use `auth.api.getSession` (DB call); middleware uses `getSessionCookie` (synchronous, Edge-safe).
+- All credential failures map to a single message "E-mail ou senha incorretos" (no enumeration).
+- Dashboard `middleware.ts`: Edge-safe session gate + RBAC route enforcement skeleton.
+- Logout: server-side session invalidation via `auth.api.signOut`.
+
 ### File List
+
+- `packages/auth/src/use-cases/login-user.ts`
+- `packages/auth/src/use-cases/login-user.test.ts`
+- `packages/auth/src/use-cases/logout-user.ts`
+- `apps/web/app/(auth)/login/page.tsx`
+- `apps/web/app/(auth)/login/actions.ts`
+- `apps/dashboard/middleware.ts`
+- `apps/dashboard/app/actions.ts`
+- `apps/dashboard/app/page.tsx`

@@ -1,6 +1,6 @@
 # Story 2.5: Role-Based Access Control (RBAC)
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -89,4 +89,16 @@ claude-sonnet-4-6
 
 ### Completion Notes List
 
+- RBAC matrix in `packages/auth/src/rbac.ts`: single source of truth for all permissions.
+- 43 unit tests covering the full matrix (every role x every permission).
+- Three enforcement layers: dashboard middleware (route-level), Hono middleware (API), UI hook.
+- Dashboard middleware enforces route permissions fail-closed (403) until a per-tenant role is available in the session (TODO Story 2.7).
+- `requirePermission()` Hono middleware ready for use when business routes are added to `apps/api`.
+
 ### File List
+
+- `packages/auth/src/rbac.ts`
+- `packages/auth/src/rbac.test.ts`
+- `apps/api/src/middleware/require-role.ts`
+- `apps/dashboard/app/403/page.tsx`
+- `apps/dashboard/src/hooks/use-permission.ts`

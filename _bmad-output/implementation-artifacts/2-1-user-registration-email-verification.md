@@ -1,6 +1,6 @@
 # Story 2.1: User Registration & Email Verification
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -92,4 +92,28 @@ claude-sonnet-4-6
 
 ### Completion Notes List
 
+- Better-Auth `emailAndPassword` configured with `requireEmailVerification: true`, `autoSignIn: false`.
+- Password policy (min 8, 1 uppercase, 1 number) in `packages/auth/src/schemas/password.ts`.
+- `register-user.ts` use-case maps duplicate email to the exact AC#3 pt-BR message.
+- React Email templates via `packages/notification` (Resend adapter + template renderer).
+- `apps/web` registration page uses `useActionState` + Server Action.
+- Better-Auth route handler at `apps/web/app/api/auth/[...all]/route.ts`.
+- Migration `0001` created auth tables (`accounts`, `sessions`, `verifications`) and made `users.password_hash` nullable.
+
 ### File List
+
+- `packages/auth/src/auth.ts`
+- `packages/auth/src/index.ts`
+- `packages/auth/src/schemas/password.ts`
+- `packages/auth/src/schemas/password.test.ts`
+- `packages/auth/src/use-cases/register-user.ts`
+- `packages/auth/src/email-senders.ts`
+- `packages/notification/src/adapters/resend.ts`
+- `packages/notification/src/template-renderer.tsx`
+- `packages/notification/src/templates/email-verification.tsx`
+- `packages/notification/src/index.ts`
+- `apps/web/app/(auth)/register/page.tsx`
+- `apps/web/app/(auth)/register/actions.ts`
+- `apps/web/app/api/auth/[...all]/route.ts`
+- `apps/web/messages/pt-BR.json`
+- `packages/db/migrations/0001_striped_purifiers.sql`

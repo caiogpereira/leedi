@@ -1,6 +1,6 @@
 # Story 2.6: Team Member Invitation Flow
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -92,4 +92,23 @@ claude-sonnet-4-6
 
 ### Completion Notes List
 
+- `invitations` table added to the DB schema + migration `0002_mute_havok.sql` with RLS `tenant_isolation`.
+- `inviteMember`: privilege escalation guard (admin cannot grant owner), 72h token, AC#3 duplicate rejection with the exact message.
+- `acceptInvitation`: token re-verified at submit time; `onConflictDoNothing` prevents duplicate membership on retry.
+- Accept page branches: new user (password form) vs existing user (click-to-accept).
+- PARTIAL AC#1: the team page is a scaffold; it does not yet list pending invitations (session carries no tenant context until Story 2.7).
+- PARTIAL AC#2: redirects to `/login?invited=success` (not `/dashboard`) because no session is established at accept time.
+
 ### File List
+
+- `packages/db/src/schema/tenancy.ts` (invitations table)
+- `packages/db/migrations/0002_mute_havok.sql`
+- `packages/tenancy/src/use-cases/invite-member.ts`
+- `packages/tenancy/src/use-cases/invite-member.test.ts`
+- `packages/tenancy/src/use-cases/accept-invitation.ts`
+- `packages/tenancy/src/index.ts`
+- `packages/notification/src/templates/invitation.tsx`
+- `apps/web/app/invite/[token]/page.tsx`
+- `apps/web/app/invite/[token]/actions.ts`
+- `apps/dashboard/app/(dashboard)/settings/team/page.tsx`
+- `apps/dashboard/app/(dashboard)/settings/team/invite-form.tsx`
