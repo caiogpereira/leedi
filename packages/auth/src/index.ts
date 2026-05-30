@@ -9,3 +9,10 @@ export { requestPasswordReset } from './use-cases/request-password-reset.js';
 export { resetPassword } from './use-cases/reset-password.js';
 export type { ResetPasswordResult } from './use-cases/reset-password.js';
 export { passwordSchema } from './schemas/password.js';
+export {
+  hasPermission,
+  getRequiredRoles,
+  ROLE_PERMISSIONS,
+  ROUTE_PERMISSION_MAP,
+} from './rbac.js';
+export type { TenantRole, WorkspaceRole, Permission } from './rbac.js';
