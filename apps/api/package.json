@@ -13,15 +13,24 @@
   "devDependencies": {
     "@leedi/eslint-config": "workspace:*",
     "@leedi/tsconfig": "workspace:*",
+    "@types/papaparse": "^5.3.14",
     "tsx": "^4.22.3",
     "vitest": "^4.1.7"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.100.1",
     "@hono/node-server": "^2.0.4",
     "@leedi/auth": "workspace:*",
     "@leedi/config": "workspace:*",
+    "@leedi/connection": "workspace:*",
+    "@leedi/db": "workspace:*",
+    "@leedi/lead": "workspace:*",
+    "@leedi/messaging": "workspace:*",
     "@leedi/observability": "workspace:*",
+    "@upstash/qstash": "^2.11.0",
     "@upstash/redis": "^1.38.0",
-    "hono": "^4.12.23"
+    "hono": "^4.12.23",
+    "papaparse": "^5.4.1",
+    "zod": "^4.4.3"
   }
 }

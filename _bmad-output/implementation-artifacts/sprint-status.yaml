@@ -1,5 +1,5 @@
 # generated: 2026-05-29
-# last_updated: 2026-05-30
+# last_updated: 2026-05-31  (epics 5/6/7/8/9/10/11/12/13 stories created — all ready-for-dev)
 # project: leedi
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-29
-last_updated: 2026-05-30
+last_updated: 2026-06-01  # epic 5 all stories in review
 project: leedi
 project_key: NOKEY
 tracking_system: file-system
@@ -74,137 +74,137 @@ development_status:
   # Epic 3: Design System & UI Shell
   # ─────────────────────────────────────────────────────────────────────────────
   epic-3: in-progress
-  3-1-dashboard-navigation-shell-layout: ready-for-dev
-  3-2-admin-shell-navigation: ready-for-dev
-  3-3-ai-assisted-textarea-component: ready-for-dev
-  3-4-accessibility-foundations-wcag-aa-compliance: ready-for-dev
+  3-1-dashboard-navigation-shell-layout: review
+  3-2-admin-shell-navigation: review
+  3-3-ai-assisted-textarea-component: review
+  3-4-accessibility-foundations-wcag-aa-compliance: review
   epic-3-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 4: WhatsApp Channel Connection
   # ─────────────────────────────────────────────────────────────────────────────
   epic-4: in-progress
-  4-1-whatsapp-connection-schema-encrypted-credential-storage: ready-for-dev
-  4-2-connect-whatsapp-number-tenant-configuration: ready-for-dev
-  4-3-connection-health-display-status-quality-tier: ready-for-dev
-  4-4-inbound-webhook-message-reception-routing: ready-for-dev
-  4-5-outbound-message-sending-via-meta-cloud-api: ready-for-dev
+  4-1-whatsapp-connection-schema-encrypted-credential-storage: review
+  4-2-connect-whatsapp-number-tenant-configuration: review
+  4-3-connection-health-display-status-quality-tier: review
+  4-4-inbound-webhook-message-reception-routing: review
+  4-5-outbound-message-sending-via-meta-cloud-api: review
   epic-4-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 5: Lead Management & Conversation Tracking
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-5: backlog
-  5-1-lead-database-schema-list-view: backlog
-  5-2-lead-detail-page-journey-timeline: backlog
-  5-3-csv-lead-import: backlog
-  5-4-lead-tags-opt-out-management: backlog
-  5-5-conversation-window-tracking-24h-billing-unit: backlog
+  epic-5: in-progress
+  5-1-lead-database-schema-list-view: review
+  5-2-lead-detail-page-journey-timeline: review
+  5-3-csv-lead-import: review
+  5-4-lead-tags-opt-out-management: review
+  5-5-conversation-window-tracking-24h-billing-unit: review
   epic-5-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 6: Product Knowledge Base & Sales Methods
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-6: backlog
-  6-1-product-catalog-crud: backlog
-  6-2-sales-arguments-differentials-social-proofs: backlog
-  6-3-faq-objection-counter-library: backlog
-  6-4-sales-methods-seed-selection: backlog
+  epic-6: in-progress
+  6-1-product-catalog-crud: ready-for-dev
+  6-2-sales-arguments-differentials-social-proofs: ready-for-dev
+  6-3-faq-objection-counter-library: ready-for-dev
+  6-4-sales-methods-seed-selection: ready-for-dev
   epic-6-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 7: Intelligent Sales Agent
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-7: backlog
-  7-1-agent-configuration-panel: backlog
-  7-2-agent-core-processing-loop: backlog
-  7-3-lead-context-tools-history-offers-eligibility: backlog
-  7-4-sales-conversion-tools-checkout-intent-tagging: backlog
-  7-5-objection-handling-knowledge-base-consultation: backlog
-  7-6-human-transfer-tool: backlog
-  7-7-multimodal-input-processing-audio-image: backlog
-  7-8-model-routing-cost-optimization: backlog
+  epic-7: in-progress
+  7-1-agent-configuration-panel: ready-for-dev
+  7-2-agent-core-processing-loop: ready-for-dev
+  7-3-lead-context-tools-history-offers-eligibility: ready-for-dev
+  7-4-sales-conversion-tools-checkout-intent-tagging: ready-for-dev
+  7-5-objection-handling-knowledge-base-consultation: ready-for-dev
+  7-6-human-transfer-tool: ready-for-dev
+  7-7-multimodal-input-processing-audio-image: ready-for-dev
+  7-8-model-routing-cost-optimization: ready-for-dev
   epic-7-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 8: Agent Playground
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-8: backlog
-  8-1-playground-chat-interface: backlog
-  8-2-scenario-simulation-tool-transparency: backlog
+  epic-8: in-progress
+  8-1-playground-chat-interface: ready-for-dev
+  8-2-scenario-simulation-tool-transparency: ready-for-dev
   epic-8-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 9: Documentation Quality Corrections
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-9: backlog
-  9-1-prd-nfrs-success-metrics-lgpd-requirements: backlog
-  9-2-prd-onboarding-edge-case-architecture-webhook-retry-dlq: backlog
-  9-3-architecture-redis-ttl-byok-enterprise-audit-log-retention: backlog
-  9-4-execution-plan-time-estimates-rollback-strategy-cicd-detail: backlog
+  epic-9: in-progress
+  9-1-prd-nfrs-success-metrics-lgpd-requirements: ready-for-dev
+  9-2-prd-onboarding-edge-case-architecture-webhook-retry-dlq: ready-for-dev
+  9-3-architecture-redis-ttl-byok-enterprise-audit-log-retention: ready-for-dev
+  9-4-execution-plan-time-estimates-rollback-strategy-cicd-detail: ready-for-dev
   epic-9-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 10: Campaign Management
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-10: backlog
-  10-1-campaign-crud-phase-schema: backlog
-  10-2-campaign-activation-phase-transitions: backlog
-  10-3-active-campaign-as-agent-context: backlog
+  epic-10: in-progress
+  10-1-campaign-crud-phase-schema: ready-for-dev
+  10-2-campaign-activation-phase-transitions: ready-for-dev
+  10-3-active-campaign-as-agent-context: ready-for-dev
   epic-10-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 11: Hotmart Gateway Integration
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-11: backlog
-  11-1-hotmart-webhook-receiver-canonical-event-normalization: backlog
-  11-2-purchase-approved-lead-status-update: backlog
-  11-3-recovery-flow-triggers-abandoned-cart-boleto-pix: backlog
+  epic-11: in-progress
+  11-1-hotmart-webhook-receiver-canonical-event-normalization: ready-for-dev
+  11-2-purchase-approved-lead-status-update: ready-for-dev
+  11-3-recovery-flow-triggers-abandoned-cart-boleto-pix: ready-for-dev
   epic-11-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 12: Meta Template Management
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-12: backlog
-  12-1-template-builder-meta-submission: backlog
-  12-2-template-status-tracking-suggested-library: backlog
+  epic-12: in-progress
+  12-1-template-builder-meta-submission: ready-for-dev
+  12-2-template-status-tracking-suggested-library: ready-for-dev
   epic-12-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 13: Smart Message Dispatch
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-13: backlog
-  13-1-lead-segment-builder: backlog
-  13-2-manual-template-dispatch: backlog
-  13-3-automatic-dispatch-rules: backlog
-  13-4-24h-window-followup-reengagement: backlog
+  epic-13: in-progress
+  13-1-lead-segment-builder: ready-for-dev
+  13-2-manual-template-dispatch: ready-for-dev
+  13-3-automatic-dispatch-rules: ready-for-dev
+  13-4-24h-window-followup-reengagement: ready-for-dev
   epic-13-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 14: Human Inbox & Handoff
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-14: backlog
-  14-1-real-time-conversation-list-filters: backlog
-  14-2-conversation-detail-ai-handoff-summary: backlog
-  14-3-human-takeover-manual-reply-return-to-bot: backlog
+  epic-14: in-progress
+  14-1-real-time-conversation-list-filters: ready-for-dev
+  14-2-conversation-detail-ai-handoff-summary: ready-for-dev
+  14-3-human-takeover-manual-reply-return-to-bot: ready-for-dev
   epic-14-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 15: Tenant Analytics Dashboard
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-15: backlog
-  15-1-core-sales-metrics-dashboard: backlog
-  15-2-conversation-health-objection-analytics: backlog
-  15-3-number-health-campaign-status-widgets: backlog
+  epic-15: in-progress
+  15-1-core-sales-metrics-dashboard: ready-for-dev
+  15-2-conversation-health-objection-analytics: ready-for-dev
+  15-3-number-health-campaign-status-widgets: ready-for-dev
   epic-15-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 16: Usage Metering & Overage
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-16: backlog
-  16-1-conversation-counting-usage-counter: backlog
-  16-2-usage-dashboard-widget-threshold-alerts: backlog
-  16-3-overage-handling-tenant-configuration: backlog
+  epic-16: in-progress
+  16-1-conversation-counting-usage-counter: ready-for-dev
+  16-2-usage-dashboard-widget-threshold-alerts: ready-for-dev
+  16-3-overage-handling-tenant-configuration: ready-for-dev
   epic-16-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────

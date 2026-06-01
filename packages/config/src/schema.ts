@@ -14,6 +14,28 @@ export const schema = z.object({
   UPSTASH_REDIS_REST_URL: z.string().url('UPSTASH_REDIS_REST_URL must be a valid URL'),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1, 'UPSTASH_REDIS_REST_TOKEN is required'),
   WORKSPACE_ID: z.string().uuid('WORKSPACE_ID must be a valid UUID'),
+  ANTHROPIC_API_KEY: z.string().min(1, 'ANTHROPIC_API_KEY is required'),
+  ENCRYPTION_MASTER_KEY: z
+    .string()
+    .refine(
+      (v) => {
+        try {
+          return Buffer.from(v, 'base64').length === 32;
+        } catch {
+          return false;
+        }
+      },
+      { message: 'ENCRYPTION_MASTER_KEY must be a base64-encoded 32-byte key' }
+    ),
+  WHATSAPP_API_VERSION: z.string().default('v20.0'),
+  // Meta webhook verification — obtained from the Meta Developer App (App Settings > Basic)
+  WHATSAPP_APP_SECRET: z.string().min(1, 'WHATSAPP_APP_SECRET is required'),
+  // Custom token you choose when registering the webhook endpoint in the Meta Developer App
+  WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().min(1, 'WHATSAPP_WEBHOOK_VERIFY_TOKEN is required'),
+  // QStash (Upstash) — for scheduled health checks and debounce flush jobs
+  QSTASH_TOKEN: z.string().min(1, 'QSTASH_TOKEN is required'),
+  QSTASH_CURRENT_SIGNING_KEY: z.string().min(1, 'QSTASH_CURRENT_SIGNING_KEY is required'),
+  QSTASH_NEXT_SIGNING_KEY: z.string().min(1, 'QSTASH_NEXT_SIGNING_KEY is required'),
 });
 
 export type Env = z.infer<typeof schema>;

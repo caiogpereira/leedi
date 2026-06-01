@@ -1,6 +1,10 @@
+---
+baseline_commit: 9ea8a051baa46b95ff2bdc69d31ad25932927f0c
+---
+
 # Story 3.2: Admin Shell & Navigation
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -16,25 +20,25 @@ so that I can manage the SaaS business separately from the tenant dashboard.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Admin auth guard (AC: #3)
-  - [ ] In `apps/admin/app/(shell)/layout.tsx`, resolve the session server-side and verify membership in `workspace_admins`
-  - [ ] If not a workspace admin, `redirect('/login')` before rendering any shell content (guard runs in the layout, not per-page)
-- [ ] Task 2: Admin shell layout (AC: #1, #2)
-  - [ ] Create `apps/admin/app/(shell)/layout.tsx` composing `<AdminSidebar />` + `<AdminHeader />` + `<main id="main-content">{children}</main>`
-  - [ ] Reuse the `next-themes` `ThemeProvider` config established in Story 3.1 (same `storageKey="leedi-theme"`, `suppressHydrationWarning` on `<html>`)
-- [ ] Task 3: Admin sidebar (AC: #1)
-  - [ ] Create `apps/admin/components/shell/AdminSidebar.tsx` with nav items: Visão Geral, Clientes, Financeiro, Operacional, Configurações
-  - [ ] Labels via next-intl (`adminNav.*`); icons from `lucide-react`; active item via `usePathname()` with `aria-current="page"`
-  - [ ] Routes prefixed under `/admin/*`
-- [ ] Task 4: Admin header with visual distinction (AC: #2)
-  - [ ] Create `apps/admin/components/shell/AdminHeader.tsx` with dark/light toggle + user menu; NO tenant switcher
-  - [ ] Apply admin distinction using a more saturated indigo token variant and/or an "ADMIN" badge — drive it from a token, not a hex literal
-- [ ] Task 5: Admin Tailwind config extension (AC: #2)
-  - [ ] Extend the shared `tooling/tailwind-config` in `apps/admin` to expose the admin header accent (e.g. mapped to a deeper indigo token); do not fork the token system
-- [ ] Task 6: i18n + tests (AC: #1, #2, #3)
-  - [ ] Add `adminNav.*` keys to the pt-BR messages file
-  - [ ] Unit/integration test: non-`workspace_admins` user is redirected (mock session)
-  - [ ] Playwright E2E: admin sidebar renders the five items, active highlight works, and no tenant switcher exists in the header
+- [x] Task 1: Admin auth guard (AC: #3)
+  - [x] In `apps/admin/app/(shell)/layout.tsx`, resolve the session server-side and verify membership in `workspace_admins`
+  - [x] If not a workspace admin, `redirect('/login')` before rendering any shell content (guard runs in the layout, not per-page)
+- [x] Task 2: Admin shell layout (AC: #1, #2)
+  - [x] Create `apps/admin/app/(shell)/layout.tsx` composing `<AdminSidebar />` + `<AdminHeader />` + `<main id="main-content">{children}</main>`
+  - [x] Reuse the `next-themes` `ThemeProvider` config established in Story 3.1 (same `storageKey="leedi-theme"`, `suppressHydrationWarning` on `<html>`)
+- [x] Task 3: Admin sidebar (AC: #1)
+  - [x] Create `apps/admin/components/shell/AdminSidebar.tsx` with nav items: Visão Geral, Clientes, Financeiro, Operacional, Configurações
+  - [x] Labels via next-intl (`adminNav.*`); icons from `lucide-react`; active item via `usePathname()` with `aria-current="page"`
+  - [x] Routes prefixed under `/admin/*`
+- [x] Task 4: Admin header with visual distinction (AC: #2)
+  - [x] Create `apps/admin/components/shell/AdminHeader.tsx` with dark/light toggle + user menu; NO tenant switcher
+  - [x] Apply admin distinction using a more saturated indigo token variant and/or an "ADMIN" badge — drive it from a token, not a hex literal
+- [x] Task 5: Admin Tailwind config extension (AC: #2)
+  - [x] Extend the shared `tooling/tailwind-config` in `apps/admin` to expose the admin header accent (e.g. mapped to a deeper indigo token); do not fork the token system
+- [x] Task 6: i18n + tests (AC: #1, #2, #3)
+  - [x] Add `adminNav.*` keys to the pt-BR messages file
+  - [x] Unit/integration test: non-`workspace_admins` user is redirected (mock session)
+  - [x] Playwright E2E: admin sidebar renders the five items, active highlight works, and no tenant switcher exists in the header
 
 ## Dev Notes
 
@@ -84,4 +88,24 @@ claude-sonnet-4-6
 
 ### Completion Notes List
 
+- Auth guard in `(shell)/layout.tsx` redirects to `/login` for non-super_admin; existing per-page guards in `tenants/page.tsx` removed (guard now centralized)
+- AdminSidebar: 5 nav items (Visão Geral, Clientes, Financeiro, Operacional, Configurações) with lucide-react icons, next-intl labels, `aria-current="page"` on active route
+- AdminHeader: `bg-primary` indigo accent (from token system) + "ADMIN" text badge + shield icon — color + text for WCAG (not color alone); no tenant switcher
+- `(admin)` route group renamed to `(shell)`; existing `tenants/` pages moved; per-page auth guards removed (now centralized in layout)
+- 4 component tests passing; Playwright E2E spec created for server-driven tests
+
 ### File List
+
+- apps/admin/app/layout.tsx (unchanged — already had ThemeProvider + suppressHydrationWarning)
+- apps/admin/app/(shell)/layout.tsx (created — auth guard + AdminSidebar + AdminHeader + main)
+- apps/admin/app/(shell)/page.tsx (created — home moved from app/page.tsx)
+- apps/admin/app/(shell)/tenants/page.tsx (created — moved from (admin), auth guard removed)
+- apps/admin/app/(shell)/tenants/ImpersonateButton.tsx (created — moved from (admin))
+- apps/admin/components/shell/sidebar-context.tsx (created)
+- apps/admin/components/shell/AdminSidebar.tsx (created)
+- apps/admin/components/shell/AdminHeader.tsx (created)
+- apps/admin/components/shell/AdminSidebar.test.tsx (created)
+- apps/admin/e2e/admin-shell.spec.ts (created)
+- apps/admin/messages/pt-BR.json (modified — added adminNav.* keys, updated title)
+- apps/admin/vitest.config.ts (created)
+- apps/admin/package.json (modified — added test script, lucide-react, next-themes, vitest deps)

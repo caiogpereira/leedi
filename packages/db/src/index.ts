@@ -11,10 +11,12 @@ export {
   gt,
   lt,
   like,
+  ilike,
   isNull,
   isNotNull,
   inArray,
 } from 'drizzle-orm';
+export type { SQL } from 'drizzle-orm';
 
 import { db } from './client.js';
 import { sql } from 'drizzle-orm';

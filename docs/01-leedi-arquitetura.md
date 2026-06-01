@@ -337,7 +337,7 @@ conversation_windows
 
 messages
   id, tenant_id, conversation_window_id (fk), lead_id (fk),
-  direcao (enum: entrada|saida),
+  direction (enum: inbound|outbound),          -- English: code convention
   autor (enum: lead|agente|humano|sistema),
   tipo (enum: texto|audio|imagem|documento|template|sticker),
   conteudo (text),
@@ -486,8 +486,10 @@ dispatch_jobs
 
 dispatch_targets
   id, dispatch_job_id (fk), lead_id (fk), tenant_id,
+  dispatch_rule_id (fk nullable), -- preenchido para targets gerados por dispatch_rules
   status (enum: pendente|enviado|entregue|respondido|falhou|excluido),
   motivo_exclusao (text nullable), -- ex: já comprou, optout, conversa ativa
+  wamid (text nullable),          -- WhatsApp message ID retornado pela Meta; usado p/ correlacionar delivery webhooks
   enviado_em (timestamptz nullable), created_at
 
 dispatch_rules  -- regras automáticas (carrinho, abandono)
@@ -754,9 +756,16 @@ Conforme 5.2. RLS ligado em todas as tabelas de tenant. Política padrão: nega 
 
 - Endpoints `/webhooks/*` são idempotentes (verificação por chave canônica: `meta_message_id`, `gateway_event_id`, `payment_event_id`).
 - Cada webhook é enfileirado em Redis com chave `webhook:{provider}:{event_id}` para deduplicação — TTL 24h.
-- Consumer assíncrono processa fila (Bull Queue ou similar) com retry exponencial: tentativa 1 (imediato), 2 (5s), 3 (30s), 4 (5m), 5 (30m).
-- **DLQ (Dead Letter Queue):** após 5 falhas, evento é movido para `webhook_dlq:{provider}` para análise manual (alertar ops em Sentry com tag `severity:critical`).
+- Consumer assíncrono processa fila (BullMQ) com retry exponencial: **3 tentativas** — 1s → 4s → 16s. Após 3 falhas, o job vai para a DLQ.
+- **DLQ (Dead Letter Queue):** após 3 falhas, evento é movido para `{tenantId}:webhook:dlq`. Sentry alerta quando DLQ de um tenant ultrapassar **10 eventos em 1 hora** (`severity:critical`).
+- **Replay manual:** super-admin pode re-disparar um job do DLQ pelo painel admin (V1: via BullMQ Job API; V2: botão na UI de admin).
 - Falhas registradas com `webhook_error.provider`, `webhook_error.event_id`, `webhook_error.last_error_message` para debug.
+
+**Idempotência por provider:**
+- **Hotmart:** `gateway_events` row com `processado: true` — processamento duplo do mesmo `gateway_event_id` é descartado.
+- **Meta (mensagens):** `messages.meta_message_id` com constraint UNIQUE — inserção duplicada falha silenciosamente.
+
+**Debounce de mensagens (Meta):** múltiplas mensagens do mesmo lead em 6s são agrupadas antes de acionar o agente. Chave Redis: `buffer:msg:{tenantId}:{leadPhone}`, TTL 30s. Cada mensagem individual é persistida em `messages` antes do debounce — nenhuma mensagem é perdida mesmo que o agente processe em batch.
 
 **Implementação:**
 
@@ -774,34 +783,54 @@ Redis é usado para: deduplicação (webhooks), rate limiting, locks distribuíd
 | Chave | Propósito | TTL |
 |---|---|---|
 | `webhook:{provider}:{event_id}` | Deduplicação de entrada | 24h |
-| `ratelimit:{tenant_id}:{endpoint}` | Rate limiting | 60s |
-| `lock:conversation:{id}` | Lock distribuído | 30s (heartbeat a cada 10s) |
+| `buffer:msg:{tenantId}:{leadPhone}` | Buffer de mensagens (debounce de 6s) | 30s |
+| `ratelimit:{tenant_id}:{endpoint}` | Rate limiting por tenant | 60s |
+| `lock:agent:{tenantId}:{leadPhone}` | Lock distribuído de conversa (evita processamento paralelo) | 300s (5 min) |
 | `template:cache:{template_id}` | Cache de templates aprovados | 24h |
 | `session:{session_id}` | Sessão de usuário | 30 dias (renovável) |
+| `playground:{tenantId}:{sessionId}` | Sessão do playground (sandbox) | 1800s (30 min) |
+| `bullmq:job:*` | Metadados de jobs BullMQ (ex: transição de fase agendada) | 7 dias |
 
 **Eviction policy:** `allkeys-lru` — quando memory limit atingir 80%, evitar chaves menos usadas. Monitorar `redis_memory_used` em observabilidade.
 
-### 9.8 BYOK (Bring Your Own Key) para Enterprise
+### 9.8 BYOK — Dois conceitos distintos para Enterprise
 
-Clientes Enterprise podem opcionalmente fornecer suas próprias chaves de criptografia para dados sensíveis.
+> **Atenção:** O termo "BYOK" no Leedi cobre dois casos de uso diferentes. Leia ambas as seções para entender qual se aplica a cada contexto de implementação.
+
+#### 9.8.1 BYOK — Chave de Criptografia de Dados (Enterprise)
+
+Clientes Enterprise podem fornecer suas próprias chaves de criptografia para dados sensíveis em repouso (leads, conversas).
 
 **Implementação:**
 
 - Campo `tenant.encryption_key_id` referencia chave armazenada em cofre (AWS KMS, Vault).
 - Se `encryption_key_id` != null, todas as mensagens de `lead` e `conversation` são criptografadas com essa chave antes de salvar em DB.
 - Decriptografia ocorre on-demand (leitura de conversa carrega chave do cofre, decripta em memória).
-- Fallback para chave padrão se Enterprise não fornece chave.
-- Auditoria: log de "Chave de criptografia acessada por user_id em 2026-05-29 14:30:00 UTC" em `audit_log` com `action: 'encryption_key_accessed'`.
+- Fallback para chave padrão da plataforma se Enterprise não fornece chave.
+- Auditoria: `audit_log` com `action: 'encryption_key_accessed'` em todo acesso.
 
 **Configuração:**
 
 ```yaml
-# Para Enterprise ativar BYOK
+# Para Enterprise ativar BYOK de dados
 tenant:
   encryption_enabled: true
   encryption_key_id: 'arn:aws:kms:us-east-1:123456:key/abc-def'
   encryption_algorithm: 'AES-256-GCM'
 ```
+
+#### 9.8.2 BYOK — Chave de IA Anthropic (Enterprise)
+
+Clientes Enterprise podem fornecer sua própria Anthropic API key, consumindo cota da própria conta em vez da cota compartilhada da plataforma.
+
+**Implementação:**
+
+- Campo `agent_configs.byok_key_encrypted` (nullable) — armazenado com envelope encryption (mesma estratégia do `access_token_encrypted` de WhatsApp).
+- O AI provider adapter em `@leedi/agent` verifica: se `agent_config.byok_key_encrypted` não é null, descriptografa e usa como header `x-api-key` na chamada ao Anthropic; caso contrário, usa a chave da plataforma (`ANTHROPIC_API_KEY`).
+- Custo de IA para tenants com BYOK não é contabilizado no `usage_counters.custo_ia_usd` da plataforma (é custo do próprio cliente).
+- Gated ao plano Enterprise.
+
+> **Nota:** a coluna `agent_configs.byok_key_encrypted` não existe na migration atual — será adicionada em epic futuro de Enterprise. Este documento registra o target de implementação.
 
 ### 9.9 Audit Log: Retenção e Políticas de Exclusão
 
@@ -902,6 +931,22 @@ Registramos aqui para que ninguém "descubra" depois que algo ficou de fora por 
 | White-label total (CNAME)              | V2 enterprise            | Login unificado atende V1                           |
 | Separação física do banco de memória   | Quando volume justificar | Separação lógica já isola                           |
 | Múltiplos números por tenant           | V1.5/Enterprise          | V1 = 1 número por tenant                            |
+
+### Decisão arquitetural registrada: transcrição de áudio (Story 7.7)
+
+Claude/Anthropic não aceita arquivos de áudio como input — não há endpoint de transcrição na API. A transcrição de mensagens de voz do WhatsApp requer um serviço externo dedicado.
+
+**Serviço adotado:** Groq Whisper (padrão), com adapter pattern para troca sem mudança de código.
+
+| Provider | Preço/min | Notas |
+|----------|-----------|-------|
+| **Groq Whisper** (default) | ~$0,00033/min | 18× mais barato que OpenAI; excelente qualidade PT-BR |
+| OpenAI Whisper | $0,006/min | Fallback disponível via adapter |
+| Deepgram | $0,0043/min | Stub disponível via adapter |
+
+**Implementação:** Port `TranscriptionProvider` em `packages/agent/src/ports/transcription-provider.ts`. Provider selecionado via env var `TRANSCRIPTION_PROVIDER` (`'groq'` | `'openai'` | `'deepgram'`, default `'groq'`). Chave: `GROQ_API_KEY` (obrigatória quando `TRANSCRIPTION_PROVIDER=groq`).
+
+**Por que uma nova dependência externa:** Claude não processa áudio nativamente. O WhatsApp Business entrega áudio OGG/OPUS — transcrevemos antes de enviar ao Claude para manter o fluxo de raciocínio do agente íntegro. Esta é a única dependência de IA fora do ecossistema Anthropic no V0/V1.
 
 ---
 

@@ -163,7 +163,7 @@ Wizard de 5 passos, salvável e retomável:
    - Super-admin pode forçar ativação (status→ativo) mesmo incompleto, SE necessário para troubleshoot
 
 2. **Abandono de onboarding:**
-   - Se > 7 dias sem progresso, admin recebe email: "Seu setup está incompleto há uma semana. Você pode continuar aqui: [link]"
+   - Se > 48 horas sem progresso no wizard (nenhum passo avançado), tenant owner recebe email automático: "Seu setup está incompleto. Continue de onde parou: [link]"
    - Dados parciais (empresa + WhatsApp conectado mas sem agente) são preservados; cliente pode retomar
    - Sessão de onboarding não expira (salvável indefinidamente até conclusão)
 

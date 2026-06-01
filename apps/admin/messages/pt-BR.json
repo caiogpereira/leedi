@@ -1,10 +1,17 @@
 {
   "app": {
-    "title": "Leedi",
-    "description": "Plataforma de vendas inteligente via WhatsApp"
+    "title": "Leedi Admin",
+    "description": "Painel administrativo do workspace"
   },
   "home": {
-    "heading": "Bem-vindo ao Leedi"
+    "heading": "Visão Geral"
+  },
+  "adminNav": {
+    "visaoGeral": "Visão Geral",
+    "clientes": "Clientes",
+    "financeiro": "Financeiro",
+    "operacional": "Operacional",
+    "configuracoes": "Configurações"
   },
   "tenants": {
     "title": "Tenants",

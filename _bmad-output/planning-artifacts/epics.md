@@ -283,7 +283,7 @@ FR7: Epic 2 - Invited user accepts, creates password, enters tenant
 FR8: Epic 2 - Super-admin workspace access + impersonation
 FR9: Epic 2 - RBAC enforces role permissions
 FR10: Epic 19 - Onboarding wizard 5-step saveable/resumable
-FR11: Epic 19 - Step 1: company data
+FR11: Epic 19 - Step 1: company data (name, logo, segment) — custom colors deferred to V1.5
 FR12: Epic 19 - Step 2: WhatsApp connection setup with validation
 FR13: Epic 19 - Step 3: Hotmart gateway connection + test event
 FR14: Epic 19 - Step 4: agent configuration in wizard
@@ -365,7 +365,7 @@ FR89: Epic 5 - CSV import (phone required, deduplication)
 FR90: Epic 5 - Manual and auto-tags
 FR91: Epic 5 - Opt-out management
 FR92: Epic 11 - Hotmart webhook receiver + validation + normalization
-FR93: Epic 11 - Canonical events processing (12 event types)
+FR93: Epic 11 - Canonical events processing (11 event types)
 FR94: Epic 11 - Purchase approved marks lead as buyer
 FR95: Epic 11 - Abandoned cart / boleto / pix recovery activation
 FR96: Epic 11 - Cancellation/refund reverts lead status
@@ -417,7 +417,7 @@ NFR2: Epic 2 - RBAC role enforcement
 NFR3: Epic 4 - Encrypted storage for access tokens and secrets
 NFR4: Epic 11 - Idempotent webhook processing
 NFR5: Epic 13 - Dispatch throttling respects Meta tier
-NFR6: Epic 13 - Quality rating drop pauses dispatches + alerts
+NFR6: Epic 13 (Story 13.5) - Quality rating drop pauses dispatches + alerts
 NFR7: Epic 7 - Prompt caching mandatory for agent conversations
 NFR8: Epic 7 - API rate limiting per tenant (Redis)
 NFR9: Epic 7 - Distributed lock prevents parallel conversation processing
@@ -1632,7 +1632,7 @@ So that the rest of the system only handles well-defined events regardless of Ho
 
 **Given** Hotmart sends a webhook with invalid signature
 **When** received
-**Then** it responds `403 Forbidden` and discards without processing
+**Then** it responds `401 Unauthorized` and discards without processing
 
 **Given** the same Hotmart event ID is received twice
 **When** the second event arrives
@@ -1798,6 +1798,28 @@ So that warm leads are nudged without unnecessary template costs.
 **When** the follow-up is attempted
 **Then** `followups.status` updates to `janela_fechada`
 **And** if a re-engagement dispatch rule exists, it is triggered instead
+
+### Story 13.5: Quality Gate — Dispatch Pausing on Quality Rating Drop
+
+As a **tenant owner**,
+I want dispatches to pause automatically when my WhatsApp number's quality rating drops to RED,
+So that my number is protected from being flagged or banned by Meta during bulk sends.
+
+**Acceptance Criteria:**
+
+**Given** Meta sends a `phone_number_quality_update` webhook with quality RED or event FLAGGED
+**When** processed
+**Then** `whatsapp_connections.quality_tier` updates to `red`
+**And** all active `dispatch_jobs` for that tenant are paused with `paused_reason: "quality_red"`
+**And** a notification is sent to tenant owners
+
+**Given** `whatsapp_connections.quality_tier = 'red'`
+**When** the dispatch BullMQ worker starts processing a job
+**Then** the job is set to `pausado` with `paused_reason: "quality_red"` and aborts without sending
+
+**Given** Meta sends a quality update restoring GREEN or YELLOW
+**When** processed
+**Then** quality_tier is updated but auto-paused jobs are NOT automatically resumed (manual resume required)
 
 ---
 

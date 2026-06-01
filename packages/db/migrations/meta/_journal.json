@@ -22,6 +22,27 @@
       "when": 1780100356821,
       "tag": "0002_mute_havok",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1780190276796,
+      "tag": "0003_fast_morg",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780233999522,
+      "tag": "0004_add_messages_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1780309901285,
+      "tag": "0005_melodic_justice",
+      "breakpoints": true
     }
   ]
 }

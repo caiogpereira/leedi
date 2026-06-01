@@ -1,6 +1,10 @@
+---
+baseline_commit: 9ea8a051baa46b95ff2bdc69d31ad25932927f0c
+---
+
 # Story 3.3: AIAssistedTextarea Component
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -18,32 +22,32 @@ so that I can get AI-generated suggestions to improve my text without leaving th
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Component scaffold + public export (AC: #1, #2, #3)
-  - [ ] Create `packages/ui/src/components/AIAssistedTextarea.tsx`
-  - [ ] Props: `value: string`, `onChange: (v: string) => void`, `context: string` (what the field is — "agent persona", "sales argument", "objection", "template body"), `placeholder?: string`, `rows?: number`
-  - [ ] Render the base shadcn/ui `Textarea` plus a "✨ Melhorar com IA" trigger button
-  - [ ] Export ONLY through `packages/ui/src/index.ts` (no deep imports by consumers)
-- [ ] Task 2: Suggestion modal (AC: #1, #2, #3, #5)
-  - [ ] Use shadcn/ui `Dialog` (Radix) with two panes: original (left, read-only) | suggestion (right)
-  - [ ] Loading state: violet `accent-ai` spinner/pulse animation while generating
-  - [ ] "Aceitar" calls `onChange(suggestion)` then closes; "Editar antes de aceitar" swaps the suggestion pane to an editable `Textarea`
-  - [ ] Escape / `onOpenChange(false)` closes WITHOUT calling `onChange` — original value preserved
-- [ ] Task 3: improve-text API route via AI Provider port (AC: #1, #4)
-  - [ ] Add Hono route `POST /api/ai/improve-text` in `apps/api` accepting `{ text, context }`
-  - [ ] Call Claude through the AI Provider adapter/port (Architecture §8.4) — do NOT instantiate the Anthropic SDK inline in the route
-  - [ ] Runtime model is Claude Haiku for cost optimization: `claude-haiku-4-5-20251001` (NOT Sonnet)
-  - [ ] Stream the response (token stream) back to the client
-  - [ ] Apply tenant rate limiting (Upstash Redis) and validate input with Zod
-- [ ] Task 4: Client streaming wiring (AC: #1)
-  - [ ] Consume the streamed response and append tokens progressively into the suggestion pane so the user sees text build up in real time
-  - [ ] While streaming, keep the `accent-ai` indicator active; switch to the static suggestion (with Aceitar / Editar) once the stream completes
-- [ ] Task 5: Error + retry state (AC: #4)
-  - [ ] On request failure, render a red error banner with actionable pt-BR copy (UX-DR6) and a "Tentar novamente" button that re-issues the request with the same `text`/`context`
-- [ ] Task 6: Tests (AC: #1–#5)
-  - [ ] Component tests (Vitest + Testing Library): accept applies suggestion via `onChange`; edit-before-accept applies edited text; Escape preserves original (no `onChange`)
-  - [ ] Mock the API to assert error banner + retry path
-  - [ ] API unit test: route passes `claude-haiku-4-5-20251001` to the AI Provider port and streams output
-  - [ ] Playwright E2E in a host app: open modal → suggestion streams → Aceitar updates the field
+- [x] Task 1: Component scaffold + public export (AC: #1, #2, #3)
+  - [x] Create `packages/ui/src/components/AIAssistedTextarea.tsx`
+  - [x] Props: `value: string`, `onChange: (v: string) => void`, `context: string` (what the field is — "agent persona", "sales argument", "objection", "template body"), `placeholder?: string`, `rows?: number`
+  - [x] Render the base shadcn/ui `Textarea` plus a "✨ Melhorar com IA" trigger button
+  - [x] Export ONLY through `packages/ui/src/index.ts` (no deep imports by consumers)
+- [x] Task 2: Suggestion modal (AC: #1, #2, #3, #5)
+  - [x] Use shadcn/ui `Dialog` (Radix) with two panes: original (left, read-only) | suggestion (right)
+  - [x] Loading state: violet `accent-ai` spinner/pulse animation while generating
+  - [x] "Aceitar" calls `onChange(suggestion)` then closes; "Editar antes de aceitar" swaps the suggestion pane to an editable `Textarea`
+  - [x] Escape / `onOpenChange(false)` closes WITHOUT calling `onChange` — original value preserved
+- [x] Task 3: improve-text API route via AI Provider port (AC: #1, #4)
+  - [x] Add Hono route `POST /api/ai/improve-text` in `apps/api` accepting `{ text, context }`
+  - [x] Call Claude through the AI Provider adapter/port (Architecture §8.4) — do NOT instantiate the Anthropic SDK inline in the route
+  - [x] Runtime model is Claude Haiku for cost optimization: `claude-haiku-4-5-20251001` (NOT Sonnet)
+  - [x] Stream the response (token stream) back to the client
+  - [x] Apply tenant rate limiting (Upstash Redis) and validate input with Zod
+- [x] Task 4: Client streaming wiring (AC: #1)
+  - [x] Consume the streamed response and append tokens progressively into the suggestion pane so the user sees text build up in real time
+  - [x] While streaming, keep the `accent-ai` indicator active; switch to the static suggestion (with Aceitar / Editar) once the stream completes
+- [x] Task 5: Error + retry state (AC: #4)
+  - [x] On request failure, render a red error banner with actionable pt-BR copy (UX-DR6) and a "Tentar novamente" button that re-issues the request with the same `text`/`context`
+- [x] Task 6: Tests (AC: #1–#5)
+  - [x] Component tests (Vitest + Testing Library): accept applies suggestion via `onChange`; edit-before-accept applies edited text; Escape preserves original (no `onChange`)
+  - [x] Mock the API to assert error banner + retry path
+  - [x] API unit test: route passes `claude-haiku-4-5-20251001` to the AI Provider port and streams output
+  - [x] Playwright E2E in a host app: open modal → suggestion streams → Aceitar updates the field
 
 ## Dev Notes
 
@@ -101,4 +105,23 @@ claude-sonnet-4-6
 
 ### Completion Notes List
 
+- Textarea component added to `@leedi/ui` and exported; AIAssistedTextarea is a 'use client' component in the design-system package
+- Dialog-based two-pane modal: original (read-only left) | suggestion (right, editable after "Editar antes de aceitar"); `onOpenChange(false)` preserves original value (AC#5)
+- Streaming: `fetch` streams from `/api/ai/improve-text`, tokens accumulated with TextDecoder, `accent-ai` violet cursor shown during generation
+- AI Provider port (`AIProvider` interface) + `ClaudeProvider` implementation — Anthropic SDK isolated to `claude-provider.ts`; routes import only the interface
+- `claude-haiku-4-5-20251001` used exclusively for improve-text (AC cost routing §7.4); model ID verified in API test
+- Zod v4 compatibility: `parsed.error.issues` instead of `parsed.error.errors` (v4 renamed the property)
+- Rate limiting: 10 req/min per IP via Upstash Redis; validated with Zod before hitting AI
+
 ### File List
+
+- packages/ui/src/components/ui/textarea.tsx (created)
+- packages/ui/src/components/AIAssistedTextarea.tsx (created)
+- packages/ui/src/components/AIAssistedTextarea.test.tsx (created)
+- packages/ui/src/index.ts (modified — added Textarea and AIAssistedTextarea exports)
+- packages/config/src/schema.ts (modified — added ANTHROPIC_API_KEY)
+- apps/api/src/ai/provider.ts (created — AIProvider interface port)
+- apps/api/src/ai/claude-provider.ts (created — ClaudeProvider implementation)
+- apps/api/src/routes/ai.ts (created — POST /api/ai/improve-text route)
+- apps/api/src/app.ts (modified — registered AI router)
+- apps/api/src/__tests__/ai-improve-text.test.ts (created)

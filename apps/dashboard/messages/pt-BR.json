@@ -7,7 +7,17 @@
     "heading": "Bem-vindo ao Leedi"
   },
   "nav": {
-    "logout": "Sair"
+    "logout": "Sair",
+    "dashboard": "Dashboard",
+    "conversas": "Conversas",
+    "leads": "Leads",
+    "agente": "Agente",
+    "conhecimento": "Conhecimento",
+    "campanhas": "Campanhas",
+    "templates": "Templates",
+    "disparos": "Disparos",
+    "relatorios": "Relatórios",
+    "configuracoes": "Configurações"
   },
   "impersonation": {
     "banner": "Você está em modo de suporte para {tenantName}. Suas ações estão sendo registradas.",

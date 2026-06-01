@@ -64,6 +64,7 @@ export function hasPermission(role: TenantRole, permission: Permission): boolean
  */
 export const ROUTE_PERMISSION_MAP: Record<string, readonly TenantRole[]> = {
   '/settings/billing': ['owner'],
+  '/settings/whatsapp': ['owner'],
   '/settings/agent': ['owner', 'admin'],
   '/settings/team': ['owner', 'admin'],
   '/settings': ['owner', 'admin'],
