@@ -24,6 +24,7 @@
     "@leedi/config": "workspace:*",
     "@leedi/connection": "workspace:*",
     "@leedi/db": "workspace:*",
+    "@leedi/knowledge": "workspace:*",
     "@leedi/lead": "workspace:*",
     "@leedi/messaging": "workspace:*",
     "@leedi/observability": "workspace:*",

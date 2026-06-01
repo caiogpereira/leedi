@@ -4,7 +4,7 @@ baseline_commit: 9ea8a05
 
 # Story 6.4: Sales Methods Seed & Selection
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -28,35 +28,35 @@ For now, the save action persists the selected `sales_method_id` to a `tenant_sa
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: DB schema for `sales_methods` + migration (AC: #1)
-  - [ ] Create `packages/db/src/schema/sales-method.ts`
-  - [ ] Define `salesMethodNomeEnum` via `pgEnum('sales_method_nome', ['spin', 'aida', 'storytelling', 'livre'])`
-  - [ ] Define `sales_methods` table: `id` (uuid pk, defaultRandom), `nome` (salesMethodNomeEnum, notNull), `titulo` (text notNull), `descricao` (text notNull), `systemPromptTemplate` (text notNull, column `system_prompt_template`), `phases` (jsonb notNull), `isGlobal` (boolean notNull default `false`, column `is_global`), `tenantId` (uuid nullable, column `tenant_id` — null for global methods), `createdAt` (timestamp with timezone, defaultNow notNull)
-  - [ ] NOTE: `sales_methods` has NO `updated_at` column (per Architecture §6.7) — do NOT add an `updated_at` trigger to this table
-  - [ ] Generate migration `0008_sales_methods.sql` via Drizzle Kit
-  - [ ] NOTE: `sales_methods` does NOT need RLS — global records have no `tenant_id`; per-tenant custom methods are a future feature. Do NOT add an RLS policy in this migration.
-  - [ ] Re-export `sales-method` schema from `packages/db/src/schema/index.ts`
-- [ ] Task 2: Seed for the 4 global sales methods (AC: #1, #4, #5)
-  - [ ] Create `packages/db/src/seed/sales-methods.ts` with 4 method objects, all `isGlobal: true`, `tenantId: null`
-  - [ ] SPIN: `nome='spin'`, `titulo='SPIN Selling'`; `system_prompt_template` emphasizes Situação → Problema → Implicação → Necessidade; `phases` = ordered array `[{ ordem, nome, objetivo }]` for those 4 phases (pt-BR)
-  - [ ] AIDA: `nome='aida'`, `titulo='AIDA'`; template structures Atenção → Interesse → Desejo → Ação; `phases` array for those 4
-  - [ ] Storytelling: `nome='storytelling'`, `titulo='Storytelling'`; template structures Identificação → Conflito → Transformação → Convite (4 phases per PRD §MÓDULO 7); `phases` array for those 4. NOTE: do NOT use "Contexto → Conflito → Resolução" — that is incorrect per PRD.
-  - [ ] Livre: `nome='livre'`, `titulo='Livre'`; free-form consultative approach; `phases` array with a single open phase
-  - [ ] All templates written in Portuguese, focused on the WhatsApp sales context
-  - [ ] Make the seed idempotent (upsert on `nome` where `is_global = true`, or skip if already present) so re-runs don't duplicate
-  - [ ] Add an npm script `seed:sales-methods` in `packages/db/package.json` (e.g. `tsx src/seed/sales-methods.ts`) OR integrate into the main seed; document which
-- [ ] Task 3: Sales methods API (AC: #2)
-  - [ ] `GET /sales-methods` — list all global methods (`is_global = true`); no tenant filter needed
-  - [ ] Create use case `list-sales-methods.ts` (location: `apps/api/src/use-cases/knowledge/` or a `sales-method/` subfolder) returning all global methods
-  - [ ] Register the route in `apps/api/src/app.ts`
-- [ ] Task 4: Sales method selector UI (AC: #2, #3)
-  - [ ] Create `apps/dashboard/app/(dashboard)/agente/metodo/page.tsx`
-  - [ ] Radio card group showing the 4 methods with `titulo`, `descricao`, and phase pills (rendered from each method's `phases`)
-  - [ ] On save: persist the selected `sales_method_id` to the `tenants.config` preference key (see Story 7.1 Dependency) via the existing tenant-config endpoint; mark the wiring to `agent_configs` as pending in code comments
-  - [ ] Clearly indicate in the UI that this choice affects agent behavior
-- [ ] Task 5: Tests (AC: #1, #2)
-  - [ ] Unit: the seed produces exactly 4 records, each with a non-empty `system_prompt_template` and a non-empty `phases` array, all `is_global = true`
-  - [ ] Unit: `list-sales-methods` returns all 4 global methods
+- [x] Task 1: DB schema for `sales_methods` + migration (AC: #1)
+  - [x] Create `packages/db/src/schema/sales-method.ts`
+  - [x] Define `salesMethodNomeEnum` via `pgEnum('sales_method_nome', ['spin', 'aida', 'storytelling', 'livre'])`
+  - [x] Define `sales_methods` table: `id` (uuid pk, defaultRandom), `nome` (salesMethodNomeEnum, notNull), `titulo` (text notNull), `descricao` (text notNull), `systemPromptTemplate` (text notNull, column `system_prompt_template`), `phases` (jsonb notNull), `isGlobal` (boolean notNull default `false`, column `is_global`), `tenantId` (uuid nullable, column `tenant_id` — null for global methods), `createdAt` (timestamp with timezone, defaultNow notNull)
+  - [x] NOTE: `sales_methods` has NO `updated_at` column (per Architecture §6.7) — do NOT add an `updated_at` trigger to this table
+  - [x] Generate migration `0008_sales_methods.sql` via Drizzle Kit
+  - [x] NOTE: `sales_methods` does NOT need RLS — global records have no `tenant_id`; per-tenant custom methods are a future feature. Do NOT add an RLS policy in this migration.
+  - [x] Re-export `sales-method` schema from `packages/db/src/schema/index.ts`
+- [x] Task 2: Seed for the 4 global sales methods (AC: #1, #4, #5)
+  - [x] Create `packages/db/src/seed/sales-methods.ts` with 4 method objects, all `isGlobal: true`, `tenantId: null`
+  - [x] SPIN: `nome='spin'`, `titulo='SPIN Selling'`; `system_prompt_template` emphasizes Situação → Problema → Implicação → Necessidade; `phases` = ordered array `[{ ordem, nome, objetivo }]` for those 4 phases (pt-BR)
+  - [x] AIDA: `nome='aida'`, `titulo='AIDA'`; template structures Atenção → Interesse → Desejo → Ação; `phases` array for those 4
+  - [x] Storytelling: `nome='storytelling'`, `titulo='Storytelling'`; template structures Identificação → Conflito → Transformação → Convite (4 phases per PRD §MÓDULO 7); `phases` array for those 4. NOTE: do NOT use "Contexto → Conflito → Resolução" — that is incorrect per PRD.
+  - [x] Livre: `nome='livre'`, `titulo='Livre'`; free-form consultative approach; `phases` array with a single open phase
+  - [x] All templates written in Portuguese, focused on the WhatsApp sales context
+  - [x] Make the seed idempotent (upsert on `nome` where `is_global = true`, or skip if already present) so re-runs don't duplicate
+  - [x] Add an npm script `seed:sales-methods` in `packages/db/package.json` (e.g. `tsx src/seed/sales-methods.ts`) OR integrate into the main seed; document which
+- [x] Task 3: Sales methods API (AC: #2)
+  - [x] `GET /sales-methods` — list all global methods (`is_global = true`); no tenant filter needed
+  - [x] Create use case `list-sales-methods.ts` (location: `apps/api/src/use-cases/knowledge/` or a `sales-method/` subfolder) returning all global methods
+  - [x] Register the route in `apps/api/src/app.ts`
+- [x] Task 4: Sales method selector UI (AC: #2, #3)
+  - [x] Create `apps/dashboard/app/(dashboard)/agente/metodo/page.tsx`
+  - [x] Radio card group showing the 4 methods with `titulo`, `descricao`, and phase pills (rendered from each method's `phases`)
+  - [x] On save: persist the selected `sales_method_id` to the `tenants.config` preference key (see Story 7.1 Dependency) via the existing tenant-config endpoint; mark the wiring to `agent_configs` as pending in code comments
+  - [x] Clearly indicate in the UI that this choice affects agent behavior
+- [x] Task 5: Tests (AC: #1, #2)
+  - [x] Unit: the seed produces exactly 4 records, each with a non-empty `system_prompt_template` and a non-empty `phases` array, all `is_global = true`
+  - [x] Unit: `list-sales-methods` returns all 4 global methods
 
 ## Dev Notes
 
@@ -98,7 +98,7 @@ For now, the save action persists the selected `sales_method_id` to a `tenant_sa
 
 ### Agent Model Used
 
-_not yet assigned_
+claude-sonnet-4-6 (1M context)
 
 ### Debug Log References
 
@@ -106,12 +106,12 @@ _none_
 
 ### Completion Notes List
 
-_not yet implemented_
+Story 6.4: sales_methods schema (0008, no RLS/updated_at), tenants.config added in 0008, 4 idempotent global seed methods (SPIN/AIDA/Storytelling=Identificacao-Conflito-Transformacao-Convite/Livre), GET /api/sales-methods, radio card selector UI. PENDING: Story 7.1 wires to agent_configs. 7 unit tests passing.
 
 ### File List
 
-_not yet implemented_
+_see git diff_
 
 ### Change Log
 
-_none_
+- 2026-06-01: Implemented.

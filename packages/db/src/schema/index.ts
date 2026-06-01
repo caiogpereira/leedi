@@ -5,3 +5,5 @@ export * from './connection.js';
 export * from './message.js';
 export * from './lead.js';
 export * from './messaging.js';
+export * from './knowledge.js';
+export * from './sales-method.js';

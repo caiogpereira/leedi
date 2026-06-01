@@ -14,7 +14,8 @@
     "migrate": "drizzle-kit migrate",
     "check": "drizzle-kit check",
     "studio": "drizzle-kit studio",
-    "migrate:run": "tsx src/migrate.ts"
+    "migrate:run": "tsx src/migrate.ts",
+    "seed:sales-methods": "tsx src/seed/sales-methods.ts"
   },
   "devDependencies": {
     "@leedi/eslint-config": "workspace:*",

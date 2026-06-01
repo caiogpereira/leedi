@@ -11,12 +11,34 @@ const improveTextSchema = z.object({
   context: z.string().min(1, 'context is required').max(200, 'context is too long'),
 });
 
+const contextInstructions: Record<string, string> = {
+  sales_argument:
+    'Torne-o mais persuasivo e focado nos benefícios. Máximo 2 frases, em português do Brasil.',
+  differential:
+    'Destaque o diferencial de forma clara e memorável. Máximo 2 frases, em português do Brasil.',
+  social_proof:
+    'Torne a prova social mais convincente e específica. Máximo 2 frases, em português do Brasil.',
+  guarantee:
+    'Redija a garantia de forma clara, tranquilizadora e profissional, em português do Brasil.',
+  bonus:
+    'Descreva o bônus de forma atraente, destacando o valor percebido. Máximo 2 frases, em português do Brasil.',
+  faq_answer:
+    'Responda de forma clara, direta e amigável. Português do Brasil, linguagem natural de WhatsApp.',
+  objection_counter:
+    'Redija um contorno de objeção empático e persuasivo. Máximo 2 frases, em português do Brasil.',
+};
+
 function buildPrompt(text: string, context: string): string {
-  return `You are a professional copywriter assistant for a Brazilian WhatsApp sales platform.
+  const specificInstruction = contextInstructions[context];
+  const instruction = specificInstruction
+    ? specificInstruction
+    : `Melhore o texto de ${context}. Mantenha o significado original, em português do Brasil.`;
 
-Improve the following ${context} text. Make it clearer, more compelling, and more professional while preserving the original meaning and keeping it in Brazilian Portuguese. Return ONLY the improved text — no explanation, no preamble, no markdown.
+  return `Você é um especialista em copywriting para vendas pelo WhatsApp no mercado brasileiro.
 
-Original text:
+Melhore o seguinte texto. ${instruction} Retorne APENAS o texto melhorado — sem explicações, sem preâmbulo, sem markdown.
+
+Texto original:
 ${text}`;
 }
 

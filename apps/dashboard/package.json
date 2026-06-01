@@ -27,6 +27,7 @@
     },
     "dependencies": {
         "@leedi/auth": "workspace:*",
+        "@leedi/knowledge": "workspace:*",
         "@leedi/config": "workspace:*",
         "@leedi/connection": "workspace:*",
         "@leedi/db": "workspace:*",

@@ -4,7 +4,7 @@ baseline_commit: 9ea8a05
 
 # Story 6.3: FAQ & Objection-Counter Library
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -23,37 +23,37 @@ so that the agent responds consistently to common questions and handles predicta
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Knowledge base use cases in `@leedi/knowledge` + thin API router (AC: #1, #2, #4, #6)
-  - [ ] Create use cases under `packages/knowledge/src/use-cases/`: `create-knowledge-entry.ts`, `list-knowledge-base.ts`, `update-knowledge-entry.ts`, `delete-knowledge-entry.ts` — all via `withTenant`; export from `packages/knowledge/src/index.ts`
-  - [ ] Create thin Hono router `apps/api/src/routes/knowledge/knowledge-base.ts` — calls `@leedi/knowledge` only; contains ZERO business logic
-  - [ ] `GET /knowledge-base?tipo=faq|objecao&categoria=` → calls `listKnowledgeBase`
-  - [ ] `POST /knowledge-base` → calls `createKnowledgeEntry`
-  - [ ] `PATCH /knowledge-base/:id` → calls `updateKnowledgeEntry`
-  - [ ] `DELETE /knowledge-base/:id` → calls `deleteKnowledgeEntry` (soft delete, `ativo = false`)
-  - [ ] Register the knowledge-base router in `apps/api/src/app.ts`
-- [ ] Task 2: `consultar_base_conhecimento` use case — agent tool foundation (AC: #5)
-  - [ ] Create `packages/knowledge/src/use-cases/search-knowledge-base.ts` (in `@leedi/knowledge`, NOT in `packages/db`)
-  - [ ] Signature: `searchKnowledgeBase(tenantId: string, opts: { tipo?: 'faq' | 'objecao'; categoria?: string; query?: string })`
-  - [ ] V1: keyword/exact match on `categoria` + `tipo` (optionally a simple ILIKE on `query` over the question/objection text); NO vector search (embedding stays unused)
-  - [ ] Returns an array of `{ perguntaOuObjecao, respostaOuContorno, tipo, categoria }` for active entries only
-  - [ ] All reads via `withTenant`; export from `packages/knowledge/src/index.ts`
-- [ ] Task 3: FAQ management UI (AC: #1, #3)
-  - [ ] Create `apps/dashboard/app/(dashboard)/conhecimento/faq/page.tsx`
-  - [ ] List of FAQ entries (`tipo='faq'`) with inline edit
-  - [ ] "Adicionar FAQ" form (`perguntaOuObjecao` + `respostaOuContorno`)
-  - [ ] AI improvement button on the answer field using the `AIAssistedTextarea` from `@leedi/ui` with `context="faq_answer"` (reuses the improve-text route extended in Story 6.2)
-  - [ ] Success toast on save: "Contorno atualizado com sucesso." for objection counters (and an appropriate FAQ-save toast)
-- [ ] Task 4: Objections management UI (AC: #2, #3, #4, #6)
-  - [ ] Create `apps/dashboard/app/(dashboard)/conhecimento/objecoes/page.tsx`
-  - [ ] Group entries (`tipo='objecao'`) by `categoria`; add a filter control by `categoria`
-  - [ ] Each entry shows objection + counter with edit + AI improve (`context="objection_counter"`) + delete (soft)
-  - [ ] "Adicionar objeção" form with a `categoria` selector: `preco | tempo | capacidade | outros`
-  - [ ] Toast on save: "Contorno atualizado com sucesso." (exact copy, AC #3)
-  - [ ] Delete confirmation dialog; on confirm, soft-delete and remove from the active list
-- [ ] Task 5: Tests (AC: #1, #5, #6)
-  - [ ] Unit: `search-knowledge-base` returns the correct entries filtered by `categoria` + `tipo`, active only
-  - [ ] Unit: `create-knowledge-entry` validates required fields (`tipo`, `perguntaOuObjecao`, `respostaOuContorno`)
-  - [ ] Unit: `delete-knowledge-entry` sets `ativo = false` (soft delete) and the entry no longer appears in `list-knowledge-base`
+- [x] Task 1: Knowledge base use cases in `@leedi/knowledge` + thin API router (AC: #1, #2, #4, #6)
+  - [x] Create use cases under `packages/knowledge/src/use-cases/`: `create-knowledge-entry.ts`, `list-knowledge-base.ts`, `update-knowledge-entry.ts`, `delete-knowledge-entry.ts` — all via `withTenant`; export from `packages/knowledge/src/index.ts`
+  - [x] Create thin Hono router `apps/api/src/routes/knowledge/knowledge-base.ts` — calls `@leedi/knowledge` only; contains ZERO business logic
+  - [x] `GET /knowledge-base?tipo=faq|objecao&categoria=` → calls `listKnowledgeBase`
+  - [x] `POST /knowledge-base` → calls `createKnowledgeEntry`
+  - [x] `PATCH /knowledge-base/:id` → calls `updateKnowledgeEntry`
+  - [x] `DELETE /knowledge-base/:id` → calls `deleteKnowledgeEntry` (soft delete, `ativo = false`)
+  - [x] Register the knowledge-base router in `apps/api/src/app.ts`
+- [x] Task 2: `consultar_base_conhecimento` use case — agent tool foundation (AC: #5)
+  - [x] Create `packages/knowledge/src/use-cases/search-knowledge-base.ts` (in `@leedi/knowledge`, NOT in `packages/db`)
+  - [x] Signature: `searchKnowledgeBase(tenantId: string, opts: { tipo?: 'faq' | 'objecao'; categoria?: string; query?: string })`
+  - [x] V1: keyword/exact match on `categoria` + `tipo` (optionally a simple ILIKE on `query` over the question/objection text); NO vector search (embedding stays unused)
+  - [x] Returns an array of `{ perguntaOuObjecao, respostaOuContorno, tipo, categoria }` for active entries only
+  - [x] All reads via `withTenant`; export from `packages/knowledge/src/index.ts`
+- [x] Task 3: FAQ management UI (AC: #1, #3)
+  - [x] Create `apps/dashboard/app/(dashboard)/conhecimento/faq/page.tsx`
+  - [x] List of FAQ entries (`tipo='faq'`) with inline edit
+  - [x] "Adicionar FAQ" form (`perguntaOuObjecao` + `respostaOuContorno`)
+  - [x] AI improvement button on the answer field using the `AIAssistedTextarea` from `@leedi/ui` with `context="faq_answer"` (reuses the improve-text route extended in Story 6.2)
+  - [x] Success toast on save: "Contorno atualizado com sucesso." for objection counters (and an appropriate FAQ-save toast)
+- [x] Task 4: Objections management UI (AC: #2, #3, #4, #6)
+  - [x] Create `apps/dashboard/app/(dashboard)/conhecimento/objecoes/page.tsx`
+  - [x] Group entries (`tipo='objecao'`) by `categoria`; add a filter control by `categoria`
+  - [x] Each entry shows objection + counter with edit + AI improve (`context="objection_counter"`) + delete (soft)
+  - [x] "Adicionar objeção" form with a `categoria` selector: `preco | tempo | capacidade | outros`
+  - [x] Toast on save: "Contorno atualizado com sucesso." (exact copy, AC #3)
+  - [x] Delete confirmation dialog; on confirm, soft-delete and remove from the active list
+- [x] Task 5: Tests (AC: #1, #5, #6)
+  - [x] Unit: `search-knowledge-base` returns the correct entries filtered by `categoria` + `tipo`, active only
+  - [x] Unit: `create-knowledge-entry` validates required fields (`tipo`, `perguntaOuObjecao`, `respostaOuContorno`)
+  - [x] Unit: `delete-knowledge-entry` sets `ativo = false` (soft delete) and the entry no longer appears in `list-knowledge-base`
 
 ## Dev Notes
 
@@ -101,7 +101,7 @@ so that the agent responds consistently to common questions and handles predicta
 
 ### Agent Model Used
 
-_not yet assigned_
+claude-sonnet-4-6 (1M context)
 
 ### Debug Log References
 
@@ -109,12 +109,12 @@ _none_
 
 ### Completion Notes List
 
-_not yet implemented_
+Story 6.3: create/list/update/delete knowledge base entries, search-knowledge-base (consultar_base_conhecimento) V1 keyword match, FAQ + Objections management UI, toast: Contorno atualizado com sucesso., soft delete only. 4 unit tests passing.
 
 ### File List
 
-_not yet implemented_
+_see git diff_
 
 ### Change Log
 
-_none_
+- 2026-06-01: Implemented.

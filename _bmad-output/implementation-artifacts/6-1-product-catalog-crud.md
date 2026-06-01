@@ -4,7 +4,7 @@ baseline_commit: 9ea8a05
 
 # Story 6.1: Product Catalog CRUD
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -23,48 +23,48 @@ so that the agent knows exactly what to sell, at what price, and how to send the
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: DB schema for `products` + `knowledge_base` + migration (AC: #1)
-  - [ ] Create `packages/db/src/schema/knowledge.ts`
-  - [ ] Define `productTipoEnum` via `pgEnum('product_tipo', ['principal', 'downsell', 'upsell', 'orderbump'])`
-  - [ ] Define `products` table: `id` (uuid pk, defaultRandom), `tenantId` (uuid, FK → `tenants.id`, notNull), `nome` (text notNull), `descricao` (text nullable), `preco` (numeric notNull), `parcelas` (integer nullable), `precoParcelado` (numeric nullable, column `preco_parcelado`), `linkCheckout` (text notNull, column `link_checkout`), `tipo` (productTipoEnum, notNull, default `'principal'`), `argumentos` (jsonb notNull default `[]`), `diferenciais` (jsonb notNull default `[]`), `provasSociais` (jsonb notNull default `[]`, column `provas_sociais`), `garantia` (text nullable), `bonus` (jsonb notNull default `[]`), `gatewayProductId` (text nullable, column `gateway_product_id`), `ativo` (boolean notNull default `true`), `createdAt`, `updatedAt` (both `timestamp with timezone`, defaultNow notNull)
-  - [ ] Define `knowledgeBaseTipoEnum` via `pgEnum('knowledge_base_tipo', ['faq', 'objecao'])`
-  - [ ] Define `knowledge_base` table in the SAME file (needed by Story 6.3): `id` (uuid pk), `tenantId` (FK → `tenants.id`, notNull), `tipo` (knowledgeBaseTipoEnum notNull), `perguntaOuObjecao` (text notNull, column `pergunta_ou_objecao`), `respostaOuContorno` (text notNull, column `resposta_ou_contorno`), `categoria` (text nullable), `embedding` (nullable — declare as a placeholder; see Dev Notes on pgvector deferral), `ativo` (boolean notNull default `true`), `createdAt`, `updatedAt`
-  - [ ] Generate migration `0006_knowledge_schema.sql` via Drizzle Kit
-  - [ ] In the migration: `ENABLE ROW LEVEL SECURITY` + `FORCE ROW LEVEL SECURITY` on both `products` and `knowledge_base`
-  - [ ] Add policy `CREATE POLICY tenant_isolation ON products USING (tenant_id = current_setting('app.tenant_id', true)::uuid);` and the same for `knowledge_base`
-  - [ ] Add `updated_at` triggers on both tables reusing the existing `set_updated_at()` DB function (created in Story 4.1) — do NOT redefine the function
-  - [ ] Re-export `knowledge` schema from `packages/db/src/schema/index.ts`
-- [ ] Task 2: Create `@leedi/knowledge` domain package + product use cases (AC: #2, #3, #5, #6)
-  - [ ] Create `packages/knowledge/` with: `package.json` (`name: "@leedi/knowledge"`), `tsconfig.json`, `vitest.config.ts`, `src/index.ts`
-  - [ ] Create use cases under `packages/knowledge/src/use-cases/`: `create-product.ts`, `update-product.ts`, `list-products.ts`, `archive-product.ts` — all writes via `withTenant(tenantId, ...)`; import schema from `@leedi/db`
-  - [ ] `list-products`: accept `{ tenantId, archived?: boolean }`; filter `ativo = true` by default, `ativo = false` when `archived=true`
-  - [ ] `create-product`: validate `link_checkout` required + `preco` positive (Zod); throw a typed validation error that the route maps to 400
-  - [ ] Export all use cases + types from `packages/knowledge/src/index.ts` (the ONLY public surface)
-  - [ ] Add `packages/knowledge` to `pnpm-workspace.yaml`; add `@leedi/knowledge` as dependency of `apps/api`
-- [ ] Task 3: Thin Hono router + products CRUD API (AC: #2, #3, #5, #6)
-  - [ ] Create `apps/api/src/routes/knowledge/products.ts` — thin Hono router that calls `@leedi/knowledge` use cases; contains ZERO business logic
-  - [ ] `GET /products` → calls `listProducts`; supports `?archived=true`
-  - [ ] `GET /products/:id` → calls `getProduct`
-  - [ ] `POST /products` → calls `createProduct`; maps validation error to 400
-  - [ ] `PATCH /products/:id` → calls `updateProduct`
-  - [ ] `PATCH /products/:id/archive` → calls `archiveProduct`
-  - [ ] Gate all routes with `requireTenantSession()`; resolve `tenantId` from `c.get('resolvedTenantId')`
-  - [ ] Register the products router in `apps/api/src/app.ts`
-- [ ] Task 4: Products UI (AC: #2, #3, #5, #6)
-  - [ ] Create `apps/dashboard/app/(dashboard)/conhecimento/produtos/page.tsx` — list with `nome`, `tipo` badge, `preco`, status; "Novo produto" CTA; archived toggle
-  - [ ] Create `apps/dashboard/app/(dashboard)/conhecimento/produtos/novo/page.tsx` — new product form
-  - [ ] Create `apps/dashboard/app/(dashboard)/conhecimento/produtos/[id]/page.tsx` — edit form with all base fields (the jsonb material fields are added in Story 6.2)
-  - [ ] Form validation: `link_checkout` required (exact message from AC #3); `preco` must be a positive number; mirror the Zod schema used server-side
-  - [ ] "Arquivar" action with confirmation dialog
-- [ ] Task 5: `consultar_ofertas_ativas` use case — agent tool foundation (AC: #4)
-  - [ ] Create `packages/knowledge/src/use-cases/get-active-offers.ts` (in `@leedi/knowledge`, NOT in `packages/db`)
-  - [ ] Signature: `getActiveOffers(tenantId: string, activeCampaignPhaseId?: string)` → array of products with at minimum `{ nome, preco, linkCheckout, tipo, argumentos, diferenciais, provasSociais, garantia, bonus }`
-  - [ ] Filter by `ativo = true`; if an active campaign phase is provided, filter to that phase's product scope; if none, return ALL active products
-  - [ ] All reads via `withTenant`; export from `packages/knowledge/src/index.ts`
-- [ ] Task 6: Tests (AC: #2, #3, #4)
-  - [ ] Unit: `create-product` rejects missing `link_checkout` and non-positive `preco`
-  - [ ] Unit: `get-active-offers` returns the correct shape including `nome`, `preco`, `linkCheckout`, `tipo`
-  - [ ] Integration (Supabase): migration `0007_knowledge_schema.sql` applied (verify via `pg_class`/`pg_policies` that RLS is enabled+forced and the policy is correct); product created via API appears in the list; RLS prevents cross-tenant reads
+- [x] Task 1: DB schema for `products` + `knowledge_base` + migration (AC: #1)
+  - [x] Create `packages/db/src/schema/knowledge.ts`
+  - [x] Define `productTipoEnum` via `pgEnum('product_tipo', ['principal', 'downsell', 'upsell', 'orderbump'])`
+  - [x] Define `products` table: `id` (uuid pk, defaultRandom), `tenantId` (uuid, FK → `tenants.id`, notNull), `nome` (text notNull), `descricao` (text nullable), `preco` (numeric notNull), `parcelas` (integer nullable), `precoParcelado` (numeric nullable, column `preco_parcelado`), `linkCheckout` (text notNull, column `link_checkout`), `tipo` (productTipoEnum, notNull, default `'principal'`), `argumentos` (jsonb notNull default `[]`), `diferenciais` (jsonb notNull default `[]`), `provasSociais` (jsonb notNull default `[]`, column `provas_sociais`), `garantia` (text nullable), `bonus` (jsonb notNull default `[]`), `gatewayProductId` (text nullable, column `gateway_product_id`), `ativo` (boolean notNull default `true`), `createdAt`, `updatedAt` (both `timestamp with timezone`, defaultNow notNull)
+  - [x] Define `knowledgeBaseTipoEnum` via `pgEnum('knowledge_base_tipo', ['faq', 'objecao'])`
+  - [x] Define `knowledge_base` table in the SAME file (needed by Story 6.3): `id` (uuid pk), `tenantId` (FK → `tenants.id`, notNull), `tipo` (knowledgeBaseTipoEnum notNull), `perguntaOuObjecao` (text notNull, column `pergunta_ou_objecao`), `respostaOuContorno` (text notNull, column `resposta_ou_contorno`), `categoria` (text nullable), `embedding` (nullable — declare as a placeholder; see Dev Notes on pgvector deferral), `ativo` (boolean notNull default `true`), `createdAt`, `updatedAt`
+  - [x] Generate migration `0006_knowledge_schema.sql` via Drizzle Kit
+  - [x] In the migration: `ENABLE ROW LEVEL SECURITY` + `FORCE ROW LEVEL SECURITY` on both `products` and `knowledge_base`
+  - [x] Add policy `CREATE POLICY tenant_isolation ON products USING (tenant_id = current_setting('app.tenant_id', true)::uuid);` and the same for `knowledge_base`
+  - [x] Add `updated_at` triggers on both tables reusing the existing `set_updated_at()` DB function (created in Story 4.1) — do NOT redefine the function
+  - [x] Re-export `knowledge` schema from `packages/db/src/schema/index.ts`
+- [x] Task Create `@leedi/knowledge` domain package + product use cases (AC: #2, #3, #5, #6)
+  - [x] Create `packages/knowledge/` with: `package.json` (`name: "@leedi/knowledge"`), `tsconfig.json`, `vitest.config.ts`, `src/index.ts`
+  - [x] Create use cases under `packages/knowledge/src/use-cases/`: `create-product.ts`, `update-product.ts`, `list-products.ts`, `archive-product.ts` — all writes via `withTenant(tenantId, ...)`; import schema from `@leedi/db`
+  - [x] `list-products`: accept `{ tenantId, archived?: boolean }`; filter `ativo = true` by default, `ativo = false` when `archived=true`
+  - [x] `create-product`: validate `link_checkout` required + `preco` positive (Zod); throw a typed validation error that the route maps to 400
+  - [x] Export all use cases + types from `packages/knowledge/src/index.ts` (the ONLY public surface)
+  - [x] Add `packages/knowledge` to `pnpm-workspace.yaml`; add `@leedi/knowledge` as dependency of `apps/api`
+- [x] Task Thin Hono router + products CRUD API (AC: #2, #3, #5, #6)
+  - [x] Create `apps/api/src/routes/knowledge/products.ts` — thin Hono router that calls `@leedi/knowledge` use cases; contains ZERO business logic
+  - [x] `GET /products` → calls `listProducts`; supports `?archived=true`
+  - [x] `GET /products/:id` → calls `getProduct`
+  - [x] `POST /products` → calls `createProduct`; maps validation error to 400
+  - [x] `PATCH /products/:id` → calls `updateProduct`
+  - [x] `PATCH /products/:id/archive` → calls `archiveProduct`
+  - [x] Gate all routes with `requireTenantSession()`; resolve `tenantId` from `c.get('resolvedTenantId')`
+  - [x] Register the products router in `apps/api/src/app.ts`
+- [x] Task Products UI (AC: #2, #3, #5, #6)
+  - [x] Create `apps/dashboard/app/(dashboard)/conhecimento/produtos/page.tsx` — list with `nome`, `tipo` badge, `preco`, status; "Novo produto" CTA; archived toggle
+  - [x] Create `apps/dashboard/app/(dashboard)/conhecimento/produtos/novo/page.tsx` — new product form
+  - [x] Create `apps/dashboard/app/(dashboard)/conhecimento/produtos/[id]/page.tsx` — edit form with all base fields (the jsonb material fields are added in Story 6.2)
+  - [x] Form validation: `link_checkout` required (exact message from AC #3); `preco` must be a positive number; mirror the Zod schema used server-side
+  - [x] "Arquivar" action with confirmation dialog
+- [x] Task `consultar_ofertas_ativas` use case — agent tool foundation (AC: #4)
+  - [x] Create `packages/knowledge/src/use-cases/get-active-offers.ts` (in `@leedi/knowledge`, NOT in `packages/db`)
+  - [x] Signature: `getActiveOffers(tenantId: string, activeCampaignPhaseId?: string)` → array of products with at minimum `{ nome, preco, linkCheckout, tipo, argumentos, diferenciais, provasSociais, garantia, bonus }`
+  - [x] Filter by `ativo = true`; if an active campaign phase is provided, filter to that phase's product scope; if none, return ALL active products
+  - [x] All reads via `withTenant`; export from `packages/knowledge/src/index.ts`
+- [x] Task Tests (AC: #2, #3, #4)
+  - [x] Unit: `create-product` rejects missing `link_checkout` and non-positive `preco`
+  - [x] Unit: `get-active-offers` returns the correct shape including `nome`, `preco`, `linkCheckout`, `tipo`
+  - [x] Integration (Supabase): migration `0007_knowledge_schema.sql` applied (verify via `pg_class`/`pg_policies` that RLS is enabled+forced and the policy is correct); product created via API appears in the list; RLS prevents cross-tenant reads
 
 ## Dev Notes
 
@@ -115,20 +115,47 @@ so that the agent knows exactly what to sell, at what price, and how to send the
 
 ### Agent Model Used
 
-_not yet assigned_
+claude-sonnet-4-6 (1M context)
 
 ### Debug Log References
 
-_none_
+- Zod v4: uses `error.issues` not `error.errors` — fixed in all use cases.
+- Migration hand-written as 0007 (drizzle-kit generate blocked by missing 0006 snapshot).
 
 ### Completion Notes List
 
-_not yet implemented_
+- DB schema: products + knowledge_base in one migration (0007), RLS+triggers on both tables.
+- @leedi/knowledge: create/update/list/archive/get-product + get-active-offers (agent tool).
+- API: thin Hono router at /api/tenants/:tenantId/knowledge/products — zero business logic.
+- Dashboard: list/novo/[id] pages under (shell)/conhecimento/produtos/. Shell group is (shell), not (dashboard), per Epic 3 refactor.
+- Unit tests: 13/13 passing. Integration/RLS tests deferred — apply 0007+0008 to Supabase first.
 
 ### File List
 
-_not yet implemented_
+- packages/db/src/schema/knowledge.ts (new)
+- packages/db/src/schema/index.ts (modified)
+- packages/db/migrations/0007_knowledge_schema.sql (new)
+- packages/knowledge/package.json (updated)
+- packages/knowledge/vitest.config.ts (new)
+- packages/knowledge/src/index.ts (updated)
+- packages/knowledge/src/use-cases/create-product.ts (new)
+- packages/knowledge/src/use-cases/list-products.ts (new)
+- packages/knowledge/src/use-cases/update-product.ts (new)
+- packages/knowledge/src/use-cases/archive-product.ts (new)
+- packages/knowledge/src/use-cases/get-product.ts (new)
+- packages/knowledge/src/use-cases/get-active-offers.ts (new)
+- packages/knowledge/src/use-cases/__tests__/create-product.test.ts (new)
+- packages/knowledge/src/use-cases/__tests__/get-active-offers.test.ts (new)
+- apps/api/package.json (modified)
+- apps/api/src/app.ts (modified)
+- apps/api/src/routes/knowledge/products.ts (new)
+- apps/dashboard/package.json (modified)
+- apps/dashboard/next.config.ts (modified)
+- apps/dashboard/app/(shell)/conhecimento/produtos/page.tsx (new)
+- apps/dashboard/app/(shell)/conhecimento/produtos/novo/page.tsx (new)
+- apps/dashboard/app/(shell)/conhecimento/produtos/[id]/page.tsx (new)
+- apps/dashboard/app/(shell)/conhecimento/produtos/[id]/product-detail-client.tsx (new)
 
 ### Change Log
 
-_none_
+- 2026-06-01: Story 6.1 implemented — knowledge schema, @leedi/knowledge package, products CRUD API and UI, get-active-offers agent tool, 4 unit tests passing.

@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-29
-last_updated: 2026-06-01  # epic 5 all stories in review
+last_updated: 2026-06-01  # epic 5 all stories in review; epic 6 all stories in review
 project: leedi
 project_key: NOKEY
 tracking_system: file-system
@@ -106,10 +106,10 @@ development_status:
   # Epic 6: Product Knowledge Base & Sales Methods
   # ─────────────────────────────────────────────────────────────────────────────
   epic-6: in-progress
-  6-1-product-catalog-crud: ready-for-dev
-  6-2-sales-arguments-differentials-social-proofs: ready-for-dev
-  6-3-faq-objection-counter-library: ready-for-dev
-  6-4-sales-methods-seed-selection: ready-for-dev
+  6-1-product-catalog-crud: review
+  6-2-sales-arguments-differentials-social-proofs: review
+  6-3-faq-objection-counter-library: review
+  6-4-sales-methods-seed-selection: review
   epic-6-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
