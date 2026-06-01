@@ -70,7 +70,7 @@ so that I can control the agent's behavior without writing code.
 
 ## Dev Notes
 
-- Files to create: `packages/db/src/schema/agent.ts`, `packages/db/migrations/0008_agent_schema.sql`, `apps/api/src/routes/agent/config.ts`, `apps/api/src/use-cases/agent/{get-or-create-agent-config,update-agent-config}.ts`, `packages/agent/` (new package: `package.json`, `tsconfig.json`, `vitest.config.ts`, `src/index.ts`, `src/utils/build-system-prompt.ts`), `apps/dashboard/app/(dashboard)/agente/configuracoes/page.tsx`.
+- Files to create: `packages/db/src/schema/agent.ts`, `packages/db/migrations/0009_agent_schema.sql`, `apps/api/src/routes/agent/config.ts`, `apps/api/src/use-cases/agent/{get-or-create-agent-config,update-agent-config}.ts`, `packages/agent/` (new package: `package.json`, `tsconfig.json`, `vitest.config.ts`, `src/index.ts`, `src/utils/build-system-prompt.ts`), `apps/dashboard/app/(dashboard)/agente/configuracoes/page.tsx`.
 - Files to modify: `packages/db/src/schema/index.ts` (re-export agent), `apps/api/src/app.ts` (register agent config router), root `pnpm-workspace.yaml`/`tsconfig` if needed for the new package, dashboard navigation to add the Agente → Configurações entry.
 - npm dependencies: none new in this story — reuse `@leedi/db`, `zod`, `@leedi/ui` (`Input`, `Switch`, `Select`, `RadioGroup`, `Button`, `AIAssistedTextarea`). The Anthropic SDK is added in Story 7.2.
 - Architecture notes: `agent_configs` is the per-tenant control surface; the agent-memory tables (`agent_threads`, `agent_messages`, `agent_tool_calls`) ship in the SAME migration to avoid schema drift, but are ISOLATED — only `@leedi/agent-memory` (Story 7.2) ever touches them. This story creates the tables; it does not read/write the memory tables.
@@ -83,7 +83,7 @@ so that I can control the agent's behavior without writing code.
 
 ### Pitfalls to avoid
 
-- Do NOT split the agent tables across multiple migrations — one migration (`0008_agent_schema.sql`).
+- Do NOT split the agent tables across multiple migrations — one migration (`0009_agent_schema.sql`).
 - Drizzle Kit does NOT emit `PARTITION BY` — you MUST hand-edit the generated SQL to add range partitioning and create initial monthly partitions. A non-partitioned table now means a painful migration later.
 - Postgres partitioned-table PK/FK trap (PG 11+): a primary key or any unique constraint on a partitioned table MUST include every partition-key column. Since `agent_threads`/`agent_messages` partition by `created_at`, their PK must be composite `(id, created_at)` — `id uuid primary key` alone will FAIL at migration time. Knock-on: a plain FK `agent_messages.thread_id → agent_threads(id)` (and `agent_tool_calls.message_id → agent_messages(id)`) is illegal because the referenced unique key is now composite. Choose one: (a) carry `created_at` into the FK as a composite reference, or (b) drop cross-partition FKs and enforce thread/message linkage at the application layer (recommended for V1 — simpler, and `@leedi/agent-memory` is the sole writer). Document the choice in the migration SQL.
 - Do NOT forget `FORCE ROW LEVEL SECURITY` on every table (owner bypasses the policy otherwise).
