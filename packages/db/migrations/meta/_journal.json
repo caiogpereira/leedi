@@ -43,6 +43,76 @@
       "when": 1780309901285,
       "tag": "0005_melodic_justice",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1780400000000,
+      "tag": "0006_messaging_conversation_windows_partition",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780500000000,
+      "tag": "0007_knowledge_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780600000000,
+      "tag": "0008_sales_methods",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1780700000000,
+      "tag": "0009_agent_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1748822400000,
+      "tag": "0010_campaign_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1748908800000,
+      "tag": "0011_gateway_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1748995100000,
+      "tag": "0012_template_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1748995200000,
+      "tag": "0013_dispatch_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1748995300000,
+      "tag": "0014_dispatch_targets_nullable_job",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1748995400000,
+      "tag": "0015_usage_counters",
+      "breakpoints": true
     }
   ]
 }

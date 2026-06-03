@@ -17,7 +17,7 @@ const FORBIDDEN_MESSAGE = 'Você não tem permissão para acessar esta área';
  */
 export function requirePermission(permission: Permission) {
   return async (ctx: Context, next: Next) => {
-    const role = ctx.get('role') as TenantRole | undefined;
+    const role = ctx.get('tenantRole') as TenantRole | undefined;
     if (!role || !hasPermission(role, permission)) {
       return ctx.json({ error: FORBIDDEN_MESSAGE }, 403);
     }

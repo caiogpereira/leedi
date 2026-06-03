@@ -5,6 +5,7 @@ import { ImpersonationBanner } from "../../components/ImpersonationBanner";
 import { SidebarProvider } from "../../components/shell/sidebar-context";
 import { Sidebar } from "../../components/shell/Sidebar";
 import { Header } from "../../components/shell/Header";
+import { checkUsageBlock } from "@leedi/usage";
 
 interface ImpersonationContext {
   tenantId: string;
@@ -52,9 +53,31 @@ export default async function ShellLayout({
     ? impersonation.tenantId
     : resolveCurrentTenantId(requestHeaders.get("x-leedi-tenant-id"), tenants);
 
+  // 16.3 AC#5: check if the block-at-limit setting is active for the current tenant.
+  const usageBlock = currentTenantId
+    ? await checkUsageBlock(currentTenantId).catch(() => null)
+    : null;
+  const showBlockBanner = usageBlock?.blocked === true;
+
   return (
     <SidebarProvider>
       {impersonation && <ImpersonationBanner tenantName={impersonation.tenantName} />}
+      {showBlockBanner && (
+        <div
+          role="alert"
+          className="flex items-center justify-between bg-red-600 px-4 py-2 text-sm text-white"
+        >
+          <span>
+            Limite de conversas atingido. Reative ou faça upgrade para continuar.
+          </span>
+          <a
+            href="/settings/billing"
+            className="ml-4 shrink-0 rounded border border-white/40 px-3 py-1 text-xs font-medium hover:bg-white/10"
+          >
+            Fazer upgrade
+          </a>
+        </div>
+      )}
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:ring-2 focus:ring-ring"
