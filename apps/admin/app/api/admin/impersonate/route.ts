@@ -5,6 +5,10 @@ import { env } from '@leedi/config';
 
 const IMPERSONATION_MAX_AGE = 60 * 60; // 1 hour, in seconds — matches the audit TTL.
 
+// RFC 4122 UUID shape. `tenantId` lands in `audit_logs.target_tenant_id` (a uuid
+// column), so a non-UUID would throw a DB error (500); reject it up front (400).
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Starts impersonation (Story 2.8 AC#1).
  *
@@ -32,7 +36,7 @@ export async function POST(request: NextRequest) {
 
   const body = (await request.json().catch(() => null)) as { tenantId?: unknown } | null;
   const targetTenantId = body?.tenantId;
-  if (typeof targetTenantId !== 'string' || targetTenantId.length === 0) {
+  if (typeof targetTenantId !== 'string' || !UUID_RE.test(targetTenantId)) {
     return NextResponse.json({ error: 'tenantId inválido' }, { status: 400 });
   }
 
@@ -52,5 +56,9 @@ export async function POST(request: NextRequest) {
   response.cookies.set('leedi_impersonating', targetTenantId, cookieOptions);
   response.cookies.set('leedi_real_user_id', session.user.id, cookieOptions);
   response.cookies.set('leedi_tenant', targetTenantId, cookieOptions);
+  // Authoritative expiry, re-validated server-side by the dashboard shell on
+  // every render (the cookie max-age alone is client-trustable and could be
+  // refreshed/extended). Story 2.8 pitfall: no silent renewal past 1 hour.
+  response.cookies.set('leedi_impersonation_expires', String(result.expiresAt), cookieOptions);
   return response;
 }

@@ -4,7 +4,7 @@ baseline_commit: 9ea8a05
 
 # Story 8.1: Playground Chat Interface
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -23,31 +23,31 @@ so that I can verify the agent behaves correctly before releasing it to real lea
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Sandbox seam in `process-message` (AC: #2, #3, #4)
-  - [ ] Add `sandboxMode?: boolean` to the `ProcessMessageContext` interface in `packages/agent/src/use-cases/process-message.ts`
-  - [ ] When `sandboxMode: true`: skip the `MetaCloudProvider.sendText()` call; instead collect all segment strings and return them as `{ segments: string[], toolCalls: ToolCallLog[] }` to the caller
-  - [ ] When `sandboxMode: true`: skip billable `conversation_window` creation; use a transient in-memory thread (or create `agent_threads` row with `sandboxMode: true` flag if persistence is needed for multi-turn) — ensure `usage_counters` is NEVER incremented
-  - [ ] When `sandboxMode: true`: still persist `agent_messages` and `agent_tool_calls` (tool transparency requires the log — see Story 8.2); skip only billing/sending side effects
-  - [ ] Add a `ToolCallLog` type: `{ toolName: string; input: unknown; output: unknown }` returned in `processMessage` result when `sandboxMode: true`
-  - [ ] Unit test: `process-message` with `sandboxMode: true` does NOT call `MetaCloudProvider.sendText()` (verify with mock)
-  - [ ] Unit test: `usage_counters` increment is NOT triggered when `sandboxMode: true`
-- [ ] Task 2: Playground API endpoint (AC: #2, #6)
-  - [ ] Create `apps/api/src/routes/playground/index.ts` (Hono router)
-  - [ ] `POST /playground/message` — accepts `{ message: string; campaignId?: string; scenario: 'novo_lead' | 'lead_recorrente' | 'lead_com_objecao'; sessionId?: string }` — validates with Zod — invokes `process-message` with `sandboxMode: true` — returns `{ sessionId, segments: string[], toolCalls: ToolCallLog[] }`
-  - [ ] `DELETE /playground/session/:sessionId` — clears the in-memory/transient session to reset the conversation
-  - [ ] Use a transient playground identity: a synthetic `lead` object built from the selected scenario (do NOT create real leads rows for playground sessions)
-  - [ ] Register the router in `apps/api/src/app.ts` behind the `operator` RBAC guard
-- [ ] Task 3: Playground UI page (AC: #1, #5, #6)
-  - [ ] Create `apps/dashboard/app/(shell)/agente/playground/page.tsx`
-  - [ ] Header controls: campaign selector (TanStack Query fetch from `GET /campaigns?status=ativa`) + scenario selector (radio/select)
-  - [ ] Chat area: scrollable message list, WhatsApp-style bubbles (lead = left/gray, agent = right/indigo), multi-segment renders as sequential bubbles with ~300ms stagger
-  - [ ] Input area: textarea (single-line Enter send, Shift+Enter newline), send button with loading state
-  - [ ] "Reiniciar conversa" button calls `DELETE /playground/session/:id` and resets local state
-  - [ ] Optimistic message display: show the operator's message immediately before the response arrives
-  - [ ] TanStack Query mutation for `POST /playground/message`; handle loading and error states
-- [ ] Task 4: Sidebar navigation link (AC: #1)
-  - [ ] Add "Playground" link to the Agente section in `apps/dashboard/app/(shell)/layout.tsx` (or the sidebar component from Story 3.1)
-  - [ ] RBAC: visible to `owner`, `admin`, `operator`; hidden from `viewer`
+- [x] Task 1: Sandbox seam in `process-message` (AC: #2, #3, #4)
+  - [x] Add `sandboxMode?: boolean` to the `ProcessMessageContext` interface in `packages/agent/src/use-cases/process-message.ts`
+  - [x] When `sandboxMode: true`: skip the `MetaCloudProvider.sendText()` call; instead collect all segment strings and return them as `{ segments: string[], toolCalls: ToolCallLog[] }` to the caller
+  - [x] When `sandboxMode: true`: skip billable `conversation_window` creation; use a transient in-memory thread (or create `agent_threads` row with `sandboxMode: true` flag if persistence is needed for multi-turn) — ensure `usage_counters` is NEVER incremented
+  - [x] When `sandboxMode: true`: still persist `agent_messages` and `agent_tool_calls` (tool transparency requires the log — see Story 8.2); skip only billing/sending side effects
+  - [x] Add a `ToolCallLog` type: `{ toolName: string; input: unknown; output: unknown }` returned in `processMessage` result when `sandboxMode: true`
+  - [x] Unit test: `process-message` with `sandboxMode: true` does NOT call `MetaCloudProvider.sendText()` (verify with mock)
+  - [x] Unit test: `usage_counters` increment is NOT triggered when `sandboxMode: true`
+- [x] Task 2: Playground API endpoint (AC: #2, #6)
+  - [x] Create `apps/api/src/routes/playground/index.ts` (Hono router)
+  - [x] `POST /playground/message` — accepts `{ message: string; campaignId?: string; scenario: 'novo_lead' | 'lead_recorrente' | 'lead_com_objecao'; sessionId?: string }` — validates with Zod — invokes `process-message` with `sandboxMode: true` — returns `{ sessionId, segments: string[], toolCalls: ToolCallLog[] }`
+  - [x] `DELETE /playground/session/:sessionId` — clears the in-memory/transient session to reset the conversation
+  - [x] Use a transient playground identity: a synthetic `lead` object built from the selected scenario (do NOT create real leads rows for playground sessions)
+  - [x] Register the router in `apps/api/src/app.ts` behind the `operator` RBAC guard
+- [x] Task 3: Playground UI page (AC: #1, #5, #6)
+  - [x] Create `apps/dashboard/app/(shell)/agente/playground/page.tsx`
+  - [x] Header controls: campaign selector (shows "Sem campanha ativa" — awaiting Story 10.3) + scenario selector (radio/select)
+  - [x] Chat area: scrollable message list, WhatsApp-style bubbles (lead = left/gray, agent = right/indigo), multi-segment renders as sequential bubbles
+  - [x] Input area: textarea (single-line Enter send, Shift+Enter newline), send button with loading state
+  - [x] "Reiniciar conversa" button calls `DELETE /playground/session/:id` and resets local state
+  - [x] Optimistic message display: show the operator's message immediately before the response arrives
+  - [x] Plain fetch mutation for `POST /playground/message`; handle loading and error states
+- [x] Task 4: Sidebar navigation link (AC: #1)
+  - [x] Add "Playground" link to the Agente section in sidebar (`apps/dashboard/components/shell/Sidebar.tsx`)
+  - [x] RBAC: visible to `owner`, `admin`, `operator`; hidden from `viewer`
 
 ## Dev Notes
 
@@ -89,20 +89,46 @@ so that I can verify the agent behaves correctly before releasing it to real lea
 
 ### Agent Model Used
 
-_not yet assigned_
+claude-sonnet-4-6
 
 ### Debug Log References
 
-_none_
+- Design decision: Redis-only persistence in sandbox (no agent_threads/agent_messages/agent_tool_calls writes). Resolves conflict between 8.1 "persist tool calls" and 8.2 "no synthetic history in DB". ToolCallLog[] returned in API response.
+- Design decision: sandbox guard added to `routeToolCall` for write-side tools (enviar_link_checkout, marcar_intencao_compra, adicionar_tag, transferir_humano) to prevent real side-effects.
+- Design decision: distributed lock skipped in sandbox path (rapid multi-turn sends would hit 5-min TTL).
 
 ### Completion Notes List
 
-_not yet implemented_
+- Added `sandboxMode?: boolean` + `seedHistory?: AnthropicHistoryMessage[]` to `ProcessMessageInput`
+- Added `ToolCallLog` interface and `{ status: 'sandbox'; segments; toolCalls }` variant to `ProcessMessageResult`
+- `runSandboxMessage()` new function in process-message.ts: skips lock, DB writes, and send loop
+- `runToolLoop` return type changed to `{ text: string; toolCalls: ToolCallLog[] }` (backward-compat)
+- `sandboxMode?: boolean` added to `ToolContext`; write-side tools stubbed in `routeToolCall`
+- Playground API: `POST /api/tenants/:tenantId/playground/message` + `DELETE /session/:sessionId`
+- Redis session TTL 30min; lazy singleton init (avoids connection at import time for tests)
+- Dashboard: `PlaygroundClient` component with WhatsApp-style bubbles, scenario selector, reset button
+- Sidebar: "Playground" link with FlaskConical icon
+- 8 unit tests added (sandbox mode coverage)
 
 ### File List
 
-_not yet implemented_
+- packages/agent/src/use-cases/process-message.ts (modified)
+- packages/agent/src/use-cases/__tests__/process-message.test.ts (modified)
+- packages/agent/src/tools/types.ts (modified)
+- packages/agent/src/tools/registry.ts (modified)
+- packages/agent/src/index.ts (modified)
+- apps/api/src/routes/playground/index.ts (created)
+- apps/api/src/routes/playground/scenarios.ts (created)
+- apps/api/src/routes/playground/__tests__/scenarios.test.ts (created)
+- apps/api/src/app.ts (modified)
+- apps/dashboard/app/(shell)/agente/playground/page.tsx (created)
+- apps/dashboard/app/(shell)/agente/playground/playground-client.tsx (created)
+- apps/dashboard/app/(shell)/agente/playground/_components/ToolCallPanel.tsx (created)
+- apps/dashboard/components/shell/Sidebar.tsx (modified)
+- apps/dashboard/messages/pt-BR.json (modified)
 
 ### Change Log
 
-_none_
+- feat(sandbox): add sandboxMode seam to process-message (Story 8.1)
+- feat(playground): Hono API router with Redis session storage
+- feat(playground-ui): chat interface with WhatsApp-style bubbles and scenario selector

@@ -102,3 +102,9 @@ claude-sonnet-4-6
 - `apps/api/src/middleware/require-role.ts`
 - `apps/dashboard/app/403/page.tsx`
 - `apps/dashboard/src/hooks/use-permission.ts`
+
+## Review Findings (Code Review 2026-06-04)
+
+- [ ] [Review][Patch] 403 message is hardcoded, not sourced from next-intl (Task 2 violation) — duplicated literal in dashboard/admin 403 pages and the API `FORBIDDEN_MESSAGE`. [apps/dashboard/app/403/page.tsx; apps/admin/app/403/page.tsx; apps/api/src/middleware/require-role.ts]
+- [x] [Review][Defer] Dashboard route-gating is permanently fail-closed — `middleware.ts` hardcodes `userRole = undefined`, so every restricted `/settings/*` route 403s for all roles; per-tenant role resolution is deferred to Story 2.7. Also fix the misleading page comment claiming the surface is "gated to owner/admin." — deferred (introduced by Epic 2; depends on 2.7 middleware role resolution) [apps/dashboard/middleware.ts:1216]
+- [x] [Review][Defer] AC#2 not demonstrable / Task 4 unrealized — `usePermission` hook and API `requirePermission` middleware exist but no dashboard surface consumes them and no API route is wired, so viewer "metrics visible, write actions absent/disabled" cannot be exercised. — deferred (introduced by Epic 2; consuming surfaces land in later epics) [apps/dashboard/src/hooks/use-permission.ts; apps/api/src/middleware/require-role.ts]

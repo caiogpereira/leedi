@@ -2,9 +2,12 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { Redis } from '@upstash/redis';
 import { env } from '@leedi/config';
+import { modelIdForTask } from '@leedi/agent';
 import type { AIProvider } from '../ai/provider.js';
 
-const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
+// Text improvement MUST use Haiku (cost). Resolved from the canonical routing
+// map in @leedi/agent — model id strings live ONLY there (Story 7.8).
+const IMPROVE_TEXT_MODEL = modelIdForTask('text_improvement');
 
 const improveTextSchema = z.object({
   text: z.string().min(1, 'text is required').max(10_000, 'text is too long'),
@@ -74,7 +77,7 @@ export function createAiRouter(aiProvider: AIProvider) {
     const prompt = buildPrompt(text, context);
 
     try {
-      const tokenStream = await aiProvider.completarStream(prompt, HAIKU_MODEL);
+      const tokenStream = await aiProvider.completarStream(prompt, IMPROVE_TEXT_MODEL);
 
       // Convert string ReadableStream to byte ReadableStream for the Response
       const byteStream = new ReadableStream<Uint8Array>({

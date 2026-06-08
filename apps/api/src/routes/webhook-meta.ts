@@ -9,7 +9,7 @@ import { findOrCreateLeadByPhone } from '@leedi/lead';
 import { captureException } from '@leedi/observability';
 import { webhookLimit } from '../middleware/rate-limit.js';
 import { checkUsageBlock, incrementUsage } from '@leedi/usage';
-import { createNotificationStub } from '@leedi/notification';
+import { sendNotificationToTenantRole } from '@leedi/notification';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -289,11 +289,16 @@ async function processMessage(
 
   // 16.1 AC#2: increment usage counter only when a NEW window is opened (messageCount === 1).
   if (window.messageCount === 1 && window.billable) {
-    const notification = createNotificationStub();
     try {
       const result = await incrementUsage({ tenantId, billable: true });
       for (const alert of result.alertsDue) {
-        notification.send({ ...alert, tenantId, userId: 'all_operators' }).catch(() => {});
+        sendNotificationToTenantRole({
+          tenantId,
+          roles: ['owner', 'admin', 'operator'],
+          tipo: alert.tipo,
+          titulo: alert.titulo,
+          corpo: alert.corpo,
+        }).catch(() => {});
       }
     } catch (err) {
       // Usage increment failure must NOT block message delivery.

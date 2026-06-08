@@ -20,6 +20,8 @@ const TEMPLATES: Record<string, TemplateLoader> = {
     import('./templates/password-reset.js') as unknown as Promise<TemplateModule>,
   invitation: () =>
     import('./templates/invitation.js') as unknown as Promise<TemplateModule>,
+  'system-notification': () =>
+    import('./templates/system-notification.js') as unknown as Promise<TemplateModule>,
 };
 
 export async function renderTemplate(

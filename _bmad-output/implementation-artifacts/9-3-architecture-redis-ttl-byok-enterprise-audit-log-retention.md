@@ -4,7 +4,7 @@ baseline_commit: 9ea8a05
 
 # Story 9.3: Architecture — Redis TTL, BYOK Enterprise & Audit Log Retention
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -21,20 +21,20 @@ so that infrastructure costs stay bounded and enterprise customers have a clear 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Update or create Redis TTL policy section in Architecture (AC: #1, #4)
-  - [ ] Locate the Redis / Upstash section in `docs/01-leedi-arquitetura.md`
-  - [ ] Add a "Política de TTL de Chaves Redis" subsection (or add to existing section)
-  - [ ] List all key types with their TTL values per AC #1 and AC #4
-  - [ ] Confirm the values match what is documented in Stories 7.2 (lock TTL), 4.4 (debounce TTL), 8.1 (playground TTL)
-- [ ] Task 2: Add BYOK Enterprise section (AC: #2)
-  - [ ] Create a new subsection in `docs/01-leedi-arquitetura.md` — suggest placing after the AI/Agent section (§7 or §8)
-  - [ ] Title: "Enterprise — BYOK (Bring Your Own Key)"
-  - [ ] Content per AC #2: storage (encrypted), adapter override logic, plan gate
-  - [ ] Add a note that `agent_configs` table needs a `byok_key_encrypted` nullable column (null = use platform key) — this column does NOT need to be added now (future epic), but is documented as the target schema
-- [ ] Task 3: Add Audit Log retention policy (AC: #3)
-  - [ ] Locate the `audit_logs` table definition in `docs/01-leedi-arquitetura.md`
-  - [ ] Add a "Retenção do Audit Log" block after the table definition
-  - [ ] Content per AC #3: 90-day hot, monthly cron archival to cold storage, deletion after archival, CSV export for compliance
+- [x] Task 1: Update or create Redis TTL policy section in Architecture (AC: #1, #4)
+  - [x] Locate the Redis / Upstash section in `docs/01-leedi-arquitetura.md`
+  - [x] Add a "Política de TTL de Chaves Redis" subsection (or add to existing section)
+  - [x] List all key types with their TTL values per AC #1 and AC #4
+  - [x] Confirm the values match what is documented in Stories 7.2 (lock TTL), 4.4 (debounce TTL), 8.1 (playground TTL)
+- [x] Task 2: Add BYOK Enterprise section (AC: #2)
+  - [x] Create a new subsection in `docs/01-leedi-arquitetura.md` — suggest placing after the AI/Agent section (§7 or §8)
+  - [x] Title: "Enterprise — BYOK (Bring Your Own Key)"
+  - [x] Content per AC #2: storage (encrypted), adapter override logic, plan gate
+  - [x] Add a note that `agent_configs` table needs a `byok_key_encrypted` nullable column (null = use platform key) — this column does NOT need to be added now (future epic), but is documented as the target schema
+- [x] Task 3: Add Audit Log retention policy (AC: #3)
+  - [x] Locate the `audit_logs` table definition in `docs/01-leedi-arquitetura.md`
+  - [x] Add a "Retenção do Audit Log" block after the table definition
+  - [x] Content per AC #3: 90-day hot, monthly cron archival to cold storage, deletion after archival, CSV export for compliance
 
 ## Dev Notes
 
@@ -67,7 +67,7 @@ so that infrastructure costs stay bounded and enterprise customers have a clear 
 
 ### Agent Model Used
 
-_not yet assigned_
+claude-sonnet-4-6[1m]
 
 ### Debug Log References
 
@@ -75,12 +75,15 @@ _none_
 
 ### Completion Notes List
 
-_not yet implemented_
+- §9.7 (Redis TTL table) already satisfied all AC #1 and AC #4 sub-clauses: debounce 30s, lock 300s, rate-limit 60s, BullMQ 7 days, playground 1800s, key `playground:{tenantId}:{sessionId}` — verified, no changes needed.
+- §9.8 (BYOK) already fully satisfied AC #2: both sections 9.8.1 (data encryption) and 9.8.2 (AI key) present, covering encrypted storage, adapter override logic, plan gate, and byok_key_encrypted schema note — verified, no changes needed.
+- §9.9 (Audit Log) had AC #3(b) gap: "monthly cron" was described as a pre-deletion backup, not a scheduled process. Added explicit monthly cron procedure with JSONL partitioning and S3 upload. Also added AC #3(d) CSV export for super-admin compliance — added download mechanism in admin panel.
 
 ### File List
 
-_not yet implemented_
+- docs/01-leedi-arquitetura.md
 
 ### Change Log
 
-_none_
+- Updated §9.9 retention to explicitly specify monthly cron archival procedure (day 1 of each month, JSONL to S3) (2026-06-02)
+- Added CSV export capability for super-admin audit log compliance requests (2026-06-02)

@@ -4,7 +4,7 @@ baseline_commit: 9ea8a05
 
 # Story 7.4: Sales & Conversion Tools (Checkout, Intent, Tagging)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -22,33 +22,33 @@ so that warm leads get frictionless purchase paths and CRM data stays current.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: `enviar_link_checkout` tool use case (AC: #1)
-  - [ ] Create `packages/agent/src/tools/enviar-link-checkout.ts`
-  - [ ] Input: `{ tenantId: string, leadPhone: string, productId: string, connectionId: string }`
-  - [ ] Fetch the product by `id` + `tenantId`; read `link_checkout`
-  - [ ] Call `@leedi/connection` `MetaCloudProvider.sendText()` with `"Aqui está o link para {nome}: {link_checkout}"`
-  - [ ] Save the outbound message to `messages` (`autor='agente'`)
-  - [ ] Return `{ sent: true, messageId: string }`
-- [ ] Task 2: `marcar_intencao_compra` tool use case (AC: #2)
-  - [ ] Create `packages/agent/src/tools/marcar-intencao-compra.ts`
-  - [ ] Input: `{ tenantId: string, leadId: string, productId?: string, agenteId?: string }`
-  - [ ] `UPDATE leads SET temperatura = 'quente' WHERE id = leadId` (via `withTenant`)
-  - [ ] `INSERT` into `lead_journey_events` with `tipo='interesse'`, `detalhes: { produto_id, agente_id }`
-  - [ ] Return `{ updated: true }`
-- [ ] Task 3: `adicionar_tag` tool use case (AC: #3, #4, #5)
-  - [ ] Create `packages/agent/src/tools/adicionar-tag.ts`
-  - [ ] Input: `{ tenantId: string, leadId: string, tagText: string, conversationContext?: string }`
-  - [ ] If `conversationContext` is provided, call Claude Haiku to refine/classify the tag. Prompt: "Given this conversation context, what is the most appropriate tag for this lead? Return only the tag text in Portuguese, lowercase, max 3 words." (use the Haiku model id; the canonical model map lands in Story 7.8 — reference `TASK_MODELS.tag_classification` once 7.8 exists)
-  - [ ] `INSERT INTO lead_tags (... origem_tag='agente')` with `ON CONFLICT DO NOTHING` for idempotency (requires a unique key on `(tenant_id, lead_id, tag)` — confirm it exists from Epic 5; if absent, dedupe in-app and note it)
-  - [ ] Return `{ tagged: true, tag: string }`
-- [ ] Task 4: Register tools in the registry (AC: #1–#5) — integration point is Story 7.2
-  - [ ] In `packages/agent/src/tools/registry.ts`, add JSON Schemas for `enviar_link_checkout`, `marcar_intencao_compra`, `adicionar_tag`
-  - [ ] `enviar_link_checkout` and `marcar_intencao_compra` are ALWAYS-ON; `adicionar_tag` is CONFIGURABLE (toggle `tools_habilitadas.adicionar_tag`)
-  - [ ] Wire each into `routeToolCall`; do NOT create a new router
-- [ ] Task 5: Tests (AC: #1, #2, #4, #5)
-  - [ ] Unit: `enviar_link_checkout` formats the message exactly and calls `MetaCloudProvider.sendText` (mocked); returns `{ sent: true, messageId }`
-  - [ ] Unit: `marcar_intencao_compra` sets `temperatura='quente'` and creates a `tipo='interesse'` journey event
-  - [ ] Unit: `adicionar_tag` is idempotent on a duplicate tag; calls Haiku for classification when `conversationContext` is provided (mock Anthropic, assert the Haiku model id)
+- [x] Task 1: `enviar_link_checkout` tool use case (AC: #1)
+  - [x] Create `packages/agent/src/tools/enviar-link-checkout.ts`
+  - [x] Input from schema: `{ productId }`; from ctx: `{ tenantId, leadPhone, connectionId, conversationWindowId, leadId }`
+  - [x] Fetch the product by `id` + `tenantId`; read `link_checkout`
+  - [x] Call `@leedi/connection` `MetaCloudProvider.sendText()` with `"Aqui está o link para {nome}: {link_checkout}"`
+  - [x] Save the outbound message to `messages` (`autor='agente'`)
+  - [x] Return `{ sent: true, messageId: string }`
+- [x] Task 2: `marcar_intencao_compra` tool use case (AC: #2)
+  - [x] Create `packages/agent/src/tools/marcar-intencao-compra.ts`
+  - [x] Input from schema: `{ productId? }`; from ctx: `{ tenantId, leadId }`
+  - [x] `UPDATE leads SET temperatura = 'quente' WHERE id = leadId` (via `withTenant`)
+  - [x] `INSERT` into `lead_journey_events` with `tipo='interesse'`, `detalhes: { produto_id, agente_id: 'agent' }`
+  - [x] Return `{ updated: true }`
+- [x] Task 3: `adicionar_tag` tool use case (AC: #3, #4, #5)
+  - [x] Create `packages/agent/src/tools/adicionar-tag.ts`
+  - [x] Input from schema: `{ tagText, conversationContext? }`; from ctx: `{ tenantId, leadId }`
+  - [x] If `conversationContext` is provided, call Claude Haiku to refine/classify the tag. Interim hardcoded model id `claude-haiku-4-5-20251001`; TODO references Story 7.8 for the canonical map.
+  - [x] Idempotency via IN-APP dedup (NOT `ON CONFLICT`): `lead_tags` has no `(tenant_id, lead_id, tag)` unique constraint, so the tool queries for the existing tag first and skips the insert if found. See Completion Notes for the residual intra-turn race and the deferred constraint.
+  - [x] Insert with `origem_tag='agente'`; return `{ tagged: true, tag: string }`
+- [x] Task 4: Register tools in the registry (AC: #1–#5) — integration point is Story 7.2
+  - [x] Updated `marcar_intencao_compra` and `adicionar_tag` JSON Schemas in `TOOL_DEFINITIONS` to match Task 2/3 input specs (old `nivel`/`observacao`/`tag` fields were unreachable for AC#2/#5)
+  - [x] `enviar_link_checkout` and `marcar_intencao_compra` are ALWAYS-ON; `adicionar_tag` is CONFIGURABLE (membership in `resolve-enabled-tools.ts`; gating done by `buildToolList`)
+  - [x] Wired each into `routeToolCall`; no new router
+- [x] Task 5: Tests (AC: #1, #2, #4, #5)
+  - [x] Unit: `enviar_link_checkout` formats the message exactly and calls `MetaCloudProvider.sendText` (mocked); returns `{ sent: true, messageId }`
+  - [x] Unit: `marcar_intencao_compra` sets `temperatura='quente'` and creates a `tipo='interesse'` journey event
+  - [x] Unit: `adicionar_tag` is idempotent on a duplicate tag; calls Haiku for classification when `conversationContext` is provided (mock Anthropic, assert the Haiku model id `claude-haiku-4-5-20251001`)
 
 ## Dev Notes
 
@@ -87,7 +87,7 @@ so that warm leads get frictionless purchase paths and CRM data stays current.
 
 ### Agent Model Used
 
-_not yet assigned_
+claude-opus-4-8
 
 ### Debug Log References
 
@@ -95,12 +95,26 @@ _none_
 
 ### Completion Notes List
 
-_not yet implemented_
+- All three tools implemented as thin use cases under `packages/agent/src/tools/`, wired into the single `routeToolCall` dispatcher in `registry.ts`. No new router.
+- **Schema correction (Task 4):** the 7.2 registry schemas for `marcar_intencao_compra` (`{ nivel, observacao }`) and `adicionar_tag` (`{ tag }`) did NOT match the Task 2/3 input specs and made AC#2 (`produto_id` in journey detalhes) and AC#5 (Haiku classification from conversation context) unreachable from the model — Claude had no schema field to supply `productId`/`conversationContext`. Updated the schemas to `{ productId? }` and `{ tagText, conversationContext? }`. The general "Task 4 is wiring only" note was overridden by the specific Task 2/3 input specs. Grep confirmed nothing outside the registry binds the old field names (the `ToolsHabilitadas` toggle keys are unaffected). `registry.test.ts` only asserts that ctx/identity fields are absent from schemas, so it still passes unchanged.
+- **`adicionar_tag` idempotency — in-app dedup (deviates from the line 69 pitfall):** `lead_tags` has no DB-level `(tenant_id, lead_id, tag)` unique constraint, so `ON CONFLICT DO NOTHING` is unavailable. Per the task instruction, dedup is done in-app: query for the existing tag inside the same `withTenant` tx, return success without inserting if found. When `conversationContext` is supplied, classification runs FIRST and dedup keys on the refined tag. **Residual race:** `runToolLoop` dispatches tool calls via `Promise.all` (parallel), so two `adicionar_tag` calls for the same tag within ONE turn can both pass the existence check and double-insert. In-app dedup closes the cross-turn case, not the intra-turn one — the proper fix is a follow-up migration adding the `(tenant_id, lead_id, tag)` unique constraint, after which this can fall back to a race-safe DB upsert.
+- **Haiku model:** interim hardcoded id `claude-haiku-4-5-20251001` (Haiku, never Sonnet) with a `TODO(Story 7.8)` to canonicalize via the model map. `classifyTag` instantiates `new Anthropic()` (SDK reads `ANTHROPIC_API_KEY` from env) and runs OUTSIDE the DB transaction so no tx is held open across the API call. Falls back to the raw `tagText` if the model returns nothing usable.
+- **Checkout message:** body formatted EXACTLY as `"Aqui está o link para {nome}: {link_checkout}"`; outbound persisted to `messages` with `autor='agente'`, `direction='outbound'`, `tipo='texto'`, `status='enviado'`, `metaMessageId` from the send result. The connection is loaded by `tenantId` (the table is unique on `tenant_id`) inside `withTenant`, mirroring `loadAgentContext`.
+- Verification: `pnpm --filter @leedi/agent test` → 60 passed (12 files); `typecheck` clean (`exactOptionalPropertyTypes` honored in the dispatcher by conditionally spreading optional keys); `lint` clean.
 
 ### File List
 
-_not yet implemented_
+Created:
+- `packages/agent/src/tools/enviar-link-checkout.ts`
+- `packages/agent/src/tools/marcar-intencao-compra.ts`
+- `packages/agent/src/tools/adicionar-tag.ts`
+- `packages/agent/src/tools/__tests__/enviar-link-checkout.test.ts`
+- `packages/agent/src/tools/__tests__/marcar-intencao-compra.test.ts`
+- `packages/agent/src/tools/__tests__/adicionar-tag.test.ts`
+
+Modified:
+- `packages/agent/src/tools/registry.ts` (updated `marcar_intencao_compra` + `adicionar_tag` schemas; imported and wired all three tools into `routeToolCall`)
 
 ### Change Log
 
-_none_
+- 2026-06-01: Implemented Story 7.4 — `enviar_link_checkout`, `marcar_intencao_compra`, `adicionar_tag` tools + tests; corrected 7.2 schemas for the latter two; wired into the registry. Status → review.

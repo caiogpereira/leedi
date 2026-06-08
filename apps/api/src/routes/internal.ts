@@ -19,6 +19,8 @@ import { dispatchRecoveryTarget } from '../jobs/dispatch-recovery-target.js';
 import type { DispatchRecoveryTargetPayload } from '../jobs/dispatch-recovery-target.js';
 import { sendFollowup } from '../jobs/send-followup.js';
 import type { SendFollowupPayload } from '../jobs/send-followup.js';
+import { processBillingEvent } from '../jobs/process-billing-event.js';
+import { runDailyBillingCheck } from '../jobs/daily-billing-check.js';
 import { processMessage } from '@leedi/agent';
 import type { RedisLock } from '@leedi/agent';
 import { captureException } from '@leedi/observability';
@@ -329,6 +331,52 @@ export function createInternalRouter(
       captureException(err);
       throw err;
     });
+    return c.json(result);
+  });
+
+  /**
+   * POST /api/internal/billing/process-asaas-event
+   *
+   * Called by QStash after the /webhooks/asaas endpoint enqueues a payment event.
+   * Handles PAYMENT_RECEIVED, PAYMENT_OVERDUE, PAYMENT_DELETED, PAYMENT_REFUNDED.
+   * QStash retries up to 5 times on non-2xx responses (Story 17.2).
+   */
+  router.post('/billing/process-asaas-event', async (c) => {
+    if (!(await verifyQStash(c))) return c.json({ error: 'Unauthorized' }, 401);
+
+    let payload: unknown;
+    try {
+      payload = await c.req.json();
+    } catch {
+      return c.json({ error: 'Invalid JSON' }, 400);
+    }
+
+    const result = await processBillingEvent(payload).catch((err) => {
+      captureException(err);
+      throw err;
+    });
+
+    return c.json(result);
+  });
+
+  /**
+   * POST /api/internal/billing/daily-check
+   *
+   * Cron: 0 12 * * * UTC (09:00 BRT). Blocks tenants with overdue invoices
+   * after 3 days (partial) or 7 days (full suspension) (Story 17.2, AC #4, #5).
+   *
+   * Register in QStash console:
+   *   URL:      https://<api-domain>/api/internal/billing/daily-check
+   *   Schedule: 0 12 * * * (daily at 12:00 UTC = 09:00 BRT)
+   */
+  router.post('/billing/daily-check', async (c) => {
+    if (!(await verifyQStash(c))) return c.json({ error: 'Unauthorized' }, 401);
+
+    const result = await runDailyBillingCheck().catch((err) => {
+      captureException(err);
+      throw err;
+    });
+
     return c.json(result);
   });
 

@@ -19,6 +19,14 @@ export const base = tseslint.config(...tseslint.configs.recommended, eslintConfi
             message:
               'Cross-domain internal import forbidden — import from the package public API (@leedi/<name>) only',
           },
+          {
+            // Second guard: relative traversal that escapes a package boundary into
+            // another package's internals (e.g. ../../agent/src/use-cases/...).
+            // Bare-specifier ban above does not catch relative paths.
+            regex: '^\\.\\./.*/src/',
+            message:
+              'Relative cross-package internal import forbidden — import from the package public API (@leedi/<name>) only',
+          },
         ],
       },
     ],

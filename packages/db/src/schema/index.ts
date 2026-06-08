@@ -13,3 +13,5 @@ export * from './gateway.js';
 export * from './template.js';
 export * from './dispatch.js';
 export * from './usage.js';
+export * from './billing.js';
+export * from './notifications.js';

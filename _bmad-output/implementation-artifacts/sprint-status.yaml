@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-29
-last_updated: 2026-06-03  # epic 16 in-progress
+last_updated: 2026-06-08  # epic 20 complete — 20-1/20-2/20-3 all in review
 project: leedi
 project_key: NOKEY
 tracking_system: file-system
@@ -45,15 +45,15 @@ development_status:
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 1: Project Foundation & Developer Infrastructure
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-1: in-progress
-  1-1-initialize-turborepo-monorepo-with-pnpm-workspaces: review
-  1-2-configure-shared-tooling-typescript-strict-eslint-prettier: review
-  1-3-set-up-environment-config-package-with-zod-validation: review
-  1-4-set-up-database-package-drizzle-orm-supabase: review
-  1-5-set-up-shared-ui-package-shadcn-ui-leedi-design-tokens: review
-  1-6-create-application-shells-web-dashboard-admin-api: review
-  1-7-configure-observability-stubs-sentry-posthog-better-stack: review
-  1-8-set-up-ci-pipeline-lint-typecheck-build-migrations: review
+  epic-1: done
+  1-1-initialize-turborepo-monorepo-with-pnpm-workspaces: done
+  1-2-configure-shared-tooling-typescript-strict-eslint-prettier: done
+  1-3-set-up-environment-config-package-with-zod-validation: done
+  1-4-set-up-database-package-drizzle-orm-supabase: done
+  1-5-set-up-shared-ui-package-shadcn-ui-leedi-design-tokens: done
+  1-6-create-application-shells-web-dashboard-admin-api: done
+  1-7-configure-observability-stubs-sentry-posthog-better-stack: done
+  1-8-set-up-ci-pipeline-lint-typecheck-build-migrations: done
   epic-1-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
@@ -211,35 +211,35 @@ development_status:
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 17: Billing & Subscription Management
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-17: backlog
-  17-1-asaas-integration-subscription-creation: backlog
-  17-2-payment-webhook-tenant-lock-unlock: backlog
-  17-3-tenant-billing-panel: backlog
+  epic-17: in-progress
+  17-1-asaas-integration-subscription-creation: review
+  17-2-payment-webhook-tenant-lock-unlock: review
+  17-3-tenant-billing-panel: review
   epic-17-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 18: Notifications
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-18: backlog
-  18-1-notification-infrastructure-push-email: backlog
-  18-2-event-driven-notifications-user-preferences: backlog
+  epic-18: in-progress
+  18-1-notification-infrastructure-push-email: review
+  18-2-event-driven-notifications-user-preferences: review
   epic-18-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 19: Assisted Onboarding Wizard
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-19: backlog
-  19-1-wizard-infrastructure-progress-persistence: backlog
-  19-2-wizard-steps-1-2-company-data-whatsapp-connection: backlog
-  19-3-wizard-steps-3-4-gateway-connection-agent-configuration: backlog
-  19-4-wizard-step-5-playground-test-completion: backlog
+  epic-19: in-progress
+  19-1-wizard-infrastructure-progress-persistence: review
+  19-2-wizard-steps-1-2-company-data-whatsapp-connection: review
+  19-3-wizard-steps-3-4-gateway-connection-agent-configuration: review
+  19-4-wizard-step-5-playground-test-completion: review
   epic-19-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 20: Super-Admin Financial & Operational Dashboard
   # ─────────────────────────────────────────────────────────────────────────────
   epic-20: backlog
-  20-1-financial-health-dashboard-mrr-revenue-delinquencies: backlog
-  20-2-tenant-list-lifecycle-management: backlog
-  20-3-operational-health-conversations-ai-cost-risk-signals: backlog
+  20-1-financial-health-dashboard-mrr-revenue-delinquencies: review
+  20-2-tenant-list-lifecycle-management: review
+  20-3-operational-health-conversations-ai-cost-risk-signals: review
   epic-20-retrospective: optional

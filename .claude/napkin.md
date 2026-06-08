@@ -15,6 +15,9 @@
 2. **[2026-05-28] Validate docs before generating epics/stories**
    Do instead: Always run validation pass (PRD + Architecture + Execution) before invoking `bmad-create-epics-and-stories`. Check cross-document coherence, NFRs, and open decisions.
 
+3. **[2026-06-08] CI `pnpm lint` is intentionally RED on `main` (5 pkgs) — not an Epic 1 bug**
+   Do instead: Don't "fix" red lint by scoping the gate. It's later-epic debt (api/dashboard/connection/usage/knowledge), itemized per-epic in `_bmad-output/implementation-artifacts/deferred-work.md` ("Deferred from: code review of Epic 1"); gate rationale in `epic-1-test-ci-backlog.md`. Each epic's review fixes its own files → gate re-greens incrementally. CI `test` job IS scoped (`--filter='!@leedi/db' --filter='!@leedi/api'`); lint is NOT, by design.
+
 ## Architecture Guardrails
 
 1. **[2026-05-28] Never import domain internals — only public interface**
@@ -160,6 +163,34 @@
 
 3. **[2026-06-03] COALESCE sort for inbox recency (AC#5 compliance)**
    Do instead: Order inbox list by `COALESCE(last_message_at_subquery, conversation_windows.created_at) DESC`. Conversations with new messages float to top. Cursor must encode this same COALESCE value for keyset pagination.
+
+## Onboarding Wizard (Epic 19)
+
+1. **[2026-06-04] Onboarding redirect must be in server component, NOT Edge middleware**
+   Do instead: Read tenant `status` + `config` via `withTenant` in `(shell)/layout.tsx` server component. Edge middleware cannot import `@leedi/db`. Gate: `status === 'trial' && !config.onboarding_config?.onboarding_completed`.
+
+2. **[2026-06-04] `vi.mock('@leedi/db')` must export `and` for tenant-session tests**
+   Do instead: Always include `and: vi.fn((...args) => args)` in `@leedi/db` mock. The `requireTenantSession` middleware imports `and` from `@leedi/db` for membership queries. Missing it causes 500 errors in route tests.
+
+## Admin App (Epic 20)
+
+1. **[2026-06-08] Admin app = server-component + use-case + Server Action override (NOT Hono)**
+   Do instead: Story specs assume `apps/api/src/routes/admin/*`. The shipped `apps/admin` reads via `packages/*` use-cases behind the `(shell)/layout.tsx` super_admin guard and mutates via Server Actions. Route group is `(shell)`; the tenant list lives at `/clientes` (the path `AdminSidebar` links). Same override as Stories 20.1/20.2.
+
+2. **[2026-06-08] Admin Server Actions MUST re-verify super_admin (they bypass RLS)**
+   Do instead: Every admin server action using `withServiceRole` calls a local `requireSuperAdmin` (session → `getWorkspaceAdmin(userId)` → `role === 'super_admin'`, returns `{userId, workspaceId}`). The layout guard only protects render, not a direct action POST.
+
+3. **[2026-06-08] `tenants.status` is the ENGLISH enum — manual block uses the same gate as billing lock**
+   Do instead: `active`/`trial`/`blocked`/`cancelled` (NOT `bloqueado`/`ativo`). Block→`blocked`, unblock→`active`. The agent already aborts at `process-message.ts` `tenantStatus === 'blocked'`; distinguish manual vs billing only via `audit_logs.acao` (`manual_block` vs `billing_lock`).
+
+4. **[2026-06-08] `@leedi/ui` only ships Dialog + Button/Input/Label/Textarea/FormField**
+   Do instead: No Sheet/DropdownMenu/AlertDialog/Tooltip/Select/Badge. Substitute: `Dialog` for sheets/alert-dialogs, native `<select>`, `<span title>` tooltips, inline `<span>` badges, inline action buttons. Document the substitution in the story (like 20.1).
+
+5. **[2026-06-08] Admin tenant creation: reuse `inviteMember`, never pre-create users/membership**
+   Do instead: `createTenant` inserts the tenant (withServiceRole) then calls `inviteMember({inviterRole:'owner'})`. Better-Auth provisions the account only at `acceptInvitation`→`signUpEmail`; a manual `users` row leaves the owner unable to log in. Call `createBillingForTenant` from the apps/admin action (try/catch), not inside the tenancy use-case.
+
+6. **[2026-06-08] Admin `DASHBOARD_URL` comes from `@leedi/config` env, not `process.env`**
+   Do instead: eslint `no-restricted-properties` blocks `process.env` in app code. `env.DASHBOARD_URL` exists in the config schema (default `http://localhost:3001`). Import `{ env } from '@leedi/config'`.
 
 ## Domain Guardrails
 

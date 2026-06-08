@@ -863,9 +863,10 @@ CREATE INDEX idx_audit_log_tenant_created ON audit_log(tenant_id, created_at DES
 
 **Retenção:**
 
-- **Default:** 90 dias (dados de auditoria normais — conformidade padrão).
-- **GDPR/LGPD "direito ao esquecimento":** Se `reason = 'GDPR_request'`, linha é marcada com `expires_at = now() + 30 days`, então deletada após 30 dias (período de contestação legal).
-- **Backup:** antes de deletar, fazer dump de audit logs > 90 dias para storage S3 "cold" (custo-efetivo, mantém histórico legal).
+- **Hot storage:** 90 dias no Supabase (tabela `audit_log` — dados de auditoria normais, conformidade padrão).
+- **Archival mensal (cron):** No dia 1 de cada mês, um cron job exporta linhas com `created_at < now() - 90 days` para S3-compatible storage (Supabase Storage ou bucket externo), no formato JSONL particionado por `(tenant_id, YYYY-MM)`. Após confirmação do upload, as linhas exportadas são deletadas do hot storage.
+- **GDPR/LGPD "direito ao esquecimento":** Se `reason = 'GDPR_request'`, linha é marcada com `expires_at = now() + 30 days`, então deletada após 30 dias (período de contestação legal) independente do cron mensal.
+- **Exportação para compliance:** Super-admin pode exportar o audit log de qualquer tenant como CSV (com colunas: `id`, `tenant_id`, `user_id`, `action`, `resource_type`, `resource_id`, `reason`, `ip_address`, `created_at`) para atender solicitações regulatórias. Download disponível no painel admin em "Tenant → Audit Log → Exportar CSV".
 
 **Cascata de Deletions:**
 

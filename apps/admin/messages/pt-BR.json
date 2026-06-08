@@ -13,20 +13,144 @@
     "operacional": "Operacional",
     "configuracoes": "Configurações"
   },
-  "tenants": {
-    "title": "Tenants",
-    "subtitle": "Todos os tenants do workspace. Impersone para prestar suporte.",
+  "financeiro": {
+    "title": "Financeiro",
+    "subtitle": "Saúde financeira da operação — receita, recebíveis e inadimplência.",
+    "kpi": {
+      "mrr": "MRR",
+      "mrrHint": "Receita recorrente mensal (assinaturas ativas)",
+      "received": "Recebido este mês",
+      "receivedHint": "de {projected} projetados",
+      "openReceivables": "Recebíveis em aberto",
+      "openReceivablesHint": "Faturas pendentes e atrasadas",
+      "churn": "Churn este mês",
+      "churnHint": "assinaturas canceladas"
+    },
+    "delinquency": {
+      "title": "Inadimplência",
+      "columns": {
+        "tenant": "Cliente",
+        "plan": "Plano",
+        "daysOverdue": "Dias em atraso",
+        "totalOverdue": "Valor em aberto"
+      },
+      "empty": "Nenhum cliente em atraso."
+    }
+  },
+  "forbidden": {
+    "code": "403",
+    "message": "Você não tem permissão para acessar esta área",
+    "back": "Voltar"
+  },
+  "operacional": {
+    "title": "Operacional",
+    "subtitle": "Saúde operacional agregada e sinais de risco entre todos os clientes.",
+    "emptySection": "Nenhum tenant neste status.",
+    "kpi": {
+      "conversations": "Conversas este mês",
+      "aiCost": "Custo IA (USD)",
+      "aiCostHint": "{brl} ao câmbio de {rate}",
+      "margin": "Margem estimada",
+      "marginHint": "(MRR − custo IA) / MRR, câmbio {rate}",
+      "newTenants": "Novos tenants este mês",
+      "netGrowth": "Crescimento líquido",
+      "netGrowthHint": "Novos menos cancelamentos: +{new} −{churn}"
+    },
+    "upsell": {
+      "title": "Oportunidades de Upsell",
+      "cta": "Entrar em contato",
+      "copied": "E-mail copiado!",
+      "columns": {
+        "tenant": "Cliente",
+        "plan": "Plano",
+        "usage": "Uso",
+        "action": "Ação"
+      }
+    },
+    "churn": {
+      "title": "Risco de Churn",
+      "columns": {
+        "tenant": "Cliente",
+        "quality": "Qualidade do número",
+        "daysAtRisk": "Dias nesse status"
+      }
+    },
+    "quality": {
+      "amarelo": "Amarelo",
+      "vermelho": "Vermelho"
+    }
+  },
+  "clientes": {
+    "title": "Clientes",
+    "subtitle": "Todos os tenants do workspace — gerencie ciclo de vida e cobrança.",
+    "searchPlaceholder": "Buscar por nome...",
+    "empty": "Nenhum cliente encontrado.",
+    "billingPending": "Configuração de cobrança pendente",
     "columns": {
-      "name": "Nome",
-      "slug": "Slug",
-      "status": "Status",
+      "name": "Cliente",
       "plan": "Plano",
+      "status": "Status",
+      "value": "Valor/mês",
+      "overage": "Excedente (mês ant.)",
+      "lastPayment": "Último pagamento",
       "actions": "Ações"
     },
-    "empty": "Nenhum tenant encontrado.",
+    "status": {
+      "trial": "Trial",
+      "active": "Ativo",
+      "blocked": "Bloqueado",
+      "cancelled": "Cancelado"
+    },
+    "plans": {
+      "starter": "Starter",
+      "pro": "Pro",
+      "enterprise": "Enterprise"
+    },
+    "actions": {
+      "block": "Bloquear",
+      "unblock": "Liberar"
+    },
     "impersonate": "Impersonar",
     "impersonating": "Impersonando...",
-    "confirm": "Iniciar modo de suporte para \"{name}\"? Todas as suas ações serão registradas em auditoria.",
-    "error": "Não foi possível iniciar a impersonação. Tente novamente."
+    "impersonateConfirm": "Iniciar modo de suporte para \"{name}\"? Todas as suas ações serão registradas em auditoria.",
+    "impersonateError": "Não foi possível iniciar a impersonação. Tente novamente.",
+    "create": {
+      "button": "Criar tenant",
+      "title": "Criar novo tenant",
+      "description": "Um convite será enviado ao responsável e a cobrança no Asaas será inicializada.",
+      "name": "Nome da empresa",
+      "ownerEmail": "E-mail do responsável",
+      "plan": "Plano",
+      "enterpriseValue": "Valor mensal (R$)",
+      "cancel": "Cancelar",
+      "submit": "Criar",
+      "saving": "Criando...",
+      "billingFailed": "Tenant criado, mas a configuração de cobrança falhou. Configure manualmente."
+    },
+    "block": {
+      "title": "Bloquear cliente",
+      "description": "Bloquear \"{name}\"? O agente para de processar novas mensagens imediatamente.",
+      "reasonLabel": "Motivo (obrigatório)",
+      "reasonPlaceholder": "Descreva o motivo do bloqueio (mínimo 10 caracteres)...",
+      "cancel": "Cancelar",
+      "saving": "Salvando..."
+    },
+    "unblock": {
+      "title": "Liberar cliente",
+      "description": "Liberar \"{name}\"? Os serviços do tenant voltam a funcionar imediatamente."
+    },
+    "history": {
+      "title": "Histórico financeiro — {name}",
+      "loading": "Carregando faturas...",
+      "empty": "Nenhuma fatura gerada para este tenant.",
+      "columns": {
+        "date": "Data",
+        "dueDate": "Vencimento",
+        "value": "Valor",
+        "overage": "Excedente",
+        "status": "Status",
+        "paidAt": "Pago em"
+      }
+    }
   }
 }

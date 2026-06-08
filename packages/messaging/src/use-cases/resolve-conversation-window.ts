@@ -107,6 +107,14 @@ export async function resolveConversationWindow(
         billable: schema.conversationWindows.billable,
       });
 
+    // Auto-create the inbox assignment for the new window (Story 14.1, AC#2).
+    // Default status 'bot' — the agent is active until transferir_humano is called.
+    await tx.insert(schema.inboxAssignments).values({
+      tenantId,
+      conversationWindowId: created!.id,
+      status: 'bot',
+    });
+
     return {
       id: created!.id,
       startedAt: created!.startedAt,

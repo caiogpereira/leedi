@@ -1,9 +1,36 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { getSessionCookie } from 'better-auth/cookies';
 import { nextCookies } from 'better-auth/next-js';
+import { createAuthMiddleware, APIError } from 'better-auth/api';
 import { db, schema } from '@leedi/db';
 import { env } from '@leedi/config';
+import { passwordSchema } from './schemas/password.js';
+
+/**
+ * Enforces the full password policy (Story 2.1 — min 8 + uppercase + digit) at
+ * EVERY Better-Auth entry point, not just the app's Server Actions. The catch-all
+ * `/api/auth/[...all]` route exposes the native `sign-up`/`reset-password`
+ * endpoints directly; without this hook a client could POST a weak password
+ * straight to them and bypass `registerUser`/`resetPassword`'s `passwordSchema`.
+ * `minPasswordLength` below covers length at the native layer; this hook adds the
+ * complexity rules Better-Auth has no native config for.
+ */
+const enforcePasswordPolicy = createAuthMiddleware(async (ctx) => {
+  let candidate: unknown;
+  if (ctx.path === '/sign-up/email') {
+    candidate = (ctx.body as { password?: unknown } | undefined)?.password;
+  } else if (ctx.path === '/reset-password') {
+    candidate = (ctx.body as { newPassword?: unknown } | undefined)?.newPassword;
+  } else {
+    return;
+  }
+  const parsed = passwordSchema.safeParse(candidate);
+  if (!parsed.success) {
+    throw new APIError('BAD_REQUEST', {
+      message: parsed.error.issues[0]?.message ?? 'Senha inválida',
+    });
+  }
+});
 
 /**
  * Better-Auth instance for Leedi.
@@ -42,6 +69,10 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: true,
     autoSignIn: false,
+    // Length floor enforced at the native endpoints too (Story 2.1). Complexity
+    // (uppercase + digit) is added by the `hooks.before` policy below, which
+    // Better-Auth has no native config for.
+    minPasswordLength: 8,
     // Reset-password token lifetime (Story 2.3 AC#1): 60 minutes, in seconds.
     resetPasswordTokenExpiresIn: 60 * 60,
     // AC#2: invalidate ALL existing sessions after a successful reset. This is
@@ -58,7 +89,11 @@ export const auth = betterAuth({
     },
   },
   session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 days default — AC#1 persistent session
+    // Story 2.2 Task 1: "remember me" -> 30-day persistent session. When the
+    // login form leaves the box unchecked, Better-Auth issues a session cookie
+    // (no max-age, cleared on browser close) regardless of this value — so this
+    // 30-day lifetime applies to remembered sessions only.
+    expiresIn: 60 * 60 * 24 * 30, // 30 days — AC#1 persistent (remember me)
     updateAge: 60 * 60 * 24, // refresh once per day
     cookieCache: {
       enabled: true,
@@ -71,6 +106,11 @@ export const auth = betterAuth({
       const { sendVerificationEmail } = await import('./email-senders.js');
       await sendVerificationEmail(user.email, url);
     },
+  },
+  // Global request hook: enforce the password policy on the native endpoints
+  // exposed by the catch-all route (see `enforcePasswordPolicy` above).
+  hooks: {
+    before: enforcePasswordPolicy,
   },
   // nextCookies bridges Better-Auth's Set-Cookie headers into next/headers
   // cookies() so that auth.api.* calls made from Server Actions (login/logout)
@@ -86,22 +126,8 @@ export type Session = typeof auth.$Infer.Session;
  *
  * This performs a full DB-backed validation of the session token. Do NOT call it
  * from Edge middleware — the Drizzle/pg adapter cannot run on the Edge runtime.
- * For optimistic Edge checks use `hasSessionCookie` instead.
+ * For optimistic Edge checks use `hasSessionCookie` from `@leedi/auth/edge` instead.
  */
 export async function getSession(headers: Headers) {
   return auth.api.getSession({ headers });
-}
-
-/**
- * Edge-safe optimistic auth check for middleware.
- *
- * Returns true when a Better-Auth session cookie is present on the request. It
- * only inspects the cookie (no DB call), so it is safe in the Edge runtime. Real
- * validation still happens server-side via `getSession`; this just gates routing.
- *
- * It auto-detects the `__Secure-` cookie prefix from the request protocol, so it
- * stays consistent with `advanced.useSecureCookies` above.
- */
-export function hasSessionCookie(request: Request | Headers): boolean {
-  return getSessionCookie(request) !== null;
 }

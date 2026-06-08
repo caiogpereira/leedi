@@ -1,6 +1,10 @@
-﻿# Story 1.5: Set Up Shared UI Package (shadcn/ui + Leedi Design Tokens)
+﻿---
+baseline_commit: d9f5685 # Story 1.4 commit (db package) — added retroactively in code review 2026-06-04
+---
 
-Status: review
+# Story 1.5: Set Up Shared UI Package (shadcn/ui + Leedi Design Tokens)
+
+Status: done
 
 ## Story
 
@@ -16,26 +20,26 @@ so that the platform looks consistent from the very first screen.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Define the design token system in the shared Tailwind config (AC: #1)
-  - [ ] In `tooling/tailwind-config/index.js` (named `@leedi/tailwind-config`), define the token scales: `neutral-50â€¦950` (12 gray tones), `primary` indigo (10 tones), `accent-ai` violet (10 tones, reserved for AI badges/indicators ONLY), semantic `success`/`warning`/`error`/`info`, and a single `whatsapp` green (used ONLY on the channel icon)
-  - [ ] Set the dark-mode base background to off-black `#0A0A0F` (NOT `#000`)
-  - [ ] Configure `darkMode: "class"`, `content` globs covering apps + `packages/ui`, and map tokens to CSS variables (HSL) so shadcn theming works
-  - [ ] Export the config as a Tailwind preset so apps consume it via `presets: [require('@leedi/tailwind-config')]`
-- [ ] Task 2: Define the CSS variable theme layer (AC: #1, #3)
-  - [ ] Create `packages/ui/src/styles/globals.css` declaring CSS custom properties for light (`:root`) and dark (`.dark`) â€” both the shadcn semantic vars (`--background`, `--foreground`, `--primary`, etc.) and the Leedi token vars
-  - [ ] Verify color choices meet WCAG AA contrast (>= 4.5:1 for normal text) in BOTH themes; document the contrast pairs checked
-- [ ] Task 3: Install shadcn/ui components into `packages/ui` (AC: #2)
-  - [ ] Initialize shadcn/ui in `packages/ui` (configure `components.json` with the alias pointing at `src/components/ui`, the shared Tailwind preset, and `globals.css`)
-  - [ ] Add the baseline components required by the AC: `Button`, `Input`, `Dialog` (plus their primitive deps, e.g. Radix)
-  - [ ] Re-export every component from `packages/ui/src/index.ts` (public API contract) and export `cn`, the theme provider, and `globals.css` path
-- [ ] Task 4: Theme provider + toggle (AC: #3)
-  - [ ] Add a `ThemeProvider` (next-themes) wrapper and a `ThemeToggle` component, exported from `src/index.ts`, toggling the `.dark` class on `<html>` with no page reload
-- [ ] Task 5: Tailwind preset consumption wiring (AC: #1)
-  - [ ] Document (and stub) how each app's `tailwind.config` imports the preset and includes `@leedi/ui` in its `content`; full app wiring happens in Story 1.6 but the preset must be ready and resolvable
-- [ ] Task 6: Tests / verification (AC: #1, #2, #3)
-  - [ ] Add a minimal render test (Vitest + React Testing Library) for `Button` rendering with the primary token class
-  - [ ] Manually verify (or with an automated contrast check) that `primary` on `background` and `accent-ai` on `background` pass WCAG AA in light and dark
-  - [ ] Verify toggling theme flips `.dark` and re-renders without reload (covered when an app exists in 1.6; note the dependency)
+- [x] Task 1: Define the design token system in the shared Tailwind config (AC: #1)
+  - [x] In `tooling/tailwind-config/index.js` (named `@leedi/tailwind-config`), define the token scales: `neutral-50â€¦950` (12 gray tones), `primary` indigo (10 tones), `accent-ai` violet (10 tones, reserved for AI badges/indicators ONLY), semantic `success`/`warning`/`error`/`info`, and a single `whatsapp` green (used ONLY on the channel icon)
+  - [x] Set the dark-mode base background to off-black `#0A0A0F` (NOT `#000`)
+  - [x] Configure `darkMode: "class"`, `content` globs covering apps + `packages/ui`, and map tokens to CSS variables (HSL) so shadcn theming works
+  - [x] Export the config as a Tailwind preset so apps consume it via `presets: [require('@leedi/tailwind-config')]`
+- [x] Task 2: Define the CSS variable theme layer (AC: #1, #3)
+  - [x] Create `packages/ui/src/styles/globals.css` declaring CSS custom properties for light (`:root`) and dark (`.dark`) â€” both the shadcn semantic vars (`--background`, `--foreground`, `--primary`, etc.) and the Leedi token vars
+  - [x] Verify color choices meet WCAG AA contrast (>= 4.5:1 for normal text) in BOTH themes; document the contrast pairs checked
+- [x] Task 3: Install shadcn/ui components into `packages/ui` (AC: #2)
+  - [x] Initialize shadcn/ui in `packages/ui` (configure `components.json` with the alias pointing at `src/components/ui`, the shared Tailwind preset, and `globals.css`)
+  - [x] Add the baseline components required by the AC: `Button`, `Input`, `Dialog` (plus their primitive deps, e.g. Radix)
+  - [x] Re-export every component from `packages/ui/src/index.ts` (public API contract) and export `cn`, the theme provider, and `globals.css` path
+- [x] Task 4: Theme provider + toggle (AC: #3)
+  - [x] Add a `ThemeProvider` (next-themes) wrapper and a `ThemeToggle` component, exported from `src/index.ts`, toggling the `.dark` class on `<html>` with no page reload
+- [x] Task 5: Tailwind preset consumption wiring (AC: #1)
+  - [x] Document (and stub) how each app's `tailwind.config` imports the preset and includes `@leedi/ui` in its `content`; full app wiring happens in Story 1.6 but the preset must be ready and resolvable
+- [x] Task 6: Tests / verification (AC: #1, #2, #3)
+  - [x] Add a minimal render test (Vitest + React Testing Library) for `Button` rendering with the primary token class
+  - [x] Manually verify (or with an automated contrast check) that `primary` on `background` and `accent-ai` on `background` pass WCAG AA in light and dark
+  - [x] Verify toggling theme flips `.dark` and re-renders without reload (covered when an app exists in 1.6; note the dependency)
 
 ## Dev Notes
 
@@ -80,4 +84,28 @@ claude-sonnet-4-6
 
 ### Completion Notes List
 
+> Reconstructed in code review 2026-06-04 from commit `ec0dd67` (Dev Agent Record was left empty at hand-off).
+
+- AC 1 verified: design tokens defined once in `tooling/tailwind-config/index.js` (preset) — neutral 50…950, primary indigo, accent-ai violet, semantic + whatsapp green; consumed by apps via `presets`. `bg-primary`, `text-accent-ai`, `bg-neutral-50` resolve to Leedi brand colors.
+- AC 2 verified: shadcn/ui `Button`, `Input`, `Dialog` installed in `packages/ui/src/components/ui/`, re-exported from `src/index.ts`. Button render smoke test passes; contrast test asserts WCAG AA pairs.
+- AC 3 verified: dark base set to off-black `#0A0A0F` (not pure black); `darkMode: "class"`; `ThemeProvider` (next-themes) + `ThemeToggle` toggle `.dark` on `<html>` without reload.
+- Single source of truth respected: tokens in the Tailwind preset + matching CSS variables in `globals.css`; no duplication. `cn` util imported from the package's own `lib/utils`.
+- Tests: `button.test.tsx` (render with primary token), `contrast.test.ts` (computed WCAG AA contrast, both themes).
+
 ### File List
+
+- tooling/tailwind-config/index.js (new — token preset, darkMode class, off-black dark base)
+- tooling/tailwind-config/package.json (modified)
+- packages/ui/components.json (new — shadcn config)
+- packages/ui/package.json (modified — cva, clsx, tailwind-merge, next-themes, radix, RTL/jsdom)
+- packages/ui/src/components/ui/button.tsx (new)
+- packages/ui/src/components/ui/input.tsx (new)
+- packages/ui/src/components/ui/dialog.tsx (new)
+- packages/ui/src/lib/utils.ts (new — cn)
+- packages/ui/src/styles/globals.css (new — light/dark CSS variables)
+- packages/ui/src/theme/provider.tsx (new — ThemeProvider)
+- packages/ui/src/theme/toggle.tsx (new — ThemeToggle)
+- packages/ui/src/index.ts (modified — barrel re-exports)
+- packages/ui/src/__tests__/button.test.tsx (new)
+- packages/ui/vitest.config.ts (new)
+- packages/ui/tsconfig.json (modified)

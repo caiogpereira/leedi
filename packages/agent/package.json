@@ -8,10 +8,21 @@
   "scripts": {
     "build": "echo 'stub'",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@leedi/tsconfig": "workspace:*",
-    "@leedi/eslint-config": "workspace:*"
+    "@leedi/eslint-config": "workspace:*",
+    "vitest": "^4.1.7"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.100.1",
+    "@upstash/qstash": "^2.11.0",
+    "@leedi/agent-memory": "workspace:*",
+    "@leedi/config": "workspace:*",
+    "@leedi/connection": "workspace:*",
+    "@leedi/db": "workspace:*",
+    "@leedi/knowledge": "workspace:*"
   }
 }

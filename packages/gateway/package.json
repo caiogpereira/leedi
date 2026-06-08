@@ -8,10 +8,12 @@
   "scripts": {
     "build": "echo 'stub'",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@leedi/tsconfig": "workspace:*",
-    "@leedi/eslint-config": "workspace:*"
+    "@leedi/eslint-config": "workspace:*",
+    "vitest": "^4.1.7"
   }
 }

@@ -228,20 +228,27 @@ As estimativas abaixo assumem:
 - **Comunicação clara** com PM/Architect a cada milestone
 - **Bloqueios externos resolvidos em paralelo** (Meta approval, credenciais)
 
-| Fase              | Épicos      | Funcionalidades principais                                  | Estimativa      | Crítico externo                    |
-| ----------------- | ----------- | ----------------------------------------------------------- | --------------- | ---------------------------------- |
-| **0**             | (Fundação)  | Monorepo, DB, Auth base, CI/CD, tipos                       | **1 semana**    | Supabase+Vercel ready              |
-| **1**             | 1-2-3       | Tenancy, RLS, Auth completo, Design System, WhatsApp schema | **2 semanas**   | Meta app/webhook URL               |
-| **2**             | 4           | Webhook ingestion, message normalization, idempotência      | **1 semana**    | Meta quality tier                  |
-| **3**             | 5-7         | Agent core, tools, templates, catalog                       | **3 semanas**   | Claude API billing                 |
-| **4**             | 6-8         | Campaigns, disparo, follow-up, inbox, analytics             | **2 semanas**   | Asaas sandbox                      |
-| **Stabilization** | (não épico) | Testes E2E, otimizações, bugfix                             | **2 semanas**   | N/A                                |
-| **MVP Total**     | —           | —                                                           | **~11 semanas** | **Meta + Claude + Asaas paralelo** |
+> **Calibração:** Epics 1–8 foram implementadas e estão em review — usadas como âncora de calibração. Épicos menores (1–2 stories) tendem a 3–5 dev-days; épicos maiores (5–8 stories) tendem a 8–15 dev-days com ramp-up de contexto.
 
-**Notas:**
+| Fase              | Épicos      | Funcionalidades principais                                  | Dev-days est. | Confiança | Dependência externa crítica |
+| ----------------- | ----------- | ----------------------------------------------------------- | ------------- | --------- | --------------------------- |
+| **0 — Fundação**  | (Fundação)  | Monorepo, DB, Auth base, CI/CD, tipos                       | **5**         | Alta      | Supabase + Vercel provisionados |
+| **1 — Auth + Tenancy** | 1–3    | Tenancy, RLS, Auth completo, Design System, WhatsApp schema | **10**        | Alta      | Meta app criado + webhook URL pública |
+| **2 — WhatsApp**  | 4           | Webhook ingestion, normalização, idempotência               | **5**         | Alta      | Meta quality tier (pode simular com test number) |
+| **3 — Agent core** | 5–8        | Lead, Knowledge, Sales Method, Agent, Playground            | **15**        | Média     | Anthropic API billing ativo; chaves Claude disponíveis |
+| **4 — Comercial** | 10–11       | Campaigns, Gateway Hotmart, Dispatch, Inbox                 | **10**        | Média     | Hotmart sandbox; Asaas sandbox |
+| **5 — Templates** | 12          | Template builder, submissão Meta, biblioteca, webhook status | **5**        | **Baixa** | **Aprovação de templates pela Meta pode levar 24–72h e está fora do controle da equipe. Planejar buffer de no mínimo 3 dias úteis a mais por ciclo de aprovação.** |
+| **6 — Produto vendável** | 13–18 | Usage, Billing Asaas, Notifications, Onboarding polido, Super-Admin | **15** | Média | Asaas produção; DKIM/SPF de email configurado |
+| **Stabilization** | (não épico) | Testes E2E, otimizações, bugfix                             | **10**        | Alta      | N/A |
+| **MVP Total**     | —           | —                                                           | **~75 dev-days (~15 semanas)** | — | Meta + Claude + Asaas em paralelo |
 
-- Se **Meta approval atrasada**, Fase 1 avança até webhook handlers (sem teste real), retoma na aprovação.
-- Se **Asaas sandbox atrasado**, Fase 4 retoma assim que pronto.
+**Notas de calibração:**
+
+- **Alta confiança:** escopo bem entendido, sem dependência externa bloqueante, padrões já estabelecidos no projeto.
+- **Média confiança:** envolve integração com serviço externo (sandbox disponível), edge cases a validar.
+- **Baixa confiança:** depende de processo externo com SLA variável (Meta approval, Meta Tech Provider status).
+- Se **Meta approval atrasada (Epic 12)**, avançar com mocks e retomar quando aprovado. Não bloquear outras fases.
+- Se **Asaas sandbox atrasado**, Fases 4 e 6 avançam sem billing automático e testam manual.
 - **Seções críticas** (auth RLS, webhook idempotência, agent tools) têm testes isolados que não dependem de externos.
 
 ---
@@ -285,6 +292,62 @@ Uma vez que o Leedi está em produção (clientes reais usando), rolbacks precis
    - Rodar feature novo em feature flag (5% → 25% → 100%)
 ```
 
+### Rollback de deploy Vercel
+
+```bash
+# Via CLI — reverte para o deployment anterior em produção
+vercel rollback [deployment-url]
+
+# Via Dashboard: Vercel UI → projeto → "Deployments" → deployment anterior → "Promote to Production"
+# Tempo estimado: 1–3 min para propagação de CDN
+```
+
+### Rollback de migration Drizzle
+
+**V1 assumption:** todas as migrations são aditivas (ADD COLUMN, CREATE TABLE, CREATE INDEX). Nenhuma migration de V1 faz DROP ou RENAME. Isso é parte do Definition of Done de cada story.
+
+Por isso, um true "down migration" raramente é necessário. O procedimento seguro é:
+
+```bash
+# 1. Identificar a migration problemática
+ls packages/db/src/migrations/
+
+# 2. Criar uma nova migration "undo" que desfaz o efeito
+# Exemplo: se a migration adicionou coluna bad_column na tabela leads:
+# Nova migration: ALTER TABLE leads DROP COLUMN IF EXISTS bad_column;
+
+# 3. Aplicar a migration de undo em staging primeiro
+pnpm --filter @leedi/db db:migrate # testa em staging
+# Se OK → aplicar em produção
+
+# 4. Reverter o código via Vercel (ver seção acima)
+```
+
+**Nunca edite uma migration já aplicada em produção.** Crie sempre uma nova migration de correção.
+
+### Procedimento crítico: migration aplicada + código novo quebrado
+
+Este é o cenário mais perigoso. O schema foi atualizado mas o novo código tem um bug.
+
+```
+Situação: migration 0012 aplicada em produção, deploy do novo código causa error rate > 10%
+
+AÇÃO CORRETA:
+1. Reverter código via Vercel (promote deployment anterior)
+2. NÃO reverter a migration — o schema novo já existe
+3. O código anterior DEVE ser compatível com o schema novo
+   (isso é garantido pelo DoD: toda migration é backward-compatible com a versão anterior do código)
+
+RESULTADO: código antigo + schema novo rodando juntos temporariamente
+           → equipe corrige o bug → novo deploy com código corrigido
+
+ERROS A EVITAR:
+- Não tente rodar "down migration" com dados reais sem snapshot
+- Não force o schema antigo se o código novo foi parcialmente executado
+```
+
+> **Por que isso funciona:** o DoD do Leedi exige que toda migration seja backward-compatible — o código N-1 deve funcionar com o schema N. Essa restrição é exatamente o que torna o rollback seguro sem reverter schema.
+
 ### Backups and recovery
 
 - **Supabase:** backup automático diário (mantém 7 dias)
@@ -296,9 +359,53 @@ Uma vez que o Leedi está em produção (clientes reais usando), rolbacks precis
 
 ## 9. Pipeline CI/CD (detalhes técnicos)
 
+### Branch trigger matrix
+
+| Evento | CI roda? | CD roda? |
+|---|---|---|
+| Pull Request aberto/atualizado (qualquer branch → main) | **Sim** | Não |
+| Push para `main` (merge de PR) | **Sim** | **Sim** → staging automático → produção manual |
+| Push para outras branches | Não | Não |
+
+**Regra:** CI bloqueia merge se qualquer step falhar. CD só executa depois que CI passa em `main`.
+
+### Staging URL pattern
+
+```
+# Apps Vercel preview (PRs)
+https://<app>-git-<branch>-leedi.vercel.app
+
+# Staging (branch main antes de promote)
+https://dashboard-staging.leedi.digital
+https://api-staging.leedi.digital
+https://admin-staging.leedi.digital
+```
+
+### Definição de smoke test
+
+O smoke test valida que o deploy está saudável antes de promover para produção:
+
+```bash
+# 1. Health check da API (obrigatório)
+curl -f https://api-staging.leedi.digital/health
+# Espera: HTTP 200, body: {"status":"ok","db":"connected","redis":"connected"}
+
+# 2. Canary DB read (obrigatório)
+# Endpoint interno que faz SELECT 1 + lê 1 registro de tenants
+curl -f https://api-staging.leedi.digital/health/db-canary
+# Espera: HTTP 200
+
+# 3. Auth smoke (obrigatório)
+# Tenta login com conta de teste do staging
+pnpm --filter @leedi/api test:smoke
+# Roda: vitest run tests/smoke/auth.test.ts
+```
+
+Se qualquer check falhar → deploy não é promovido para produção, Slack #deploy-log é notificado.
+
 ### CI (Continuous Integration) — GitHub Actions
 
-Cada **push para main** (após PR merge) roda:
+Cada **pull request aberto contra `main`** e cada **push para `main`** roda:
 
 ```yaml
 name: CI

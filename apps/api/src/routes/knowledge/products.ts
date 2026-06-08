@@ -9,12 +9,16 @@ import {
   ProductValidationError,
 } from '@leedi/knowledge';
 import { requireTenantSession } from '../../middleware/tenant-session.js';
+import { rateLimitTenant } from '../../middleware/rate-limit.js';
 
 const FIELDS = ['argumentos', 'diferenciais', 'provasSociais', 'bonus'] as const;
 type MaterialField = (typeof FIELDS)[number];
 
 export function createProductsRouter() {
   const router = new Hono();
+
+  // NFR8: per-tenant rate limit on every route in this router (keys off :tenantId).
+  router.use('*', rateLimitTenant());
 
   // GET /api/tenants/:tenantId/knowledge/products
   router.get('/', requireTenantSession(), async (c) => {

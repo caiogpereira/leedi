@@ -110,3 +110,9 @@ claude-sonnet-4-6
 - `packages/db/src/index.ts`
 - `packages/db/migrations/0000_opposite_mephisto.sql`
 - `packages/db/src/__tests__/rls.test.ts`
+
+## Review Findings (Code Review 2026-06-04)
+
+- [ ] [Review][Decision] AC#2 (tenant isolation) is UNENFORCED at runtime — the app `DATABASE_URL` connects as Supabase `postgres` (`rolbypassrls = true`), so `withTenant`/`withServiceRole` are no-ops and the cross-tenant negative test is left actively failing. Violates the story's explicit pitfall ("app role must NOT have BYPASSRLS"). Decide: gate Epic-2 acceptance on provisioning a dedicated non-BYPASSRLS app role, or accept stories 2.4/2.7/2.8 with a documented runtime limitation. [packages/db/src/__tests__/rls.test.ts; packages/db/src/index.ts]
+- [ ] [Review][Patch] RLS policies on `memberships`/`tenants` are all-command and lack `WITH CHECK` — the `user_id = app.user_id` SELECT escape hatch also permits writes (e.g. a user self-assigning `role='owner'`); any `withTenant(t)` write can mutate any membership in `t` with no role check. Fix: split `FOR SELECT` vs write policies and add `WITH CHECK`. [packages/db/migrations/0000_opposite_mephisto.sql:3648-3655]
+- [ ] [Review][Patch] `audit_logs` SELECT policy is `USING (true)` and INSERT is `WITH CHECK (true)` — world-readable across workspaces and any context can insert arbitrary audit rows. Task 3 required a separate super-admin/service-role SELECT policy. [packages/db/migrations/0000_opposite_mephisto.sql:3656-3658]

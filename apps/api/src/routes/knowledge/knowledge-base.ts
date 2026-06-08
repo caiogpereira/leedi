@@ -7,9 +7,13 @@ import {
   KnowledgeValidationError,
 } from '@leedi/knowledge';
 import { requireTenantSession } from '../../middleware/tenant-session.js';
+import { rateLimitTenant } from '../../middleware/rate-limit.js';
 
 export function createKnowledgeBaseRouter() {
   const router = new Hono();
+
+  // NFR8: per-tenant rate limit on every route in this router (keys off :tenantId).
+  router.use('*', rateLimitTenant());
 
   // GET /api/tenants/:tenantId/knowledge/knowledge-base?tipo=faq|objecao&categoria=
   router.get('/', requireTenantSession(), async (c) => {

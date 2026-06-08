@@ -4,7 +4,7 @@ baseline_commit: 9ea8a05
 
 # Story 7.1: Agent Configuration Panel
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -23,50 +23,50 @@ so that I can control the agent's behavior without writing code.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: DB schema for `agent_configs` + agent-memory tables + migration (AC: #1)
-  - [ ] Create `packages/db/src/schema/agent.ts`
-  - [ ] Define `pgEnum('agent_modelo_ia', ['sonnet', 'haiku', 'opus'])`
-  - [ ] Define `pgEnum('agent_thread_status', ['ativo', 'pausado', 'encerrado'])`
-  - [ ] Define `pgEnum('agent_message_role', ['system', 'user', 'assistant', 'tool'])`
-  - [ ] Define `agent_configs` table: `id` (uuid pk, defaultRandom), `tenantId` (uuid FK → `tenants.id`, notNull, UNIQUE), `nomeAgente` (text notNull default `'Assistente'`, column `nome_agente`), `persona` (text notNull default `''`), `estiloMensagem` (jsonb notNull default `{ tamanho: 'medio', formalidade: 'informal', emoji: true }`, column `estilo_mensagem`), `limites` (text notNull default `''`), `salesMethodId` (uuid FK → `sales_methods.id`, nullable, column `sales_method_id`), `modeloIa` (agentModeloIaEnum notNull default `'sonnet'`, column `modelo_ia`), `toolsHabilitadas` (jsonb notNull default `{ consultar_base_conhecimento: false, agendar_followup: false, transferir_humano: false, adicionar_tag: false, solicitar_reengajamento: false }`, column `tools_habilitadas`), `ativo` (boolean notNull default `true`), `createdAt`, `updatedAt`
-  - [ ] Define `agent_threads` table (PARTITIONED BY MONTH on `created_at`): `id` (uuid), `tenantId` (uuid notNull), `leadId` (uuid FK → `leads.id`, column `lead_id`), `conversationWindowId` (uuid FK → `conversation_windows.id`, column `conversation_window_id`), `status` (agentThreadStatusEnum notNull default `'ativo'`), `createdAt`, `updatedAt`. PRIMARY KEY MUST be composite `(id, created_at)` — see partitioning pitfall below
-  - [ ] Define `agent_messages` table (PARTITIONED BY MONTH on `created_at`): `id` (uuid), `tenantId` (uuid notNull), `threadId` (uuid column `thread_id`), `role` (agentMessageRoleEnum notNull), `content` (jsonb notNull — Anthropic SDK message format), `tokensInput` (integer nullable, column `tokens_input`), `tokensOutput` (integer nullable, column `tokens_output`), `modelo` (text nullable), `custoUsd` (numeric nullable, column `custo_usd`), `createdAt`. PRIMARY KEY MUST be composite `(id, created_at)`. Do NOT add a naive FK `thread_id → agent_threads.id` (the parent's unique key is now composite) — see pitfall
-  - [ ] Define `agent_tool_calls` table: `id` (uuid), `tenantId` (uuid notNull), `threadId` (uuid column `thread_id`), `messageId` (uuid nullable, column `message_id`), `toolName` (text notNull, column `tool_name`), `input` (jsonb), `output` (jsonb), `duracaoMs` (integer nullable, column `duracao_ms`), `erro` (text nullable), `createdAt`. Cross-partition FKs to `agent_messages`/`agent_threads` are not viable with composite PKs — enforce integrity at the app layer (see pitfall)
-  - [ ] Generate migration `0009_agent_schema.sql` via Drizzle Kit. Correct sequence: 0004=messages (Epic 4), 0005=leads (5.1), 0006=messaging (5.5), 0007=knowledge (6.1), 0008=sales_methods (6.4), **0009=agent_schema (this story)**.
-  - [ ] In the migration: declare `agent_threads` and `agent_messages` as `PARTITION BY RANGE (created_at)` and create at least the current + next month partitions (e.g. `agent_threads_yYYYYmMM`). Drizzle Kit does not emit partitioning — hand-edit the generated SQL.
-  - [ ] `ENABLE` + `FORCE ROW LEVEL SECURITY` on all four tables; add `CREATE POLICY tenant_isolation ... USING (tenant_id = current_setting('app.tenant_id', true)::uuid)` on each (partitioned parents inherit; also set on partitions if Postgres version requires)
-  - [ ] Add `updated_at` trigger on `agent_configs` and `agent_threads` reusing the existing `set_updated_at()` DB function (from Story 4.1) — do NOT redefine it
-  - [ ] Re-export `agent` schema from `packages/db/src/schema/index.ts`
-- [ ] Task 2: Agent config API (AC: #2, #3)
-  - [ ] Create `apps/api/src/routes/agent/config.ts` (Hono router)
-  - [ ] `GET /agent-config` — returns the current tenant's `agent_config`, upserting the default if none exists
-  - [ ] `PATCH /agent-config` — update fields; validate `modelo_ia` against the enum and `estilo_mensagem` / `tools_habilitadas` shapes with Zod
-  - [ ] Create use cases: `apps/api/src/use-cases/agent/get-or-create-agent-config.ts`, `apps/api/src/use-cases/agent/update-agent-config.ts` — all writes via `withTenant(tenantId, ...)`
-  - [ ] Wire `sales_method_id`: accept and validate the FK on PATCH (Story 6.4 must be completed before this story)
-  - [ ] **WARNING-4 FIX — Migrate temporary preference:** In `get-or-create-agent-config`, when upserting the default config, read `tenants.config.tenant_sales_method_preference` (set by Story 6.4's UI). If present, set `agent_configs.sales_method_id` to that value and remove the temporary preference key from `tenants.config`. This ensures no data is lost when migrating from the Story 6.4 temporary store.
-  - [ ] Register the router in `apps/api/src/app.ts`
-- [ ] Task 3: System prompt builder utility (AC: #4)
-  - [ ] Create the `@leedi/agent` package: `packages/agent/` with `package.json` (`name: "@leedi/agent"`), `tsconfig.json`, `vitest.config.ts`, `src/index.ts`
-  - [ ] Create `packages/agent/src/utils/build-system-prompt.ts`
-  - [ ] Function `buildSystemPrompt(agentConfig, salesMethod, activeProduct): string`
-  - [ ] Structure: `[PERSONA_BLOCK]` + `[METHOD_BLOCK]` + `[PRODUCT_BLOCK]` + `[LIMITS_BLOCK]`, each clearly delimited with stable markers so the stable prefix can be cached (see §7.5)
-  - [ ] `nome_agente`, `persona`, `estilo_mensagem` feed the PERSONA_BLOCK; `limites` feeds LIMITS_BLOCK
-  - [ ] Pure function, no Claude API calls — fully unit testable
-  - [ ] Export from `packages/agent/src/index.ts`
-- [ ] Task 4: Agent configuration UI (AC: #2, #3, #6)
-  - [ ] Create `apps/dashboard/app/(dashboard)/agente/configuracoes/page.tsx`
-  - [ ] Section "Identidade": `nome_agente` (Input), `persona` (`AIAssistedTextarea` with ✨ button)
-  - [ ] Section "Estilo": `tamanho` (curto/medio/longo), `formalidade` (formal/informal), `emoji` (toggle)
-  - [ ] Section "Limites": textarea with ✨ (`AIAssistedTextarea`)
-  - [ ] Section "Método de venda": radio cards linking to `/agente/metodo` (Story 6.4)
-  - [ ] Section "Ferramentas": toggle switch per configurable tool (`consultar_base_conhecimento`, `agendar_followup`, `transferir_humano`, `adicionar_tag`, `solicitar_reengajamento`)
-  - [ ] Section "Modelo de IA": select (sonnet/haiku/opus) with plan-restriction info text
-  - [ ] Save button with loading state + success toast; fetch from `GET /agent-config`, persist via `PATCH /agent-config`
-- [ ] Task 5: Tests (AC: #2, #4, #5)
-  - [ ] Unit: `buildSystemPrompt` produces a string containing all four blocks and the configured `nome_agente` ("Mari")
-  - [ ] Unit: when `tools_habilitadas.transferir_humano = false`, the tool list built for the Claude call excludes `transferir_humano` (test the filtering helper; full loop tested in 7.2)
-  - [ ] Unit: `get-or-create-agent-config` creates the default when none exists; returns existing otherwise
-  - [ ] Integration (Supabase): `agent_configs` upsert + PATCH roundtrip; UNIQUE on `tenant_id` rejects a second config; RLS prevents cross-tenant reads
+- [x] Task 1: DB schema for `agent_configs` + agent-memory tables + migration (AC: #1)
+  - [x] Create `packages/db/src/schema/agent.ts`
+  - [x] Define `pgEnum('agent_modelo_ia', ['sonnet', 'haiku', 'opus'])`
+  - [x] Define `pgEnum('agent_thread_status', ['ativo', 'pausado', 'encerrado'])`
+  - [x] Define `pgEnum('agent_message_role', ['system', 'user', 'assistant', 'tool'])`
+  - [x] Define `agent_configs` table: `id` (uuid pk, defaultRandom), `tenantId` (uuid FK → `tenants.id`, notNull, UNIQUE), `nomeAgente` (text notNull default `'Assistente'`, column `nome_agente`), `persona` (text notNull default `''`), `estiloMensagem` (jsonb notNull default `{ tamanho: 'medio', formalidade: 'informal', emoji: true }`, column `estilo_mensagem`), `limites` (text notNull default `''`), `salesMethodId` (uuid FK → `sales_methods.id`, nullable, column `sales_method_id`), `modeloIa` (agentModeloIaEnum notNull default `'sonnet'`, column `modelo_ia`), `toolsHabilitadas` (jsonb notNull default `{ consultar_base_conhecimento: false, agendar_followup: false, transferir_humano: false, adicionar_tag: false, solicitar_reengajamento: false }`, column `tools_habilitadas`), `ativo` (boolean notNull default `true`), `createdAt`, `updatedAt`
+  - [x] Define `agent_threads` table (PARTITIONED BY MONTH on `created_at`): composite PK `(id, created_at)`
+  - [x] Define `agent_messages` table (PARTITIONED BY MONTH on `created_at`): composite PK `(id, created_at)`, no FK `thread_id → agent_threads.id`
+  - [x] Define `agent_tool_calls` table: plain `id` PK (NOT partitioned); cross-partition FKs enforced at app layer
+  - [x] Generate migration `0009_agent_schema.sql` (hand-written — Drizzle Kit hit an interactive TTY prompt and does not emit partitioning; migrations 0006–0008 follow the same hand-written + Supabase-applied convention)
+  - [x] In the migration: declared `agent_threads` and `agent_messages` as `PARTITION BY RANGE (created_at)` with `_2026_06/_07/_08` partitions (matches `messages` naming from 0006)
+  - [x] `ENABLE` + `FORCE ROW LEVEL SECURITY` on all four tables; `CREATE POLICY tenant_isolation ... USING (tenant_id = current_setting('app.tenant_id', true)::uuid)` on each (verified via pg_policies)
+  - [x] Added `updated_at` trigger on `agent_configs` and `agent_threads` reusing the existing `set_updated_at()` function (not redefined)
+  - [x] Re-export `agent` schema from `packages/db/src/schema/index.ts`
+- [x] Task 2: Agent config API (AC: #2, #3)
+  - [x] Create `apps/api/src/routes/agent/config.ts` (Hono router)
+  - [x] `GET /agent-config` — returns the current tenant's `agent_config`, upserting the default if none exists
+  - [x] `PATCH /agent-config` — update fields; validates `modelo_ia` / `estilo_mensagem` / `tools_habilitadas` shapes with Zod
+  - [x] Create use cases: `apps/api/src/use-cases/agent/get-or-create-agent-config.ts`, `apps/api/src/use-cases/agent/update-agent-config.ts` — all writes via `withTenant(tenantId, ...)`
+  - [x] Wire `sales_method_id`: accepted on PATCH; FK violation mapped to a 400
+  - [x] **WARNING-4 FIX:** `get-or-create-agent-config` migrates `tenants.config.tenant_sales_method_preference` into `agent_configs.sales_method_id` and removes the temp key — all inside the same `withTenant` transaction
+  - [x] Register the router in `apps/api/src/app.ts` (mounted at `/api/tenants/:tenantId/agent-config` to reuse `requireTenantSession`)
+- [x] Task 3: System prompt builder utility (AC: #4)
+  - [x] Create the `@leedi/agent` package: `packages/agent/` with `package.json`, `tsconfig.json`, `vitest.config.ts`, `src/index.ts`
+  - [x] Create `packages/agent/src/utils/build-system-prompt.ts`
+  - [x] Function `buildSystemPrompt(agentConfig, salesMethod, activeProduct): string`
+  - [x] Structure: `[PERSONA_BLOCK]` + `[METHOD_BLOCK]` + `[PRODUCT_BLOCK]` + `[LIMITS_BLOCK]`, delimited with stable `BLOCK_MARKERS` for prompt caching
+  - [x] `nome_agente`, `persona`, `estilo_mensagem` feed PERSONA_BLOCK; `limites` feeds LIMITS_BLOCK
+  - [x] Pure function, no Claude API calls
+  - [x] Added `resolveEnabledTools` helper (AC#5 — tool filtering, identifiers only) + exported both from `src/index.ts`
+- [x] Task 4: Agent configuration UI (AC: #2, #3, #6)
+  - [x] Create `apps/dashboard/app/(shell)/agente/configuracoes/page.tsx` (route group is `(shell)`, not `(dashboard)`) + `agent-config-client.tsx`
+  - [x] Section "Identidade": `nome_agente` (Input), `persona` (`AIAssistedTextarea` with ✨ button)
+  - [x] Section "Estilo": `tamanho` (curto/medio/longo), `formalidade` (formal/informal), `emoji` (toggle)
+  - [x] Section "Limites": `AIAssistedTextarea` with ✨
+  - [x] Section "Método de venda": card linking to `/agente/metodo` (shows the current method)
+  - [x] Section "Ferramentas": toggle switch per configurable tool
+  - [x] Section "Modelo de IA": select (sonnet/haiku/opus) with plan-restriction info text
+  - [x] Save button with loading state + success message; GET on mount (triggers upsert), PATCH on save; same-origin proxy `app/api/tenants/[tenantId]/agent-config/route.ts`
+- [x] Task 5: Tests (AC: #2, #4, #5)
+  - [x] Unit: `buildSystemPrompt` produces a string containing all four blocks and the configured `nome_agente` ("Mari")
+  - [x] Unit: when `tools_habilitadas.transferir_humano = false`, `resolveEnabledTools` excludes `transferir_humano`
+  - [x] Unit: `get-or-create-agent-config` creates the default when none exists; returns existing otherwise; migrates WARNING-4 preference
+  - [x] Integration (Supabase): `agent_configs` upsert + PATCH roundtrip; UNIQUE on `tenant_id` rejects a second config (RLS isolation documented — app role is BYPASSRLS, same caveat as Story 4.1's rls.test.ts; policies verified at DB level via pg_policies)
 
 ## Dev Notes
 
@@ -107,20 +107,56 @@ so that I can control the agent's behavior without writing code.
 
 ### Agent Model Used
 
-_not yet assigned_
+claude-opus-4-8 (Claude Opus 4.8)
 
 ### Debug Log References
 
-_none_
+- `drizzle-kit generate` failed with an interactive-TTY prompt (column-conflict resolver). Migration `0009_agent_schema.sql` was written by hand instead — consistent with migrations 0006–0008, which are also hand-written and applied via the Supabase MCP (not present in `meta/_journal.json`).
 
 ### Completion Notes List
 
-_not yet implemented_
+- DB: `agent.ts` schema + `0009_agent_schema.sql` applied to Supabase. Verified live: RLS enabled+forced and `tenant_isolation` policy on all four tables; `agent_configs_tenant_id_unique`; `set_updated_at` triggers on `agent_configs`/`agent_threads`; partitions `agent_threads_2026_06/07/08` and `agent_messages_2026_06/07/08`.
+- Partitioning decisions (documented in the migration SQL): `agent_threads`/`agent_messages` use composite PK `(id, created_at)`; `agent_messages.thread_id` has NO FK (composite parent key); `agent_tool_calls` is NOT partitioned (plain `id` PK); cross-partition linkage is enforced at the app layer (`@leedi/agent-memory`, Story 7.2).
+- API: `GET`/`PATCH` mounted at `/api/tenants/:tenantId/agent-config` to reuse `requireTenantSession` + `resolvedTenantId` (the story's bare `/agent-config` was logical shorthand — `requireTenantSession` requires the `:tenantId` param). PATCH FK violation (23503) on `sales_method_id` mapped to a 400.
+- WARNING-4: `get-or-create-agent-config` reads `tenants.config.tenant_sales_method_preference`, sets it as `sales_method_id` on first upsert, and removes the temp key — all in one `withTenant` tx. UNIQUE makes select-then-insert racy, so the insert uses `onConflictDoNothing` then re-selects.
+- `@leedi/agent` is a pure, dependency-free package (no `@leedi/db`, no `@anthropic-ai/sdk` — the SDK arrives in 7.2). `resolveEnabledTools` returns tool identifiers only; the always-on tool set is merged with the enabled configurable tools.
+- UI route group is `(shell)` (story said `(dashboard)`); the page fetches `GET` on mount to trigger the AC#2 upsert and `PATCH`es the whole config on save via a same-origin Next proxy route. `@leedi/agent` was NOT added to dashboard `transpilePackages` (the UI never imports it).
+- WARNING-4 completeness: rewired Story 6.4's `/agente/metodo` to persist the method via `PATCH /api/tenants/:id/agent-config` (`{ salesMethodId }`) and to READ it from `agent_configs.sales_method_id` — the legacy `tenants.config.tenant_sales_method_preference` store is now fully retired (stale comments removed). The one-time drain in `get-or-create-agent-config` is kept for backward-compat with any preference saved under the old key before this deploy. Verified the `jsonb - text` removal and the full migrate-and-drain path live via a transactional sanity check on Supabase.
+- AC#6 (✨): there was no dashboard proxy for `/api/ai/improve-text` (the Hono route streams plaintext) — `AIAssistedTextarea` would have 404'd dashboard-wide (also affected the 6.x knowledge pages). Added `apps/dashboard/app/api/ai/improve-text/route.ts` as a STREAMING same-origin proxy (passes through `upstream.body` + content-type, forwards cookie + x-forwarded-for) so the ✨ accept-a-suggestion flow works.
+- Authorization: PATCH uses `requireTenantSession()` (any tenant member), matching the products/leads convention; the middleware's role check is equality-only and cannot express "owner OR admin", so member-level access is the intentional project-wide stance (not an oversight). Flagged for reviewer awareness.
+- Tests: 12 unit (agent package) + 4 unit (api use case) + 4 integration (db, run against live Supabase) — all green.
+- Pre-existing typecheck errors unrelated to this story remain in `apps/api` (`knowledge-base.ts`, `notification/resend.ts`), `apps/dashboard` (`conhecimento/produtos`, `components/knowledge/ArgumentList`), and `packages/db` (`rls.test.ts`). Confirmed via `git stash` that none are introduced by this story.
 
 ### File List
 
-_not yet implemented_
+Created:
+- `packages/db/src/schema/agent.ts`
+- `packages/db/migrations/0009_agent_schema.sql`
+- `packages/db/src/__tests__/agent-configs-rls.test.ts`
+- `packages/agent/src/utils/build-system-prompt.ts`
+- `packages/agent/src/utils/resolve-enabled-tools.ts`
+- `packages/agent/src/utils/__tests__/build-system-prompt.test.ts`
+- `packages/agent/src/utils/__tests__/resolve-enabled-tools.test.ts`
+- `packages/agent/vitest.config.ts`
+- `apps/api/src/routes/agent/config.ts`
+- `apps/api/src/use-cases/agent/get-or-create-agent-config.ts`
+- `apps/api/src/use-cases/agent/update-agent-config.ts`
+- `apps/api/src/use-cases/agent/__tests__/get-or-create-agent-config.test.ts`
+- `apps/dashboard/app/(shell)/agente/configuracoes/page.tsx`
+- `apps/dashboard/app/(shell)/agente/configuracoes/agent-config-client.tsx`
+- `apps/dashboard/app/api/tenants/[tenantId]/agent-config/route.ts`
+- `apps/dashboard/app/api/ai/improve-text/route.ts` (streaming proxy for the ✨ button — fixes AC#6 dashboard-wide)
+
+Modified:
+- `packages/db/src/schema/index.ts` (re-export agent)
+- `packages/agent/package.json` (test script, vitest devDep)
+- `packages/agent/src/index.ts` (public surface)
+- `apps/api/src/app.ts` (register agent-config router)
+- `apps/dashboard/app/(shell)/agente/metodo/page.tsx` (read method from `agent_configs.sales_method_id`)
+- `apps/dashboard/app/(shell)/agente/metodo/sales-method-client.tsx` (save method via `PATCH /agent-config`; retire temp store)
 
 ### Change Log
 
-_none_
+| Date       | Version | Description                                      | Author        |
+| ---------- | ------- | ------------------------------------------------ | ------------- |
+| 2026-06-01 | 0.1.0   | Implemented Story 7.1 — agent schema + migration, config API, `@leedi/agent` prompt builder + tool filter, configuration UI, and tests. Status → review. | claude-opus-4-8 |

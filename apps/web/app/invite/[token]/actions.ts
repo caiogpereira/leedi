@@ -1,7 +1,9 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { acceptInvitation } from '@leedi/tenancy';
+import { getSession } from '@leedi/auth';
 
 export interface AcceptInviteState {
   error?: string;
@@ -24,9 +26,13 @@ export async function acceptInviteAction(
   formData: FormData
 ): Promise<AcceptInviteState> {
   const password = formData.get('password');
+  // Pass the authenticated user's email (if any) so the use-case can reject a
+  // logged-in user redeeming an invite addressed to a different account.
+  const session = await getSession(await headers());
   const result = await acceptInvitation(
     token,
-    typeof password === 'string' && password ? password : undefined
+    typeof password === 'string' && password ? password : undefined,
+    session?.user?.email
   );
 
   if (!result.success) {

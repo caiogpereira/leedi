@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   pgTable,
   pgEnum,
@@ -68,21 +69,32 @@ export const memberships = pgTable(
   (t) => [uniqueIndex('memberships_user_tenant_idx').on(t.userId, t.tenantId)]
 );
 
-export const invitations = pgTable('invitations', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id')
-    .references(() => tenants.id)
-    .notNull(),
-  email: text('email').notNull(),
-  role: tenantRoleEnum('role').notNull(),
-  invitedBy: uuid('invited_by')
-    .references(() => users.id)
-    .notNull(),
-  token: text('token').notNull().unique(),
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-  acceptedAt: timestamp('accepted_at', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+export const invitations = pgTable(
+  'invitations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    email: text('email').notNull(),
+    role: tenantRoleEnum('role').notNull(),
+    invitedBy: uuid('invited_by')
+      .references(() => users.id)
+      .notNull(),
+    token: text('token').notNull().unique(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  // Story 2.6: at most one PENDING (unaccepted) invite per (tenant, email).
+  // Mirrors migration 0016. Expiry stays in app logic (index predicates must be
+  // immutable, so `now()` cannot appear here).
+  (t) => [
+    uniqueIndex('invitations_pending_email_idx')
+      .on(t.tenantId, t.email)
+      .where(sql`${t.acceptedAt} IS NULL`),
+  ]
+);
 
 export const workspaceAdmins = pgTable('workspace_admins', {
   id: uuid('id').primaryKey().defaultRandom(),

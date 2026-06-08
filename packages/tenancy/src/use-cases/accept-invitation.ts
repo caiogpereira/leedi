@@ -1,5 +1,5 @@
 import { db, withTenant, withServiceRole, schema, eq, and, isNull } from '@leedi/db';
-import { auth } from '@leedi/auth';
+import { auth, passwordSchema } from '@leedi/auth';
 
 export interface InvitationView {
   email: string;
@@ -19,6 +19,9 @@ export type AcceptInvitationResult =
 const INVALID_MESSAGE = 'Convite inválido ou já utilizado';
 const EXPIRED_MESSAGE = 'Este convite expirou. Solicite um novo ao administrador.';
 const PASSWORD_REQUIRED_MESSAGE = 'Senha obrigatória para novos usuários';
+const EMAIL_MISMATCH_MESSAGE =
+  'Este convite é para outro e-mail. Saia da conta atual e use o e-mail convidado.';
+const SIGNUP_FAILED_MESSAGE = 'Não foi possível criar a conta. Verifique os dados e tente novamente.';
 
 /**
  * Read-only lookup used by the accept page to decide what to render:
@@ -75,10 +78,15 @@ export async function getInvitation(token: string): Promise<GetInvitationResult>
  * password-less sign-in path and existing users' passwords are unknown here, so
  * auto-session-on-accept is intentionally out of scope (tracked with the
  * tenant/role session work in Story 2.7). The caller redirects to /login.
+ *
+ * @param currentUserEmail Email of the currently authenticated user, if any. When
+ *   present it MUST match the invited email — a logged-in user may not redeem an
+ *   invitation issued to a different address.
  */
 export async function acceptInvitation(
   token: string,
-  password?: string
+  password?: string,
+  currentUserEmail?: string
 ): Promise<AcceptInvitationResult> {
   // Tenant is unknown until the row is read, so bypass RLS for the token lookup.
   const [invite] = await withServiceRole(async (tx) =>
@@ -97,6 +105,16 @@ export async function acceptInvitation(
     return { success: false, error: EXPIRED_MESSAGE };
   }
 
+  // Binding: an authenticated user can only accept an invite addressed to their
+  // own email. Prevents a logged-in user from redeeming a link meant for someone
+  // else (case-insensitive compare). New/anonymous invitees pass through.
+  if (
+    currentUserEmail &&
+    currentUserEmail.trim().toLowerCase() !== invite.email.trim().toLowerCase()
+  ) {
+    return { success: false, error: EMAIL_MISMATCH_MESSAGE };
+  }
+
   // Resolve the user: reuse an existing account or create a new one.
   const [existingUser] = await db
     .select({ id: schema.users.id })
@@ -112,19 +130,36 @@ export async function acceptInvitation(
     if (!password) {
       return { success: false, error: PASSWORD_REQUIRED_MESSAGE };
     }
-    const result = await auth.api.signUpEmail({
-      body: { email: invite.email, password, name: invite.email },
-    });
-    // signUpEmail returns `{ token: string | null; user: User }` (verified against
-    // the better-auth route types). The user always exists here.
-    userId = result.user.id;
+    // Enforce the password policy on this entry point too (the native sign-up
+    // hook also enforces it, but a typed message here is clearer than a thrown
+    // APIError surfacing as a generic failure).
+    const parsedPassword = passwordSchema.safeParse(password);
+    if (!parsedPassword.success) {
+      return {
+        success: false,
+        error: parsedPassword.error.issues[0]?.message ?? 'Senha inválida',
+      };
+    }
+    try {
+      const result = await auth.api.signUpEmail({
+        body: { email: invite.email, password, name: invite.email },
+      });
+      // signUpEmail returns `{ token: string | null; user: User }`. The user
+      // always exists here.
+      userId = result.user.id;
+    } catch {
+      // Covers weak-password rejection and the USER_ALREADY_EXISTS race (a
+      // concurrent accept created the account first). Return a typed error rather
+      // than letting the throw escape the Server Action as a 500.
+      return { success: false, error: SIGNUP_FAILED_MESSAGE };
+    }
   }
 
-  // Create the membership and mark the invite accepted, within the tenant context.
+  // Create/refresh the membership and mark the invite accepted, in tenant context.
   await withTenant(invite.tenantId, async (tx) => {
-    // onConflictDoNothing: if the user is already a member of this tenant (re-invite
-    // of an existing member), the (user_id, tenant_id) unique index would throw —
-    // accept idempotently instead of crashing.
+    // Re-invite of an existing member: apply the invited role (an upgrade is the
+    // intent of re-inviting). onConflictDoUpdate keeps it idempotent on the
+    // (user_id, tenant_id) unique index instead of throwing.
     await tx
       .insert(schema.memberships)
       .values({
@@ -133,14 +168,17 @@ export async function acceptInvitation(
         role: invite.role,
         invitedBy: invite.invitedBy,
       })
-      .onConflictDoNothing({
+      .onConflictDoUpdate({
         target: [schema.memberships.userId, schema.memberships.tenantId],
+        set: { role: invite.role, invitedBy: invite.invitedBy },
       });
 
+    // Single-use guard: only mark accepted if still pending. Under a concurrent
+    // double-accept the second update matches zero rows (already accepted).
     await tx
       .update(schema.invitations)
       .set({ acceptedAt: new Date() })
-      .where(eq(schema.invitations.token, token));
+      .where(and(eq(schema.invitations.token, token), isNull(schema.invitations.acceptedAt)));
   });
 
   return { success: true, tenantId: invite.tenantId };

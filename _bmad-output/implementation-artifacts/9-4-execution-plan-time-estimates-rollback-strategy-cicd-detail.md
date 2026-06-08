@@ -4,7 +4,7 @@ baseline_commit: 9ea8a05
 
 # Story 9.4: Execution Plan — Time Estimates, Rollback Strategy & CI/CD Detail
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -22,26 +22,26 @@ so that the team can commit to delivery dates and recover safely from bad deploy
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Update section 7 — time estimates (AC: #1, #5)
-  - [ ] Read current section 7 in `docs/03-leedi-execucao.md`
-  - [ ] For each phase/epic, confirm estimated developer-days is present; add if missing
-  - [ ] Add confidence level (high = well-understood scope; medium = moderate uncertainty; low = external dependencies or novel tech)
-  - [ ] Add external dependency notes where applicable — at minimum Epic 12 (Meta approval latency)
-  - [ ] Do NOT inflate estimates to look conservative — use honest calibration based on completed epics
-- [ ] Task 2: Update or complete section 8 — rollback strategy (AC: #2)
-  - [ ] Read current section 8; identify what is already documented vs. missing
-  - [ ] Add or expand: Vercel deployment rollback (CLI: `vercel rollback`, dashboard: promote previous deployment)
-  - [ ] Add: Drizzle migration rollback — for V1 migrations are additive (no destructive changes); for a bad migration, the safe procedure is: (a) apply a new "undo" migration rather than running a true down-migration, (b) document the specific Supabase SQL commands
-  - [ ] Add: the "migration applied + broken code" procedure: the new code can be reverted to the previous Vercel deployment while the schema stays forward; the previous code must be compatible with the new schema (this is why all migrations must be backward-compatible with the prior code version — enforce this in the Definition of Done for each story)
-- [ ] Task 3: Update section 9 — CI/CD pipeline detail (AC: #3, #4)
-  - [ ] Read current section 9; confirm all stages are documented
-  - [ ] Add any missing stages with the corresponding tool/command: e.g., `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm migrate:validate`, `pnpm build`, `vercel deploy --prebuilt`, smoke test (`curl /health && pnpm test:smoke`)
-  - [ ] Add branch trigger matrix (PRs → CI; main → CI + CD)
-  - [ ] Add staging URL pattern
-  - [ ] Add smoke test definition: `/health` returns 200 + canary read (e.g., `SELECT 1` via the API's DB check endpoint)
-- [ ] Task 4: Cross-check for conflicts (AC: #1–#5)
-  - [ ] Confirm the time estimates in section 7 are consistent with the epic ordering in section 3 (dependency graph)
-  - [ ] Confirm the rollback procedure in section 8 is consistent with the Drizzle migration strategy in Architecture
+- [x] Task 1: Update section 7 — time estimates (AC: #1, #5)
+  - [x] Read current section 7 in `docs/03-leedi-execucao.md`
+  - [x] For each phase/epic, confirm estimated developer-days is present; add if missing
+  - [x] Add confidence level (high = well-understood scope; medium = moderate uncertainty; low = external dependencies or novel tech)
+  - [x] Add external dependency notes where applicable — at minimum Epic 12 (Meta approval latency)
+  - [x] Do NOT inflate estimates to look conservative — use honest calibration based on completed epics
+- [x] Task 2: Update or complete section 8 — rollback strategy (AC: #2)
+  - [x] Read current section 8; identify what is already documented vs. missing
+  - [x] Add or expand: Vercel deployment rollback (CLI: `vercel rollback`, dashboard: promote previous deployment)
+  - [x] Add: Drizzle migration rollback — for V1 migrations are additive (no destructive changes); for a bad migration, the safe procedure is: (a) apply a new "undo" migration rather than running a true down-migration, (b) document the specific Supabase SQL commands
+  - [x] Add: the "migration applied + broken code" procedure: the new code can be reverted to the previous Vercel deployment while the schema stays forward; the previous code must be compatible with the new schema (this is why all migrations must be backward-compatible with the prior code version — enforce this in the Definition of Done for each story)
+- [x] Task 3: Update section 9 — CI/CD pipeline detail (AC: #3, #4)
+  - [x] Read current section 9; confirm all stages are documented
+  - [x] Add any missing stages with the corresponding tool/command: e.g., `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm migrate:validate`, `pnpm build`, `vercel deploy --prebuilt`, smoke test (`curl /health && pnpm test:smoke`)
+  - [x] Add branch trigger matrix (PRs → CI; main → CI + CD)
+  - [x] Add staging URL pattern
+  - [x] Add smoke test definition: `/health` returns 200 + canary read (e.g., `SELECT 1` via the API's DB check endpoint)
+- [x] Task 4: Cross-check for conflicts (AC: #1–#5)
+  - [x] Confirm the time estimates in section 7 are consistent with the epic ordering in section 3 (dependency graph)
+  - [x] Confirm the rollback procedure in section 8 is consistent with the Drizzle migration strategy in Architecture
 
 ## Dev Notes
 
@@ -73,7 +73,7 @@ so that the team can commit to delivery dates and recover safely from bad deploy
 
 ### Agent Model Used
 
-_not yet assigned_
+claude-sonnet-4-6[1m]
 
 ### Debug Log References
 
@@ -81,12 +81,20 @@ _none_
 
 ### Completion Notes List
 
-_not yet implemented_
+- §7 had estimates in weeks with no confidence levels or explicit Epic 12 dependency. Replaced table with dev-days + confidence + external-dep column. Calibrated against Epics 1–8 (completed, in review). Added explicit Epic 12 Meta template approval latency note (24–72h buffer).
+- §8 had a general rollback scenarios table but was missing: Vercel CLI command (`vercel rollback`), Drizzle-specific rollback procedure, and the critical "migration applied + broken code" edge case. All three added as distinct subsections.
+- §9 had CI/CD config but was missing: branch trigger matrix (PR vs main distinction), staging URL pattern, explicit smoke test definition. All three added at the top of the section. Note: the execution plan doc has duplicate section numbering (§8 and §9 appear twice). Edits were made to the FIRST occurrences (rollback and CI/CD), which are the intended targets.
+- Cross-check: §7 estimates are consistent with the §3 dependency graph. §8 rollback is consistent with the additive-only migration constraint described in Architecture.
 
 ### File List
 
-_not yet implemented_
+- docs/03-leedi-execucao.md
 
 ### Change Log
 
-_none_
+- Rewrote §7 estimates table with dev-days, confidence levels (High/Medium/Low), and external dependency column (2026-06-02)
+- Added Epic 12 Meta template approval buffer note (~24–72h, Low confidence) (2026-06-02)
+- Added Vercel CLI rollback section to §8 (2026-06-02)
+- Added Drizzle migration rollback procedure (undo migration pattern, no destructive down-migrations) to §8 (2026-06-02)
+- Added "migration applied + broken code" critical procedure to §8 (2026-06-02)
+- Added branch trigger matrix, staging URL pattern, and smoke test definition to §9 (2026-06-02)

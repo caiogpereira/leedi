@@ -21,6 +21,7 @@
     "@anthropic-ai/sdk": "^0.100.1",
     "@hono/node-server": "^2.0.4",
     "@leedi/agent": "workspace:*",
+    "@leedi/billing": "workspace:*",
     "@leedi/agent-memory": "workspace:*",
     "@leedi/analytics": "workspace:*",
     "@leedi/gateway": "workspace:*",

@@ -36,6 +36,24 @@ export const schema = z.object({
   QSTASH_TOKEN: z.string().min(1, 'QSTASH_TOKEN is required'),
   QSTASH_CURRENT_SIGNING_KEY: z.string().min(1, 'QSTASH_CURRENT_SIGNING_KEY is required'),
   QSTASH_NEXT_SIGNING_KEY: z.string().min(1, 'QSTASH_NEXT_SIGNING_KEY is required'),
+  // Audio transcription (Story 7.7). Provider selection is platform-level, not
+  // per-tenant. Keys are OPTIONAL at boot — many tenants never receive audio —
+  // and validated LAZILY at first audio use (see groq-whisper-adapter.ts), so the
+  // app does not fail to start just because audio support is unconfigured.
+  TRANSCRIPTION_PROVIDER: z.enum(['groq', 'openai', 'deepgram']).default('groq'),
+  GROQ_API_KEY: z.string().min(1).optional(),
+  OPENAI_API_KEY: z.string().min(1).optional(),
+  // Asaas billing (Story 17.1)
+  ASAAS_API_KEY: z.string().min(1, 'ASAAS_API_KEY is required'),
+  ASAAS_SANDBOX: z.coerce.boolean().default(false),
+  ASAAS_WEBHOOK_TOKEN: z.string().min(1, 'ASAAS_WEBHOOK_TOKEN is required'),
+  // Web Push / VAPID (Story 18.1) — generate once via: npx web-push generate-vapid-keys
+  VAPID_PUBLIC_KEY: z.string().min(1, 'VAPID_PUBLIC_KEY is required'),
+  VAPID_PRIVATE_KEY: z.string().min(1, 'VAPID_PRIVATE_KEY is required'),
+  VAPID_SUBJECT: z.string().url('VAPID_SUBJECT must be a mailto: or https: URL'),
+  // Admin operational dashboard margin estimate (Story 20.3). Fixed USD→BRL rate;
+  // update manually when the rate moves significantly. V2 may fetch a live rate.
+  USD_TO_BRL_RATE: z.coerce.number().positive().default(5.0),
 });
 
 export type Env = z.infer<typeof schema>;

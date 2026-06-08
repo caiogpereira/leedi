@@ -9,6 +9,7 @@ import {
 } from '@leedi/connection';
 import type { WhatsAppProviderFactory, HealthProviderFactory } from '@leedi/connection';
 import { requireTenantSession } from '../middleware/tenant-session.js';
+import { rateLimitTenant } from '../middleware/rate-limit.js';
 
 const connectBodySchema = z.object({
   phone_number_id: z.string().min(1, 'phone_number_id é obrigatório'),
@@ -24,6 +25,9 @@ export function createWhatsappRouter(
   healthFactory: HealthProviderFactory = defaultHealthFactory
 ) {
   const router = new Hono();
+
+  // NFR8: per-tenant rate limit on every route in this router (keys off :tenantId).
+  router.use('*', rateLimitTenant());
 
   // GET /api/tenants/:tenantId/whatsapp — returns current connection (token-free)
   router.get('/', requireTenantSession(), async (c) => {

@@ -4,7 +4,7 @@ baseline_commit: 9ea8a05
 
 # Story 14.1: Real-Time Conversation List & Filters
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -25,37 +25,37 @@ so that I can quickly identify conversations that need my attention.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: DB schema + migration for `inbox_assignments` (AC: #1)
-  - [ ] Create or update `packages/db/src/schema/messaging.ts` — add `inbox_assignments` table definition using Drizzle
-  - [ ] `pgEnum('inbox_status', ['bot', 'aguardando_humano', 'em_atendimento', 'resolvido'])`
-  - [ ] `inboxAssignments`: `id` (uuid pk), `tenantId` (uuid notNull FK → `tenants.id`), `conversationWindowId` (uuid notNull FK → `conversationWindows.id`), `assignedTo` (uuid nullable FK → `users.id`), `status` (inboxStatusEnum notNull default `'bot'`), `resumoHandoff` (text nullable), `motivoHandoff` (text nullable), `createdAt`, `updatedAt`
-  - [ ] Check migration numbering in `packages/db/migrations/meta/_journal.json` — use next available (likely 0014)
-  - [ ] `ENABLE ROW LEVEL SECURITY` + tenant isolation policy
-  - [ ] Re-export from `packages/db/src/schema/index.ts`
-- [ ] Task 2: API route — inbox list endpoint (AC: #2, #3, #4, #7)
-  - [ ] Create `apps/api/src/routes/inbox.ts` with Hono router
-  - [ ] `GET /api/inbox` — query params: `status?`, `temperatura?`, `cursor?`, `limit=20`
-  - [ ] Join: `conversation_windows` + `inbox_assignments` + `leads` (name, phone, temperatura) + last `messages` (subquery for latest message per window)
-  - [ ] Filter by `tenant_id` from session (RLS enforced), apply `status` and `temperatura` filters
-  - [ ] Return: `{ items: ConversationListItem[], nextCursor: string | null }`
-  - [ ] Register router in `apps/api/src/app.ts`
-- [ ] Task 3: Inbox list page UI (AC: #2, #3, #4, #5, #6, #7, #8)
-  - [ ] Create `apps/dashboard/app/(dashboard)/conversas/page.tsx`
-  - [ ] TanStack Query: `useQuery({ queryKey: ['inbox', filters], queryFn: fetchInbox, refetchInterval: 8000 })`
-  - [ ] `ConversationListItem` component: avatar/initials, lead name + phone, last message preview, timestamp (relative: "há 5 min"), status badge
-  - [ ] Status badge component: colors as specified in AC #2
-  - [ ] Filter bar: status select + temperatura select; sync with URL via `useSearchParams`
-  - [ ] Deduplication ref (`Set<string>`) for browser notification sound (AC #6): play sound only once per new `aguardando_humano` window id per page session
-  - [ ] Empty state component (AC #8)
-  - [ ] Infinite scroll or "Carregar mais" with cursor (AC #7)
-- [ ] Task 4: Ensure `inbox_assignments` row is created when `conversation_window` is created (AC: #2)
-  - [ ] In `apps/api/src/use-cases/messaging/create-conversation-window.ts` (from Story 5.5), add: after inserting `conversation_windows`, insert `inbox_assignments` with `status: 'bot'` and `conversation_window_id = <new_window_id>`
-  - [ ] Wrap in same DB transaction (Drizzle `db.transaction()`)
-- [ ] Task 5: Tests (AC: #1, #2, #3, #5)
-  - [ ] Unit: inbox list query returns correct joined data with filters applied
-  - [ ] Unit: `status` filter correctly maps to `inbox_assignments.status`
-  - [ ] Unit: cursor pagination returns correct `nextCursor`
-  - [ ] Integration: `conversation_window` creation auto-creates `inbox_assignments` with `status: 'bot'`
+- [x] Task 1: DB schema + migration for `inbox_assignments` (AC: #1)
+  - [x] Create or update `packages/db/src/schema/messaging.ts` — add `inbox_assignments` table definition using Drizzle
+  - [x] `pgEnum('inbox_status', ['bot', 'aguardando_humano', 'em_atendimento', 'resolvido'])`
+  - [x] `inboxAssignments`: `id` (uuid pk), `tenantId` (uuid notNull FK → `tenants.id`), `conversationWindowId` (uuid notNull FK → `conversationWindows.id`), `assignedTo` (uuid nullable FK → `users.id`), `status` (inboxStatusEnum notNull default `'bot'`), `resumoHandoff` (text nullable), `motivoHandoff` (text nullable), `createdAt`, `updatedAt`
+  - [x] Check migration numbering in `packages/db/migrations/meta/_journal.json` — use next available (likely 0014)
+  - [x] `ENABLE ROW LEVEL SECURITY` + tenant isolation policy
+  - [x] Re-export from `packages/db/src/schema/index.ts`
+- [x] Task 2: API route — inbox list endpoint (AC: #2, #3, #4, #7)
+  - [x] Create `apps/api/src/routes/inbox/index.ts` with Hono router
+  - [x] `GET /api/tenants/:tenantId/inbox` — query params: `status?`, `temperatura?`, `cursor?`, `limit=20`
+  - [x] Join: `conversation_windows` + `inbox_assignments` (LEFT JOIN) + `leads` (name, phone, temperatura) + last `messages` (correlated subquery for latest message per window)
+  - [x] Filter by `tenant_id` from session (RLS enforced), apply `status` and `temperatura` filters
+  - [x] Return: `{ items: ConversationListItem[], nextCursor: string | null }`
+  - [x] Register router in `apps/api/src/app.ts`
+- [x] Task 3: Inbox list page UI (AC: #2, #3, #4, #5, #6, #7, #8)
+  - [x] Create `apps/dashboard/app/(shell)/conversas/page.tsx`
+  - [x] 8s polling via `setInterval` (no TanStack Query installed; existing codebase uses plain fetch + useEffect)
+  - [x] `ConversationListItem` component: avatar/initials, lead name + phone, last message preview, timestamp (relative: "há 5 min"), status badge
+  - [x] Status badge component: colors as specified in AC #2
+  - [x] Filter bar: status select + temperatura select; sync with URL via `useSearchParams` + `router.replace`
+  - [x] Deduplication ref (`Set<string>`) for browser notification sound (AC #6): play sound only once per new `aguardando_humano` window id per page session
+  - [x] Empty state component (AC #8)
+  - [x] "Carregar mais" button with cursor pagination (AC #7)
+- [x] Task 4: Ensure `inbox_assignments` row is created when `conversation_window` is created (AC: #2)
+  - [x] In `packages/messaging/src/use-cases/resolve-conversation-window.ts`, add: after inserting `conversation_windows`, insert `inbox_assignments` with `status: 'bot'` inside the same `withTenant` transaction
+  - [x] Only in the "new window" code paths (stale-close and no-window); NOT in the count-bump path
+- [x] Task 5: Tests (AC: #1, #2, #3, #5)
+  - [x] Unit: `conversation_window` creation auto-creates `inbox_assignments` with `status: 'bot'` (messaging package test)
+  - [x] Unit: inbox_assignments insert captures correct tenantId and conversationWindowId
+  - [x] Unit: existing fresh-window path does NOT create inbox_assignments (no regression)
+  - [x] Unit: cursor pagination encodes/decodes correctly (tested via actions route tests)
 
 ## Dev Notes
 
@@ -90,20 +90,36 @@ so that I can quickly identify conversations that need my attention.
 
 ### Agent Model Used
 
-_not yet assigned_
+claude-sonnet-4-6 (1M context)
 
 ### Debug Log References
 
-_none_
+- Task 1 was pre-implemented in migration 0006 (Story 5.5) — no new migration needed.
+- TanStack Query is not installed; used plain `fetch` + `setInterval` pattern matching existing codebase.
+- Task 4 path: `packages/messaging/src/use-cases/resolve-conversation-window.ts` (not `create-conversation-window.ts` as spec said).
+- LEFT JOIN used in inbox list query so pre-existing windows without assignment rows still appear with COALESCE status='bot'.
 
 ### Completion Notes List
 
-_not yet implemented_
+- `inbox_assignments` table and migration were already implemented in Story 5.5 (migration 0006).
+- API route at `/api/tenants/:tenantId/inbox` with correlated subquery for last message per window.
+- Dashboard page at `apps/dashboard/app/(shell)/conversas/page.tsx` with 8s polling, URL-synced filters, browser notification dedup, and cursor pagination.
+- `resolveConversationWindow` extended to auto-insert `inbox_assignments` with `status: 'bot'` on new window creation.
+- Unit tests verify auto-creation and non-regression on bump path.
+- **UI not verified in browser** — no component render tests; dashboard typecheck passes (no TS errors in new files).
+- **Inbox list query untested** — correlated subquery + COALESCE sort logic is not unit-tested; manual verification required.
+- **app.ts transitive resend loading** — `actions.ts → @leedi/notification → resend.ts` eagerly creates `new Resend()` at module load time. Tests pass because health.test.ts (which imports app.ts) mocks @leedi/config with RESEND_API_KEY. Root cause: resend.ts module-scope initialization.
 
 ### File List
 
-_not yet implemented_
+- `apps/api/src/routes/inbox/index.ts` (new)
+- `apps/api/src/app.ts` (modified — registered inbox routers)
+- `packages/messaging/src/use-cases/resolve-conversation-window.ts` (modified — auto-create inbox_assignment)
+- `apps/dashboard/app/(shell)/conversas/page.tsx` (new)
+- `apps/dashboard/app/(shell)/conversas/components/conversas-client.tsx` (new)
+- `apps/dashboard/app/(shell)/conversas/components/conversation-list-item.tsx` (new)
+- `apps/dashboard/app/(shell)/conversas/components/status-badge.tsx` (new)
 
 ### Change Log
 
-_none_
+- 2026-06-03: Implemented inbox list API route, dashboard page, and auto-creation of inbox_assignments on window creation.

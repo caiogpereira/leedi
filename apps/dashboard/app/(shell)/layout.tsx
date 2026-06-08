@@ -1,4 +1,5 @@
 import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { getSession, getWorkspaceAdminRole } from "@leedi/auth";
 import { getTenantById, listUserTenants, type UserTenant } from "@leedi/tenancy";
 import { ImpersonationBanner } from "../../components/ImpersonationBanner";
@@ -6,6 +7,9 @@ import { SidebarProvider } from "../../components/shell/sidebar-context";
 import { Sidebar } from "../../components/shell/Sidebar";
 import { Header } from "../../components/shell/Header";
 import { checkUsageBlock } from "@leedi/usage";
+import { PushRegistrationInit } from "../../components/PushRegistrationInit";
+import { withTenant, schema, eq } from "@leedi/db";
+import type { OnboardingConfig } from "@leedi/db";
 
 interface ImpersonationContext {
   tenantId: string;
@@ -24,9 +28,15 @@ function resolveCurrentTenantId(
 
 async function resolveImpersonation(
   userId: string | undefined,
-  impersonatingTenantId: string | undefined
+  impersonatingTenantId: string | undefined,
+  expiresAtRaw: string | undefined
 ): Promise<ImpersonationContext | null> {
   if (!userId || !impersonatingTenantId) return null;
+  // Re-validate the 1-hour expiry server-side (Story 2.8 — no silent renewal).
+  // The cookie max-age is client-trustable; this is the authoritative check, so
+  // an expired/forged/extended cookie falls back to the workspace-admin context.
+  const expiresAt = Number(expiresAtRaw);
+  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) return null;
   const wsRole = await getWorkspaceAdminRole(userId);
   if (wsRole !== "super_admin") return null;
   const tenant = await getTenantById(impersonatingTenantId);
@@ -45,13 +55,34 @@ export default async function ShellLayout({
 
   const impersonation = await resolveImpersonation(
     session?.user?.id,
-    cookieStore.get("leedi_impersonating")?.value
+    cookieStore.get("leedi_impersonating")?.value,
+    cookieStore.get("leedi_impersonation_expires")?.value
   );
 
   const tenants = session?.user?.id ? await listUserTenants(session.user.id) : [];
   const currentTenantId = impersonation
     ? impersonation.tenantId
     : resolveCurrentTenantId(requestHeaders.get("x-leedi-tenant-id"), tenants);
+
+  // 19.1 AC#1/AC#2: redirect trial tenants who haven't completed onboarding.
+  // Uses a fresh DB read (not Edge middleware) because Edge can't hit the DB.
+  if (currentTenantId && !impersonation) {
+    const tenantRows = await withTenant(currentTenantId, async (tx) =>
+      tx
+        .select({ status: schema.tenants.status, config: schema.tenants.config })
+        .from(schema.tenants)
+        .where(eq(schema.tenants.id, currentTenantId))
+        .limit(1)
+    ).catch(() => []);
+
+    const tenantRow = tenantRows[0];
+    if (tenantRow?.status === "trial") {
+      const cfg = tenantRow.config?.["onboarding_config"] as Partial<OnboardingConfig> | undefined;
+      if (!cfg?.onboarding_completed) {
+        redirect("/onboarding");
+      }
+    }
+  }
 
   // 16.3 AC#5: check if the block-at-limit setting is active for the current tenant.
   const usageBlock = currentTenantId
@@ -61,6 +92,7 @@ export default async function ShellLayout({
 
   return (
     <SidebarProvider>
+      {currentTenantId && <PushRegistrationInit tenantId={currentTenantId} />}
       {impersonation && <ImpersonationBanner tenantName={impersonation.tenantName} />}
       {showBlockBanner && (
         <div

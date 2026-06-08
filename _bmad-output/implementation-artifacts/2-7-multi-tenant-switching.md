@@ -100,3 +100,9 @@ claude-sonnet-4-6
 - `apps/dashboard/app/api/tenant/switch/route.ts`
 - `apps/dashboard/app/layout.tsx`
 - `apps/dashboard/middleware.ts` (updated)
+
+## Review Findings (Code Review 2026-06-04)
+
+- [ ] [Review][Decision] Active tenant stored in a `leedi_tenant` cookie, not the Better-Auth session — deviates from the documented architecture ("the session is the single source of truth for `current_tenant_id`; the switch use-case is the only writer"). Functionally membership-checked and spoofing-resistant, but the design constraint is violated. Decide: accept the cookie approach (update the architecture note) vs. refactor to session-backed state. [apps/dashboard/app/api/tenant/switch/route.ts:787; apps/dashboard/app/layout.tsx:828]
+- [ ] [Review][Patch] `switchTenant` allows switching into a `blocked`/`cancelled` tenant — authorization checks membership existence only and never consults `tenants.status`. Fix: reject non-`active`/`trial` tenants. [packages/tenancy/src/use-cases/switch-tenant.ts:5165-5182]
+- [x] [Review][Defer] Per-tenant role resolution in dashboard middleware is deferred (shared with Story 2.5) — keeps `/settings/*` fail-closed until implemented here. — deferred (introduced by Epic 2; tracked under 2.5/2.7) [apps/dashboard/middleware.ts:1216]

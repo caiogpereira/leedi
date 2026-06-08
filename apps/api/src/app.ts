@@ -17,6 +17,7 @@ import { createAgentConfigRouter } from './routes/agent/config.js';
 import { createPlaygroundRouter } from './routes/playground/index.js';
 import { createCampaignsRouter } from './routes/campaigns/index.js';
 import { createHotmartWebhookRouter } from './routes/webhooks/hotmart.js';
+import { createAsaasWebhookRouter } from './routes/webhooks/asaas.js';
 import { createTemplatesRouter } from './routes/templates/index.js';
 import { createSegmentsRouter } from './routes/segments/index.js';
 import { createDispatchJobsRouter } from './routes/dispatch-jobs/index.js';
@@ -25,6 +26,10 @@ import { createInboxRouter } from './routes/inbox/index.js';
 import { createInboxActionsRouter } from './routes/inbox/actions.js';
 import { createAnalyticsRouter } from './routes/analytics.js';
 import { createUsageRouter } from './routes/usage.js';
+import { createBillingRouter } from './routes/billing.js';
+import { createPushSubscriptionsRouter } from './routes/push-subscriptions.js';
+import { createNotificationPreferencesRouter } from './routes/notification-preferences.js';
+import { createOnboardingRouter } from './routes/onboarding.js';
 import { ClaudeProvider } from './ai/claude-provider.js';
 
 // AI Provider — instantiated once at startup, injected into routes (§8.4 Adapter Pattern)
@@ -54,5 +59,11 @@ app.route('/api/tenants/:tenantId/inbox', createInboxRouter());
 app.route('/api/tenants/:tenantId/inbox', createInboxActionsRouter());
 app.route('/api/tenants/:tenantId/analytics', createAnalyticsRouter());
 app.route('/api/tenants/:tenantId/usage', createUsageRouter());
+app.route('/api/tenants/:tenantId/billing', createBillingRouter());
+app.route('/api/tenants/:tenantId/push', createPushSubscriptionsRouter());
+app.route('/api/tenants/:tenantId/notification-preferences', createNotificationPreferencesRouter());
+app.route('/api/tenants/:tenantId/onboarding', createOnboardingRouter());
 // Public gateway webhooks — validated by hottok, no tenant auth middleware
 app.route('/webhooks/hotmart', createHotmartWebhookRouter());
+// Asaas billing webhook — validated by accessToken, no tenant auth middleware
+app.route('/webhooks/asaas', createAsaasWebhookRouter());

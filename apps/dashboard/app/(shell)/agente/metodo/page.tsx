@@ -26,15 +26,15 @@ export default async function MetodoPage() {
     .from(schema.salesMethods)
     .where(eq(schema.salesMethods.isGlobal, true));
 
-  // Load current tenant preference from tenants.config
-  const tenantRows = await db
-    .select({ config: schema.tenants.config })
-    .from(schema.tenants)
-    .where(eq(schema.tenants.id, currentTenant.tenantId))
+  // Current method now lives in agent_configs.sales_method_id (Story 7.1 wired this).
+  // The legacy tenants.config.tenant_sales_method_preference store is retired.
+  const configRows = await db
+    .select({ salesMethodId: schema.agentConfigs.salesMethodId })
+    .from(schema.agentConfigs)
+    .where(eq(schema.agentConfigs.tenantId, currentTenant.tenantId))
     .limit(1);
 
-  const config = tenantRows[0]?.config as Record<string, unknown> | null ?? {};
-  const currentMethodId = (config?.tenant_sales_method_preference as string) ?? null;
+  const currentMethodId = configRows[0]?.salesMethodId ?? null;
 
   return (
     <SalesMethodClient

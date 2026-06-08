@@ -4,7 +4,7 @@ baseline_commit: 9ea8a05
 
 # Story 15.1: Core Sales Metrics Dashboard
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -24,40 +24,40 @@ so that I know at a glance how the agent is performing commercially.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create `@leedi/analytics` package (AC: #5)
-  - [ ] Create `packages/analytics/package.json`, `packages/analytics/src/index.ts`
-  - [ ] Create `packages/analytics/src/use-cases/get-tenant-sales-metrics.ts`
-  - [ ] Input: `{ tenantId: string; from: Date; to: Date }`
-  - [ ] Output: `TenantSalesMetrics` type with all 6 metric fields (typed, not any)
-  - [ ] Query `conversation_windows` for `conversas_iniciadas` (billable=true, created_at in range)
-  - [ ] Query `messages` + `conversation_windows` for `taxa_resposta` (% windows with ≥1 lead reply after outbound)
-  - [ ] Query `gateway_events` for `conversoes` (compra_aprovada, created_at in range) and `valor_total`
-  - [ ] Compute `ticket_medio` = valor_total / conversoes (handle 0 case)
-  - [ ] Compute `roi_estimado` = valor_total / (conversas_iniciadas × 0.10) (handle 0 case)
-  - [ ] Add to `pnpm-workspace.yaml`; re-export from `packages/analytics/src/index.ts`
-- [ ] Task 2: API route — dashboard metrics endpoint (AC: #1, #2, #6, #7)
-  - [ ] Create `apps/api/src/routes/analytics.ts`
-  - [ ] `GET /api/analytics/sales?from=&to=` — validates date range, calls `getTenantSalesMetrics` use case
-  - [ ] Returns `TenantSalesMetrics` JSON; 400 if date range invalid (e.g., range > 366 days)
-  - [ ] Register in `apps/api/src/app.ts`
-- [ ] Task 3: Dashboard page UI (AC: #1, #2, #3, #4, #6)
-  - [ ] Update or create `apps/dashboard/app/(dashboard)/page.tsx`
-  - [ ] 6 `MetricCard` components in a responsive grid (2-col mobile, 3-col desktop)
-  - [ ] `MetricCard` props: `{ label, value, subtext?, tooltip? }` — re-use from `@leedi/ui` or create in dashboard
-  - [ ] Date range picker in page header (month selector + optional custom range); sync with URL via `useSearchParams`
-  - [ ] TanStack Query: `useQuery({ queryKey: ['analytics', 'sales', dateRange], queryFn, refetchInterval: 60000 })`
-  - [ ] ROI card tooltip with cost disclaimer (AC #3)
-  - [ ] Empty state banner when all metrics are 0 (AC #6)
-- [ ] Task 4: Tests (AC: #1, #3, #5)
-  - [ ] Unit: `getTenantSalesMetrics` returns correct counts for mocked data
-  - [ ] Unit: ROI formula handles division by zero correctly (returns null)
-  - [ ] Unit: `taxa_resposta` correctly identifies windows with lead reply after outbound
-  - [ ] Unit: `valor_total` SUM is null-safe (gateway events with no valor are excluded from sum, not from count)
-  - [ ] Unit: date range validation rejects ranges > 366 days
+- [x] Task 1: Create `@leedi/analytics` package (AC: #5)
+  - [x] Create `packages/analytics/package.json`, `packages/analytics/src/index.ts`
+  - [x] Create `packages/analytics/src/use-cases/get-tenant-sales-metrics.ts`
+  - [x] Input: `{ tenantId: string; from: Date; to: Date }`
+  - [x] Output: `TenantSalesMetrics` type with all 6 metric fields (typed, not any)
+  - [x] Query `conversation_windows` for `conversas_iniciadas` (billable=true, created_at in range)
+  - [x] Query `messages` + `conversation_windows` for `taxa_resposta` (% windows with ≥1 lead reply after outbound)
+  - [x] Query `gateway_events` for `conversoes` (compra_aprovada, created_at in range) and `valor_total`
+  - [x] Compute `ticket_medio` = valor_total / conversoes (handle 0 case)
+  - [x] Compute `roi_estimado` = valor_total / (conversas_iniciadas × 0.10) (handle 0 case)
+  - [x] Add to `pnpm-workspace.yaml`; re-export from `packages/analytics/src/index.ts`
+- [x] Task 2: API route — dashboard metrics endpoint (AC: #1, #2, #6, #7)
+  - [x] Create `apps/api/src/routes/analytics.ts`
+  - [x] `GET /api/tenants/:tenantId/analytics/sales?from=&to=` — validates date range, calls `getTenantSalesMetrics` use case
+  - [x] Returns `TenantSalesMetrics` JSON; 400 if date range invalid (e.g., range > 366 days)
+  - [x] Register in `apps/api/src/app.ts`
+- [x] Task 3: Dashboard page UI (AC: #1, #2, #3, #4, #6)
+  - [x] Update or create `apps/dashboard/app/(shell)/page.tsx`
+  - [x] 6 `MetricCard` components in a responsive grid (2-col mobile, 3-col desktop)
+  - [x] `MetricCard` props: `{ label, value, subtext?, tooltip? }` — created in dashboard
+  - [x] Date range picker in page header (month selector + optional custom range); sync with URL via `useSearchParams`
+  - [x] Polling via `useEffect` + `setInterval` at 60s interval
+  - [x] ROI card tooltip with cost disclaimer (AC #3)
+  - [x] Empty state banner when all metrics are 0 (AC #6)
+- [x] Task 4: Tests (AC: #1, #3, #5)
+  - [x] Unit: `getTenantSalesMetrics` returns correct counts for mocked data
+  - [x] Unit: ROI formula handles division by zero correctly (returns null)
+  - [x] Unit: `taxa_resposta` correctly identifies windows with lead reply after outbound
+  - [x] Unit: `valor_total` SUM is null-safe (gateway events with no valor are excluded from sum, not from count)
+  - [x] Unit: date range validation rejects ranges > 366 days
 
 ## Dev Notes
 
-- **Files to create:** `packages/analytics/package.json`, `packages/analytics/src/index.ts`, `packages/analytics/src/use-cases/get-tenant-sales-metrics.ts`, `apps/api/src/routes/analytics.ts`, `apps/dashboard/app/(dashboard)/page.tsx` (update existing shell), `apps/dashboard/components/metric-card.tsx`
+- **Files to create:** `packages/analytics/package.json`, `packages/analytics/src/index.ts`, `packages/analytics/src/use-cases/get-tenant-sales-metrics.ts`, `apps/api/src/routes/analytics.ts`, `apps/dashboard/app/(shell)/page.tsx` (update existing shell), `apps/dashboard/app/(shell)/components/metric-card.tsx`
 - **Files to modify:** `apps/api/src/app.ts` (register analytics route), `pnpm-workspace.yaml` (add analytics package)
 - **ROI formula:** `ROI = Valor total / (conversas_iniciadas × 0.10)`. The R$0.10 per-conversation cost is a fixed constant (not pulled from DB). Document as a constant `ESTIMATED_COST_PER_CONVERSATION_BRL = 0.10` in the use case.
 - **FR108 compliance:** `usage_counters.custo_ia_usd` is NEVER exposed to the tenant-facing API or dashboard. Only the estimated ROI (using fixed cost) is shown. Real AI cost is only visible in Epic 20 (super-admin).
@@ -90,7 +90,7 @@ so that I know at a glance how the agent is performing commercially.
 
 ### Agent Model Used
 
-_not yet assigned_
+claude-sonnet-4-6[1m]
 
 ### Debug Log References
 
@@ -98,12 +98,31 @@ _none_
 
 ### Completion Notes List
 
-_not yet implemented_
+- Created `@leedi/analytics` package with `getTenantSalesMetrics` use case. Exports `computeSalesMetrics` pure function for testability.
+- `taxa_resposta` uses raw SQL with EXISTS subquery to handle partitioned messages table safely.
+- Value field in `payload_normalizado` is `value` (from HotmartNormalizer), not `valor` — null-safe SUM with `nullif(..., '')`.
+- Dashboard page replaced simple placeholder with `DashboardClient` server+client component pattern.
+- Date range picker syncs with URL via `useSearchParams`. Polling at 60s via `useEffect`+`setInterval` (no TanStack Query — not in project stack).
+- API route mounted at `/api/tenants/:tenantId/analytics/sales` with 366-day range validation.
+- Next.js proxy route created at `apps/dashboard/app/api/tenants/[tenantId]/analytics/sales/route.ts`.
+- 15/15 analytics package tests passing, 138/138 API tests passing.
+- **UI not verified in browser** — component logic and API integration verified through unit tests and code review only. SQL metrics logic reviewed but not executed against Postgres; `taxa_resposta` EXISTS subquery and null-safe SUM logic reviewed as correct.
 
 ### File List
 
-_not yet implemented_
+- packages/analytics/package.json (modified — added @leedi/db dep, vitest)
+- packages/analytics/src/index.ts (modified — exports)
+- packages/analytics/src/use-cases/get-tenant-sales-metrics.ts (created)
+- packages/analytics/src/__tests__/get-tenant-sales-metrics.test.ts (created)
+- packages/analytics/vitest.config.ts (created)
+- apps/api/src/routes/analytics.ts (created)
+- apps/api/src/app.ts (modified — register analytics router)
+- apps/api/package.json (modified — added @leedi/analytics dep)
+- apps/dashboard/app/(shell)/page.tsx (modified — full dashboard)
+- apps/dashboard/app/(shell)/components/metric-card.tsx (created)
+- apps/dashboard/app/(shell)/components/dashboard-client.tsx (created)
+- apps/dashboard/app/api/tenants/[tenantId]/analytics/sales/route.ts (created)
 
 ### Change Log
 
-_none_
+- 2026-06-03: Implemented Story 15.1 — Core Sales Metrics Dashboard. Created @leedi/analytics package, API route, dashboard page with 6 metric cards, date range picker, and 60s polling.

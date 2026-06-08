@@ -176,12 +176,15 @@ Wizard de 5 passos, salvável e retomável:
    - Starter/Pro: apenas 1 número. Se cliente tenta adicionar segundo, mostra "Upgrade para plano Enterprise para múltiplos números"
    - Enterprise: podem conectar 3+ números no mesmo onboarding (passo 2 expande para múltiplos inputs)
 
+**Gate de ativação:** O agente fica **inativo** enquanto o wizard não for concluído. Tenant com `status ≠ ativo` não processa mensagens recebidas — o número pode estar conectado, mas o agente não responde. A ativação do agente ocorre automaticamente quando todos os 5 passos são concluídos e `tenant.status` muda para `ativo`.
+
 **Critérios de aceite:**
 
 - [ ] Wizard salva progresso por passo, permite voltar
 - [ ] Validação de conexão WhatsApp dá feedback claro (conectado/erro + motivo)
 - [ ] Webhook de gateway confirma recebimento de evento de teste
 - [ ] Ao concluir, tenant fica status=ativo e agente configurado
+- [ ] Tenant com onboarding incompleto NÃO processa mensagens de leads (agente inativo)
 
 ---
 
@@ -670,11 +673,12 @@ Cada método tem `system_prompt_template` bem construído (por Claude) + fases. 
 
 ### Para o Tenant (Infoprodutor)
 
-1. **Taxa de conversão de leads em compradores** (meta: > 10% com agente vs 3-5% sem)
+1. **Taxa de conversão de leads em compradores** (meta: > 10% com agente vs 3–5% sem agente)
 2. **ROI de campanha** (receita atribuída / gasto com IA)
 3. **Custo médio por conversa** (limite sustentável: IA < 20% do ticket médio)
 4. **Tempo médio de resolução por lead** (meta: < 24h de primeira resposta a decisão de compra)
 5. **Taxa de satisfação do operador** (handoff resolvido sem volta ao agente > 80%)
+6. **Tempo para primeira venda de um tenant novo** (meta: < 72h desde criação da conta até primeira venda assistida pelo agente — mede a eficácia do onboarding e da configuração inicial)
 
 ### Para a Plataforma (Exponensia)
 
@@ -695,21 +699,37 @@ Leedi funciona como **processadora de dados** (Data Processor) em relação aos 
 ### Obrigações do Leedi
 
 1. **Consentimento prévio:** Leedi não faz contato sem consentimento do lead (gravado ou importado)
-2. **Direito ao esquecimento:** Lead marcado como "optado" é excluído de:
-   - Disparos futuros (fila + bloqueio)
+2. **Direito ao esquecimento:** Lead marcado como `status = optout` é excluído de **todos** os fluxos de contato:
+   - Disparos futuros (fila de disparo + bloqueio permanente)
+   - Abordagens do agente (agente não inicia nem responde pro-ativamente a lead optout)
+   - Follow-ups agendados (cancelados automaticamente)
+   - Campanhas de reengajamento
    - Busca de histórico de conversas (soft delete em até 30 dias)
-   - Relatórios agregados (anonimizado)
-3. **Retenção de dados:** Conversas mantidas por 1 ano em hot storage, depois movidas para cold/deletion respeitando solicitação do tenant
+   - Relatórios agregados (anonimizado após o soft delete)
+3. **Retenção de dados:** Logs de conversa mantidos por **1 ano em hot storage** (Supabase), depois arquivados em cold storage (S3) e excluídos do hot. Tenant pode solicitar exclusão antecipada — Leedi executa em até 30 dias.
 4. **Auditoria de acesso:** Todos os acessos a leads/conversas aparecem em `audit_log` com user_id, tenant_id, ação, timestamp
 5. **Criptografia em trânsito:** HTTPS obrigatório; criptografia em repouso para tokens/secrets
 6. **Transparência:** Dashboard mostra ao tenant quantos leads estão "optados" e último acesso
+
+### Direitos do Titular (como o tenant honra via plataforma)
+
+Quando um lead exercer seus direitos LGPD junto ao tenant, o fluxo é:
+
+| Direito | Ação do tenant no Leedi | SLA plataforma |
+|---|---|---|
+| **Acesso** | Tela de detalhe do lead → botão "Exportar dados do lead" (JSON/CSV com histórico de conversas, tags, compras) | Imediato |
+| **Exclusão** | Tela do lead → "Excluir lead" → soft delete imediato + hard delete em 30 dias | Confirmação em < 24h |
+| **Portabilidade** | Módulo 12 (Leads) → "Exportar base" em CSV (telefone, nome, email, origem, tags, status, data captação) | Download imediato |
+| **Retificação** | Editar campos do lead diretamente no painel | Imediato |
+
+> **Nota de portabilidade (LGPD Art. 18, VI):** O tenant pode exportar sua base de leads completa em CSV estruturado a qualquer momento (mesmo que o produto ainda não exija). Isso garante conformidade com o direito à portabilidade independentemente da fase do produto.
 
 ### Responsabilidade do Tenant
 
 - Informar ao lead que será contactado via Leedi
 - Manter registro de consentimento (fora do Leedi)
 - Configurar adequadamente qual "origem" de lead é consentimento explícito vs presumido (requer declaração em Configurações)
-- Responder a solicitações LGPD do lead dentro do prazo legal (Leedi fornece relatório em 5 dias úteis)
+- Responder a solicitações LGPD do lead dentro do prazo legal (Leedi fornece relatório em 5 dias úteis via painel)
 
 ---
 

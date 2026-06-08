@@ -12,12 +12,18 @@
     "conversas": "Conversas",
     "leads": "Leads",
     "agente": "Agente",
+    "playground": "Playground",
     "conhecimento": "Conhecimento",
     "campanhas": "Campanhas",
     "templates": "Templates",
     "disparos": "Disparos",
     "relatorios": "Relatórios",
     "configuracoes": "Configurações"
+  },
+  "forbidden": {
+    "code": "403",
+    "message": "Você não tem permissão para acessar esta área",
+    "back": "Voltar ao Dashboard"
   },
   "impersonation": {
     "banner": "Você está em modo de suporte para {tenantName}. Suas ações estão sendo registradas.",

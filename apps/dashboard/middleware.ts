@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { hasSessionCookie, getRequiredRoles, type TenantRole } from '@leedi/auth';
+import { hasSessionCookie, getRequiredRoles, type TenantRole } from '@leedi/auth/edge';
 
 // Routes that don't require authentication.
 const PUBLIC_PATHS = ['/api/health'];

@@ -105,3 +105,8 @@ claude-sonnet-4-6
 - `apps/dashboard/middleware.ts`
 - `apps/dashboard/app/actions.ts`
 - `apps/dashboard/app/page.tsx`
+
+## Review Findings (Code Review 2026-06-04)
+
+- [ ] [Review][Patch] `rememberMe` does not set the spec'd 30-day expiry (Task 1) — config has a single fixed `session.expiresIn = 7d`; `rememberMe` is forwarded to Better-Auth (persistent-vs-session cookie) but never yields a 30-day lifetime. [packages/auth/src/auth.ts:59-60]
+- [ ] [Review][Patch] Missing mandated test (Task 6): integration test that logout invalidates the session server-side (reused token -> 401). AC#2's anti-replay guarantee is asserted only by a comment. [packages/auth/src/use-cases/logout-user.ts]

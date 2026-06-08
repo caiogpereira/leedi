@@ -7,6 +7,10 @@
     "bmad-method": {
       "type": "http",
       "url": "https://gitmcp.io/bmad-code-org/BMAD-METHOD"
+    },
+    "asaas": {
+      "type": "http",
+      "url": "https://docs.asaas.com/mcp"
     }
   }
 }

@@ -117,3 +117,9 @@ claude-sonnet-4-6
 - `apps/web/app/api/auth/[...all]/route.ts`
 - `apps/web/messages/pt-BR.json`
 - `packages/db/migrations/0001_striped_purifiers.sql`
+
+## Review Findings (Code Review 2026-06-04)
+
+- [ ] [Review][Decision] Registration leaks account existence — `registerUser` returns a distinct `DUPLICATE_EMAIL_MESSAGE` (enumeration vector), but Story 2.1 AC#3 explicitly mandates this friendly message. Conflicts with the generic anti-enumeration responses used by login (2.2) and forgot-password (2.3). Decide: keep spec'd message vs. switch to generic. [packages/auth/src/use-cases/register-user.ts:15-16,72-73]
+- [ ] [Review][Patch] Password policy bypassable via native Better-Auth endpoints — `passwordSchema` (8+/uppercase/digit) is enforced only in the `registerUser` wrapper; the catch-all `/api/auth/[...all]` exposes `sign-up/email` directly with no `minPasswordLength`/complexity in `emailAndPassword` config. Fix: set `minPasswordLength: 8` + a sign-up `before` hook for complexity (config flag alone does not cover complexity in Better-Auth). [packages/auth/src/auth.ts:40-58]
+- [ ] [Review][Patch] Missing mandated unit test (Task 6): `register-user.test.ts` — valid input creates user; weak password rejected; duplicate email returns mapped message. [packages/auth/src/use-cases/register-user.ts]

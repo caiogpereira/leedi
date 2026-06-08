@@ -1,7 +1,17 @@
 export { db } from './client.js';
 export * as schema from './schema/index.js';
+export type { OnboardingConfig } from './types/onboarding-config.js';
+export type {
+  TemplateComponentes,
+  TemplateVariavel,
+  TemplateHeaderComponent,
+  TemplateBodyComponent,
+  TemplateFooterComponent,
+  TemplateButtonComponent,
+} from './schema/template.js';
 export {
   eq,
+  ne,
   sql,
   and,
   or,
@@ -15,6 +25,8 @@ export {
   isNull,
   isNotNull,
   inArray,
+  desc,
+  asc,
 } from 'drizzle-orm';
 export type { SQL } from 'drizzle-orm';
 

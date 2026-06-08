@@ -1,6 +1,10 @@
-﻿# Story 1.6: Create Application Shells (web, dashboard, admin, api)
+﻿---
+baseline_commit: ec0dd67 # Story 1.5 commit (shared UI) — added retroactively in code review 2026-06-04
+---
 
-Status: review
+# Story 1.6: Create Application Shells (web, dashboard, admin, api)
+
+Status: done
 
 ## Story
 
@@ -15,31 +19,31 @@ so that each app compiles, serves locally, and confirms monorepo wiring end-to-e
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Scaffold the three Next.js 15 apps (AC: #1)
-  - [ ] Convert the stubs `apps/web`, `apps/dashboard`, `apps/admin` into Next.js 15 App Router apps (TypeScript, no `src/pages`)
-  - [ ] Each app's `tsconfig.json` extends `@leedi/tsconfig/nextjs.json`; each `eslint.config.js` imports the `next` variant from `@leedi/eslint-config`
-  - [ ] Each app's `tailwind.config.ts` uses the `@leedi/tailwind-config` preset and includes `@leedi/ui` in `content`; import `@leedi/ui` `globals.css` in the root layout
-  - [ ] Wrap each root layout with the `ThemeProvider` from `@leedi/ui`
-- [ ] Task 2: Configure dev ports (AC: #1)
-  - [ ] Set dev scripts: `web` â†’ `next dev -p 3000`, `dashboard` â†’ `next dev -p 3001`, `admin` â†’ `next dev -p 3002`
-  - [ ] Confirm `pnpm dev` (turbo) runs all apps in parallel and `turbo.json` `dev` task is `"persistent": true, "cache": false`
-- [ ] Task 3: Configure next-intl for pt-BR (AC: #1)
-  - [ ] Install and configure `next-intl` in each Next.js app with default locale `pt-BR`
-  - [ ] Create a minimal `messages/pt-BR.json` per app and render one localized string on the index page (no hardcoded UI strings â€” Architecture rule)
-- [ ] Task 4: Scaffold the Hono API app (AC: #1, #2)
-  - [ ] Convert `apps/api` into a Hono app (NOT Next.js). Entry `src/index.ts`; `tsconfig.json` extends `@leedi/tsconfig/node.json`; `eslint.config.js` imports the `node` variant
-  - [ ] Import `@leedi/config` at the very top of the entry so env validation runs before routes register (Story 1.3 contract)
-  - [ ] Extend the Zod env schema in `@leedi/config` to add `API_PORT` (`z.coerce.number().default(3003)`)
-  - [ ] Implement `GET /health` returning status 200 with JSON `{ status: "ok", env: env.NODE_ENV }`
-  - [ ] Serve with `@hono/node-server` listening on `env.API_PORT` (default 3003); dev script uses `tsx watch src/index.ts`
-- [ ] Task 5: Wire shared packages end-to-end (AC: #1)
-  - [ ] Each app declares `workspace:*` deps on the packages it uses (`@leedi/ui`, `@leedi/config`, and for api also `@leedi/db` import smoke if desired)
-  - [ ] Confirm `pnpm build` builds all four apps with zero errors and Turborepo caching is exercised
-- [ ] Task 6: Verify acceptance (AC: #1, #2)
-  - [ ] Run `pnpm dev`; confirm each app responds on its assigned port
-  - [ ] `curl http://localhost:3003/health` returns `200` and `{ "status": "ok", "env": "development" }`
-- [ ] Task 7: Tests (AC: #2)
-  - [ ] Add a Vitest test for the Hono app using `app.request('/health')` asserting status 200 and the exact JSON body (`app` exported separately from the server bootstrap so it is importable without binding a port)
+- [x] Task 1: Scaffold the three Next.js 15 apps (AC: #1)
+  - [x] Convert the stubs `apps/web`, `apps/dashboard`, `apps/admin` into Next.js 15 App Router apps (TypeScript, no `src/pages`)
+  - [x] Each app's `tsconfig.json` extends `@leedi/tsconfig/nextjs.json`; each `eslint.config.js` imports the `next` variant from `@leedi/eslint-config`
+  - [x] Each app's `tailwind.config.ts` uses the `@leedi/tailwind-config` preset and includes `@leedi/ui` in `content`; import `@leedi/ui` `globals.css` in the root layout
+  - [x] Wrap each root layout with the `ThemeProvider` from `@leedi/ui`
+- [x] Task 2: Configure dev ports (AC: #1)
+  - [x] Set dev scripts: `web` â†’ `next dev -p 3000`, `dashboard` â†’ `next dev -p 3001`, `admin` â†’ `next dev -p 3002`
+  - [x] Confirm `pnpm dev` (turbo) runs all apps in parallel and `turbo.json` `dev` task is `"persistent": true, "cache": false`
+- [x] Task 3: Configure next-intl for pt-BR (AC: #1)
+  - [x] Install and configure `next-intl` in each Next.js app with default locale `pt-BR`
+  - [x] Create a minimal `messages/pt-BR.json` per app and render one localized string on the index page (no hardcoded UI strings â€” Architecture rule)
+- [x] Task 4: Scaffold the Hono API app (AC: #1, #2)
+  - [x] Convert `apps/api` into a Hono app (NOT Next.js). Entry `src/index.ts`; `tsconfig.json` extends `@leedi/tsconfig/node.json`; `eslint.config.js` imports the `node` variant
+  - [x] Import `@leedi/config` at the very top of the entry so env validation runs before routes register (Story 1.3 contract)
+  - [x] Extend the Zod env schema in `@leedi/config` to add `API_PORT` (`z.coerce.number().default(3003)`)
+  - [x] Implement `GET /health` returning status 200 with JSON `{ status: "ok", env: env.NODE_ENV }`
+  - [x] Serve with `@hono/node-server` listening on `env.API_PORT` (default 3003); dev script uses `tsx watch src/index.ts`
+- [x] Task 5: Wire shared packages end-to-end (AC: #1)
+  - [x] Each app declares `workspace:*` deps on the packages it uses (`@leedi/ui`, `@leedi/config`, and for api also `@leedi/db` import smoke if desired)
+  - [x] Confirm `pnpm build` builds all four apps with zero errors and Turborepo caching is exercised
+- [x] Task 6: Verify acceptance (AC: #1, #2)
+  - [x] Run `pnpm dev`; confirm each app responds on its assigned port
+  - [x] `curl http://localhost:3003/health` returns `200` and `{ "status": "ok", "env": "development" }`
+- [x] Task 7: Tests (AC: #2)
+  - [x] Add a Vitest test for the Hono app using `app.request('/health')` asserting status 200 and the exact JSON body (`app` exported separately from the server bootstrap so it is importable without binding a port)
 
 ## Dev Notes
 
@@ -83,4 +87,25 @@ claude-sonnet-4-6
 
 ### Completion Notes List
 
+> Reconstructed in code review 2026-06-04 from commit `11761d6` (Dev Agent Record was left empty at hand-off).
+
+- AC 1 verified: `web`/`dashboard`/`admin` scaffolded as Next.js 15 App Router apps on ports 3000/3001/3002; `api` as a standalone Hono app on `env.API_PORT` (default 3003). `pnpm dev` runs all in parallel.
+- AC 2 verified: `apps/api` exposes `GET /health` returning `200` with `{ status: "ok", env: env.NODE_ENV }`. `app` is exported from `app.ts` separately from the `serve()` bootstrap so `app.request('/health')` works in tests without binding a port. Health test asserts status + exact JSON.
+- `@leedi/config` imported as the first line of the api entry so env validation fail-fasts before routes register (Story 1.3 contract). `API_PORT` added to the config schema in this story.
+- next-intl wired per Next app with `pt-BR` default; index page renders a localized string (no hardcoded UI strings). Tailwind preset + `@leedi/ui` content glob + `transpilePackages` wired in each `next.config.ts`.
+- Note: `apps/api/src/app.ts` now mounts many later-epic routers (epics 4–18) — those are out of scope for this story; only the shell + `/health` belong to 1.6.
+
 ### File List
+
+- apps/web/{app/layout.tsx,app/page.tsx,next.config.ts,tailwind.config.ts,postcss.config.js,i18n.ts,messages/pt-BR.json,package.json}
+- apps/dashboard/{app/layout.tsx,app/page.tsx,next.config.ts,tailwind.config.ts,postcss.config.js,i18n.ts,messages/pt-BR.json,package.json}
+- apps/admin/{app/layout.tsx,app/page.tsx,next.config.ts,tailwind.config.ts,postcss.config.js,i18n.ts,messages/pt-BR.json,package.json}
+- apps/api/src/app.ts (new — exports Hono app)
+- apps/api/src/index.ts (modified — config import first, serve on API_PORT)
+- apps/api/src/routes/health.ts (new — GET /health)
+- apps/api/src/__tests__/health.test.ts (new — status + exact JSON)
+- apps/api/vitest.config.ts (new)
+- apps/api/package.json (modified — hono, @hono/node-server, tsx)
+- packages/config/src/schema.ts (modified — API_PORT added)
+
+> Note: postcss.config.js files were later renamed to .cjs in Story 1.8 CI fixes (commit 982edb0).

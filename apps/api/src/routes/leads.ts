@@ -10,6 +10,7 @@ import {
 } from '@leedi/lead';
 import type { LeadTemperatura, LeadStatus, LeadStatusChange } from '@leedi/lead';
 import { requireTenantSession } from '../middleware/tenant-session.js';
+import { rateLimitTenant } from '../middleware/rate-limit.js';
 import { parseLeadsCsv, CsvValidationError } from '../utils/parse-leads-csv.js';
 
 const DEFAULT_PAGE = 1;
@@ -36,6 +37,9 @@ function parsePositiveInt(raw: string | undefined, fallback: number): number {
 
 export function createLeadsRouter() {
   const router = new Hono();
+
+  // NFR8: per-tenant rate limit on every route in this router (keys off :tenantId).
+  router.use('*', rateLimitTenant());
 
   // GET /api/tenants/:tenantId/leads — paginated, filterable lead list for the current tenant
   router.get('/', requireTenantSession(), async (c) => {

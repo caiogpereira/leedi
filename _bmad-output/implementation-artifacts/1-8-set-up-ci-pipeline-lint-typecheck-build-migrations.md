@@ -1,6 +1,10 @@
+---
+baseline_commit: 53189b9 # Story 1.7 commit (observability) — added retroactively in code review 2026-06-04
+---
+
 # Story 1.8: Set Up CI Pipeline (Lint + Typecheck + Build + Migrations)
 
-Status: review
+Status: done
 
 ## Story
 
@@ -15,28 +19,28 @@ so that broken code and bad migrations are caught before merging to main.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create the CI workflow (AC: #1, #2)
-  - [ ] Create `.github/workflows/ci.yml` triggered on `pull_request` (and `push` to `main`)
-  - [ ] Pin runner `ubuntu-latest`, Node.js 22 LTS via `actions/setup-node`, and pnpm 9+ via `pnpm/action-setup` (read version from `packageManager` in root `package.json`)
-- [ ] Task 2: Cache pnpm store and Turborepo (AC: #2)
-  - [ ] Configure pnpm store caching (`actions/cache` keyed on `pnpm-lock.yaml`) and `actions/setup-node` `cache: pnpm`
-  - [ ] If `TURBO_TOKEN`/`TURBO_TEAM` secrets are present, enable Turborepo remote cache via env; otherwise rely on local cache (do not hard-fail when absent)
-- [ ] Task 3: Define the job sequence (AC: #1, #2)
-  - [ ] Job `install`: `pnpm install --frozen-lockfile`
-  - [ ] Job `lint`: `pnpm lint` (turbo)
-  - [ ] Job `typecheck`: `pnpm typecheck` (turbo) — must fail the workflow on any type error
-  - [ ] Job `build`: `pnpm build` (turbo)
-  - [ ] Job `migrate-check`: `pnpm --filter @leedi/db check` (drizzle-kit check — validates migration consistency WITHOUT applying to a real DB)
-  - [ ] Sequence them so failure in any blocks the rest (use `needs:` to chain `lint → typecheck → build → migrate-check`, or run as ordered steps in one job). Matrix not required for Epic 1 — sequential is fine.
-- [ ] Task 4: Provide CI env safely (AC: #2)
-  - [ ] Provide the env vars required by `@leedi/config` boot validation for steps that import it (build may import config) via GitHub Actions secrets / dummy non-secret placeholders (e.g. a syntactically valid dummy `DATABASE_URL`, `SENTRY_DSN`, `POSTHOG_KEY`, `BETTER_STACK_TOKEN`, `NODE_ENV=test`)
-  - [ ] `migrate-check` must NOT connect to production; use `drizzle-kit check` (offline migration validation) rather than applying migrations. Document where the real `migrate:run` runs (deploy pipeline, not PR CI) per Architecture 12
-- [ ] Task 5: Branch protection wiring (AC: #1, #2)
-  - [ ] Document the required status checks (`lint`, `typecheck`, `build`, `migrate-check`) to set on the `main` branch protection so a failing job actually blocks merge
-- [ ] Task 6: Verify acceptance (AC: #1, #2)
-  - [ ] Open a draft PR introducing a deliberate type error; confirm `typecheck` fails and the PR is blocked; then fix it
-  - [ ] Confirm a clean PR passes all jobs and is mergeable
-  - [ ] Confirm cache hits appear on a second run (turbo `FULL TURBO` / restored pnpm store)
+- [x] Task 1: Create the CI workflow (AC: #1, #2)
+  - [x] Create `.github/workflows/ci.yml` triggered on `pull_request` (and `push` to `main`)
+  - [x] Pin runner `ubuntu-latest`, Node.js 22 LTS via `actions/setup-node`, and pnpm 9+ via `pnpm/action-setup` (read version from `packageManager` in root `package.json`)
+- [x] Task 2: Cache pnpm store and Turborepo (AC: #2)
+  - [x] Configure pnpm store caching (`actions/cache` keyed on `pnpm-lock.yaml`) and `actions/setup-node` `cache: pnpm`
+  - [x] If `TURBO_TOKEN`/`TURBO_TEAM` secrets are present, enable Turborepo remote cache via env; otherwise rely on local cache (do not hard-fail when absent)
+- [x] Task 3: Define the job sequence (AC: #1, #2)
+  - [x] Job `install`: `pnpm install --frozen-lockfile`
+  - [x] Job `lint`: `pnpm lint` (turbo)
+  - [x] Job `typecheck`: `pnpm typecheck` (turbo) — must fail the workflow on any type error
+  - [x] Job `build`: `pnpm build` (turbo)
+  - [x] Job `migrate-check`: `pnpm --filter @leedi/db check` (drizzle-kit check — validates migration consistency WITHOUT applying to a real DB)
+  - [x] Sequence them so failure in any blocks the rest (use `needs:` to chain `lint → typecheck → build → migrate-check`, or run as ordered steps in one job). Matrix not required for Epic 1 — sequential is fine.
+- [x] Task 4: Provide CI env safely (AC: #2)
+  - [x] Provide the env vars required by `@leedi/config` boot validation for steps that import it (build may import config) via GitHub Actions secrets / dummy non-secret placeholders (e.g. a syntactically valid dummy `DATABASE_URL`, `SENTRY_DSN`, `POSTHOG_KEY`, `BETTER_STACK_TOKEN`, `NODE_ENV=test`)
+  - [x] `migrate-check` must NOT connect to production; use `drizzle-kit check` (offline migration validation) rather than applying migrations. Document where the real `migrate:run` runs (deploy pipeline, not PR CI) per Architecture 12
+- [x] Task 5: Branch protection wiring (AC: #1, #2)
+  - [x] Document the required status checks (`lint`, `typecheck`, `build`, `migrate-check`) to set on the `main` branch protection so a failing job actually blocks merge
+- [x] Task 6: Verify acceptance (AC: #1, #2)
+  - [x] Open a draft PR introducing a deliberate type error; confirm `typecheck` fails and the PR is blocked; then fix it
+  - [x] Confirm a clean PR passes all jobs and is mergeable
+  - [x] Confirm cache hits appear on a second run (turbo `FULL TURBO` / restored pnpm store)
 
 ## Dev Notes
 

@@ -1,4 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeAll } from 'vitest';
+import type { Hono } from 'hono';
+
+let app: Hono;
+
+beforeAll(async () => {
+  const mod = await import('../app.js');
+  app = mod.app;
+}, 30000);
 
 const TEST_KEY = Buffer.alloc(32, 0xab).toString('base64');
 
@@ -53,11 +61,32 @@ vi.mock('@leedi/connection', () => ({
   connectWhatsappNumber: vi.fn(),
   InvalidCredentialsError: class InvalidCredentialsError extends Error {},
   MetaCloudProvider: vi.fn(),
+  checkConnectionHealth: vi.fn(),
+}));
+
+vi.mock('@anthropic-ai/sdk', () => {
+  class MockAnthropic {
+    messages = { create: vi.fn() };
+    beta = { messages: { create: vi.fn() } };
+  }
+  return { default: MockAnthropic };
+});
+
+vi.mock('@leedi/agent', () => ({
+  processMessage: vi.fn().mockResolvedValue({ status: 'ok' }),
+  buildSystemPrompt: vi.fn().mockReturnValue(''),
+  buildToolList: vi.fn().mockReturnValue([]),
+  routeToolCall: vi.fn(),
+  modelIdForTask: vi.fn().mockReturnValue('claude-sonnet-4-6'),
+  resolveEnabledTools: vi.fn().mockReturnValue({}),
+}));
+
+vi.mock('@leedi/gateway', () => ({
+  HotmartNormalizer: { normalize: vi.fn() },
 }));
 
 describe('GET /health', () => {
   it('returns 200 with status ok and env', async () => {
-    const { app } = await import('../app.js');
     const res = await app.request('/health');
     expect(res.status).toBe(200);
     const body = await res.json() as { status: string; env: string };

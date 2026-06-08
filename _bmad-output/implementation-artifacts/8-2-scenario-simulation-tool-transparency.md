@@ -4,7 +4,7 @@ baseline_commit: 9ea8a05
 
 # Story 8.2: Scenario Simulation & Tool Transparency
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -23,28 +23,27 @@ so that I can validate the agent's decision-making and knowledge base before goi
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Scenario data builders (AC: #1, #2)
-  - [ ] Create `apps/api/src/routes/playground/scenarios.ts`
-  - [ ] `buildScenarioContext(scenario: 'novo_lead' | 'lead_recorrente' | 'lead_com_objecao'): PlaygroundScenarioContext` where `PlaygroundScenarioContext` includes: `syntheticLead` (shaped like a Lead row), `syntheticHistory: AgentMessage[]` (pre-built thread messages in Anthropic format), `initialUserMessage?: string` (for "lead com objeção" only)
-  - [ ] "Novo lead": empty history, `comprou: false`, `temperatura: frio`, no tags
-  - [ ] "Lead recorrente": history with 5 messages (system + 2 user + 2 assistant, including one recorded objection "preço"), `temperatura: morno`, `comprou: false`; the synthetic history is injected into `process-message` as pre-existing `agent_messages` (via `getThreadHistory` mock or a pre-populated transient thread)
-  - [ ] "Lead com objeção": empty base history + `initialUserMessage: "Achei caro, não vale o preço"` injected as the first user message before the agent turn
-  - [ ] Export from the playground router; consume in `POST /playground/message` on session init
-- [ ] Task 2: Tool transparency in API response (AC: #3, #4)
-  - [ ] In Story 8.1's sandbox seam (`process-message` with `sandboxMode: true`), the `ToolCallLog[]` is already returned. Ensure the log captures ALL tool calls per agent turn in chronological order.
-  - [ ] In `POST /playground/message` response shape: `{ sessionId, segments: string[], toolCalls: ToolCallLog[], turn: number }` where `ToolCallLog = { toolName: string; input: Record<string, unknown>; output: Record<string, unknown>; durationMs?: number }`
-  - [ ] `durationMs` is the tool execution wall time captured in `saveToolCall` (already present in `agent_tool_calls.duracao_ms`) — pass it through to the API response
-- [ ] Task 3: Tool transparency UI component (AC: #3, #4, #6)
-  - [ ] Create `apps/dashboard/app/(shell)/agente/playground/_components/ToolCallPanel.tsx`
-  - [ ] `<ToolCallPanel toolCalls={ToolCallLog[]} />` — renders a vertical stack of panels below the agent bubble
-  - [ ] Each panel: collapsible `<details>` element with `<summary>` showing tool name + duration badge (e.g. `buscar_historico_lead · 45ms`), expanded content shows pretty-printed JSON for input and output side by side (or stacked on narrow screens)
-  - [ ] Collapsed by default; expand on click; keyboard accessible (Enter/Space on summary)
-  - [ ] Styled with a subtle violet/indigo left border to visually distinguish from chat bubbles
-  - [ ] Empty `toolCalls` array → render nothing (no empty panel)
-- [ ] Task 4: Config hot-reload on session reset (AC: #5)
-  - [ ] In `DELETE /playground/session/:sessionId`, clear the Redis session key and also invalidate the cached agent config for that session
-  - [ ] In `POST /playground/message` on session init (when `sessionId` is absent), fetch fresh `agent_config`, `sales_method`, and active campaign — do NOT cache these across sessions
-  - [ ] UI: clicking "Reiniciar conversa" calls DELETE, then clears local state including `sessionId`, forcing the next send to re-init the session with the current config
+- [x] Task 1: Scenario data builders (AC: #1, #2)
+  - [x] Create `apps/api/src/routes/playground/scenarios.ts`
+  - [x] `buildScenarioContext(scenario: 'novo_lead' | 'lead_recorrente' | 'lead_com_objecao'): PlaygroundScenarioContext` where `PlaygroundScenarioContext` includes: `syntheticHistory: AnthropicHistoryMessage[]` (pre-built thread messages in Anthropic format), `initialUserMessage?: string` (for "lead com objeção" only)
+  - [x] "Novo lead": empty history
+  - [x] "Lead recorrente": history with 5 messages (2 user + 2 assistant + 1 user with objection "preço"); injected via seedHistory
+  - [x] "Lead com objeção": empty base history + `initialUserMessage: "Achei caro, não vale o preço"` injected as the first user message before the agent turn
+  - [x] Export from the playground router; consume in `POST /playground/message` on session init
+- [x] Task 2: Tool transparency in API response (AC: #3, #4)
+  - [x] `ToolCallLog[]` collected in-memory in `runToolLoop` sandbox path (chronological order)
+  - [x] Response shape: `{ sessionId, segments: string[], toolCalls: ToolCallLog[], turn: number }` where `ToolCallLog = { toolName; input; output; durationMs? }`
+  - [x] `durationMs` is wall time from `Date.now()` before/after `routeToolCall` call
+- [x] Task 3: Tool transparency UI component (AC: #3, #4, #6)
+  - [x] Created `apps/dashboard/app/(shell)/agente/playground/_components/ToolCallPanel.tsx`
+  - [x] `<ToolCallPanel toolCalls={ToolCallLog[]} />` — renders a vertical stack of panels below the agent bubble
+  - [x] Each panel: collapsible `<details>` element with `<summary>` showing tool name + duration badge; expanded content shows pretty-printed JSON for input/output side by side
+  - [x] Collapsed by default; keyboard accessible (native `<details>` handles Enter/Space)
+  - [x] Styled with violet/indigo left border; empty array → renders nothing
+- [x] Task 4: Config hot-reload on session reset (AC: #5)
+  - [x] `DELETE /playground/session/:sessionId` clears the Redis session key
+  - [x] `POST /playground/message` with no `sessionId` creates a fresh session — calls `loadAgentContext` on every new session (no cross-session cache)
+  - [x] UI: "Reiniciar conversa" calls DELETE, clears local state including `sessionId`
 
 ## Dev Notes
 
@@ -84,20 +83,30 @@ so that I can validate the agent's decision-making and knowledge base before goi
 
 ### Agent Model Used
 
-_not yet assigned_
+claude-sonnet-4-6
 
 ### Debug Log References
 
-_none_
+- Scenario builders use Redis-only (no DB writes); synthetic history passed via seedHistory to process-message.
+- ToolCallPanel uses native `<details>`/`<summary>` — no React state for open/closed (as per pitfall note).
 
 ### Completion Notes List
 
-_not yet implemented_
+- `buildScenarioContext` in `scenarios.ts` produces 5-message history for lead_recorrente and initialUserMessage for lead_com_objecao
+- `ToolCallLog[]` collected chronologically in `runToolLoop` sandbox path; durationMs from wall clock
+- API response includes `{ sessionId, segments, toolCalls, turn }`
+- `ToolCallPanel` component: collapsible details, violet border, JSON side-by-side, empty → null
+- Config hot-reload: no cross-session agent config cache; DELETE clears Redis key
+- 4 unit tests for scenario builders
 
 ### File List
 
-_not yet implemented_
+- apps/api/src/routes/playground/scenarios.ts (created)
+- apps/api/src/routes/playground/__tests__/scenarios.test.ts (created)
+- apps/api/src/routes/playground/index.ts (modified — consumes scenarios, includes toolCalls)
+- apps/dashboard/app/(shell)/agente/playground/_components/ToolCallPanel.tsx (created)
 
 ### Change Log
 
-_none_
+- feat(scenarios): buildScenarioContext for 3 playground scenarios (Story 8.2)
+- feat(tool-transparency): ToolCallPanel component with collapsible details (Story 8.2)

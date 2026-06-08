@@ -4,7 +4,7 @@ baseline_commit: 9ea8a05
 
 # Story 9.1: PRD — NFRs, Success Metrics & LGPD Requirements
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -22,31 +22,31 @@ so that implementation decisions are grounded in measurable targets and legal ob
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Review current state of sections 5.5, 5.6, 5.7 in `docs/02-leedi-prd.md` against the ACs
-  - [ ] Read the full text of sections 5.5, 5.6, and 5.7
-  - [ ] Mark each AC item as already-present or missing
-  - [ ] Do NOT rewrite sections wholesale — only add missing items, correct conflicts
-- [ ] Task 2: Update section 5.5 — NFR gaps (AC: #1)
-  - [ ] Confirm latency target "P95 < 800ms from message receipt to first segment sent" is explicit (not just "< 800ms")
-  - [ ] Confirm 99.9% uptime SLA is stated
-  - [ ] Confirm 1,000 msg/min throughput is stated
-  - [ ] Confirm RTO < 15min and RPO < 1min are stated
-  - [ ] Add any missing items; do not remove existing content that is consistent
-- [ ] Task 3: Update section 5.6 — Success Metrics gaps (AC: #2)
-  - [ ] Confirm time-to-first-sale target for new tenant is stated (suggest: < 72h from account creation)
-  - [ ] Confirm AI cost ceiling per conversation is stated (< 20% of average ticket)
-  - [ ] Confirm conversion rate improvement target is stated (> 10% vs 3–5% baseline)
-  - [ ] Add any missing items
-- [ ] Task 4: Update section 5.7 — LGPD gaps (AC: #3, #4)
-  - [ ] Confirm Leedi = Data Processor, tenant = Data Controller is explicitly stated
-  - [ ] Confirm opt-out requirement covers all contact flows (dispatch, agent, follow-up)
-  - [ ] Confirm data retention limit for conversations (1 year hot, then archive/delete)
-  - [ ] Confirm data subject rights procedure: how does a tenant honor a lead deletion request using the platform?
-  - [ ] Add portability note: tenant must be able to export lead data as CSV (even if feature ships later)
-  - [ ] Add any missing items
-- [ ] Task 5: Cross-check for conflicts (AC: #5)
-  - [ ] Scan sections 5.5, 5.6, 5.7 for any contradictions introduced by the edits
-  - [ ] Confirm no duplicate definitions between sections
+- [x] Task 1: Review current state of sections 5.5, 5.6, 5.7 in `docs/02-leedi-prd.md` against the ACs
+  - [x] Read the full text of sections 5.5, 5.6, and 5.7
+  - [x] Mark each AC item as already-present or missing
+  - [x] Do NOT rewrite sections wholesale — only add missing items, correct conflicts
+- [x] Task 2: Update section 5.5 — NFR gaps (AC: #1)
+  - [x] Confirm latency target "P95 < 800ms from message receipt to first segment sent" is explicit (not just "< 800ms")
+  - [x] Confirm 99.9% uptime SLA is stated
+  - [x] Confirm 1,000 msg/min throughput is stated
+  - [x] Confirm RTO < 15min and RPO < 1min are stated
+  - [x] Add any missing items; do not remove existing content that is consistent
+- [x] Task 3: Update section 5.6 — Success Metrics gaps (AC: #2)
+  - [x] Confirm time-to-first-sale target for new tenant is stated (suggest: < 72h from account creation)
+  - [x] Confirm AI cost ceiling per conversation is stated (< 20% of average ticket)
+  - [x] Confirm conversion rate improvement target is stated (> 10% vs 3–5% baseline)
+  - [x] Add any missing items
+- [x] Task 4: Update section 5.7 — LGPD gaps (AC: #3, #4)
+  - [x] Confirm Leedi = Data Processor, tenant = Data Controller is explicitly stated
+  - [x] Confirm opt-out requirement covers all contact flows (dispatch, agent, follow-up)
+  - [x] Confirm data retention limit for conversations (1 year hot, then archive/delete)
+  - [x] Confirm data subject rights procedure: how does a tenant honor a lead deletion request using the platform?
+  - [x] Add portability note: tenant must be able to export lead data as CSV (even if feature ships later)
+  - [x] Add any missing items
+- [x] Task 5: Cross-check for conflicts (AC: #5)
+  - [x] Scan sections 5.5, 5.6, 5.7 for any contradictions introduced by the edits
+  - [x] Confirm no duplicate definitions between sections
 
 ## Dev Notes
 
@@ -79,7 +79,7 @@ so that implementation decisions are grounded in measurable targets and legal ob
 
 ### Agent Model Used
 
-_not yet assigned_
+claude-sonnet-4-6[1m]
 
 ### Debug Log References
 
@@ -87,12 +87,18 @@ _none_
 
 ### Completion Notes List
 
-_not yet implemented_
+- §5.5 already satisfied all AC #1 sub-clauses (P95 latency, uptime, throughput, RTO/RPO) — verified, no changes needed.
+- §5.6 was missing AC #2(a): added KPI #6 "Tempo para primeira venda de um tenant novo (< 72h desde criação da conta)".
+- §5.7 AC #3(b) gap: expanded opt-out list to explicitly cover ALL contact flows (agent, follow-up, reengagement, dispatch). AC #3(c) and (d) already present (retention + data subject rights under tenant responsibilities). Enhanced with explicit "Direitos do Titular" table showing the platform mechanism for each LGPD right. AC #4 portability note added with explicit CSV export reference (LGPD Art. 18, VI).
+- No conflicts found in cross-check.
 
 ### File List
 
-_not yet implemented_
+- docs/02-leedi-prd.md
 
 ### Change Log
 
-_none_
+- Added KPI #6 (time-to-first-sale < 72h) to §5.6 (2026-06-02)
+- Expanded §5.7 opt-out to cover all flows: agent, follow-up, reengagement, dispatch (2026-06-02)
+- Added "Direitos do Titular" table with platform mechanism for each LGPD right (2026-06-02)
+- Added portability note (LGPD Art. 18 VI) and CSV export reference in §5.7 (2026-06-02)

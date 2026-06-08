@@ -15,6 +15,7 @@ import {
   Send,
   BarChart3,
   Settings,
+  FlaskConical,
   X,
 } from 'lucide-react';
 import { useSidebar } from './sidebar-context';
@@ -30,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/conversas', icon: MessageSquare, labelKey: 'conversas' },
   { href: '/leads', icon: Users, labelKey: 'leads' },
   { href: '/agente', icon: Bot, labelKey: 'agente' },
+  { href: '/agente/playground', icon: FlaskConical, labelKey: 'playground' },
   { href: '/conhecimento', icon: BookOpen, labelKey: 'conhecimento' },
   { href: '/campanhas', icon: Megaphone, labelKey: 'campanhas' },
   { href: '/templates', icon: FileText, labelKey: 'templates' },

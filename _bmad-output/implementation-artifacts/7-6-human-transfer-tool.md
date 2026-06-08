@@ -4,7 +4,7 @@ baseline_commit: 9ea8a05
 
 # Story 7.6: Human Transfer Tool
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -22,33 +22,33 @@ so that complex situations are handled by a person.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: `transferir_humano` tool use case (AC: #1, #2, #3)
-  - [ ] Create `packages/agent/src/tools/transferir-humano.ts`
-  - [ ] Input: `{ tenantId: string, leadId: string, threadId: string, conversationWindowId: string, motivo: string, conversationSummary: string }`
-  - [ ] Generate the handoff summary: call Claude Haiku with the structured prompt from Task 3 (output sections: lead_name, what_they_want, objections, temperatura, motivo, suggested_response)
-  - [ ] Upsert `inbox_assignments`: `{ tenantId, conversationWindowId, status: 'aguardando_humano', resumo_handoff, motivo_handoff: motivo }`
-  - [ ] Send the WhatsApp message via `MetaCloudProvider.sendText()`: "Vou te conectar com um de nossos especialistas. Um momento!" (persist to `messages`, `autor='agente'`)
-  - [ ] Emit the operator notification: create a journey event + a notification record `{ tipo: 'lead_pediu_humano', leadName, tenantId }` (actual push delivery is Epic 18 — just persist/queue here)
-  - [ ] Update the agent thread status to `pausado` via `@leedi/agent-memory.updateThreadStatus`
-  - [ ] Return `{ transferred: true, assignmentId: string }`
-- [ ] Task 2: Agent pause check in `process-message` (AC: #4)
-  - [ ] In `packages/agent/src/use-cases/process-message.ts` (from 7.2), after loading the `conversation_window`, check `inbox_assignments` for that window
-  - [ ] If `status` IN (`'aguardando_humano'`, `'em_atendimento'`) → save the inbound message to `messages` (`autor='lead'`) and RETURN EARLY (no Claude call)
-  - [ ] Add this to the `should_abort` checks alongside optout/blocked/already-bought
-- [ ] Task 3: Handoff summary prompt builder (AC: #2)
-  - [ ] Create `packages/agent/src/utils/build-handoff-prompt.ts`
-  - [ ] Builds a Haiku prompt from the thread history to produce a structured handoff summary
-  - [ ] Output format: markdown with clear sections — Sobre o Lead, O que quer, Objeções, Temperatura, Motivo, Próximo passo sugerido
-  - [ ] Pure function (prompt assembly only); the Haiku call lives in the tool use case
-- [ ] Task 4: Tool definition + toggle wiring in the registry (AC: #1, #5) — integration point is Story 7.2
-  - [ ] In `packages/agent/src/tools/registry.ts`, add the JSON Schema: `{ motivo: string, conversationSummary: string }`
-  - [ ] CONFIGURABLE — gated by `tools_habilitadas.transferir_humano` in `buildToolList`
-  - [ ] Wire into `routeToolCall`; do NOT create a new router
-- [ ] Task 5: Tests (AC: #1, #2, #3, #4)
-  - [ ] Unit: `transferir_humano` generates the handoff summary via Haiku (mocked) and upserts the `inbox_assignment` with `status='aguardando_humano'` and a populated `resumo_handoff`
-  - [ ] Unit: `process-message` skips the agent (no Claude call) when inbox status is `aguardando_humano`, and still saves the inbound message as `autor='lead'`
-  - [ ] Unit: the operator notification event is emitted with `{ tipo: 'lead_pediu_humano', leadName, tenantId }`
-  - [ ] Unit: the tool is excluded from `buildToolList` when toggled off
+- [x] Task 1: `transferir_humano` tool use case (AC: #1, #2, #3)
+  - [x] Create `packages/agent/src/tools/transferir-humano.ts`
+  - [x] Input from schema: `{ motivo: string, conversationSummary: string }`; identity/transport (`tenantId`, `leadId`, `threadId`, `conversationWindowId`, `leadPhone`, `connectionId`) come from `ToolContext`
+  - [x] Generate the handoff summary: call Claude Haiku with the structured prompt from Task 3 (output sections: Sobre o Lead, O que quer, Objeções, Temperatura, Motivo, Próximo passo sugerido)
+  - [x] Upsert `inbox_assignments`: `{ tenantId, conversationWindowId, status: 'aguardando_humano', resumoHandoff, motivoHandoff: motivo }` — idempotent on `conversation_window_id` (in-app dedup, no DB UNIQUE constraint exists)
+  - [x] Send the WhatsApp message via `MetaCloudProvider.sendText()`: "Vou te conectar com um de nossos especialistas. Um momento!" (persist to `messages`, `autor='agente'`)
+  - [x] Emit the operator notification: create a `lead_journey_events` record `{ tipo: 'handoff', detalhes: { tipo: 'lead_pediu_humano', leadName, tenantId } }` (actual push delivery is Epic 18 — persist only)
+  - [x] Update the agent thread status to `pausado` via `@leedi/agent-memory.updateThreadStatus(tenantId, threadId, 'pausado')`
+  - [x] Return `{ transferred: true, assignmentId: string }`
+- [x] Task 2: Agent pause check in `process-message` (AC: #4)
+  - [x] In `packages/agent/src/use-cases/process-message.ts` (from 7.2), after loading context, check `inbox_assignments` for the conversation window (`loadInboxStatus`)
+  - [x] If `status` IN (`'aguardando_humano'`, `'em_atendimento'`) → RETURN EARLY (no Claude call). NOTE: the inbound message is already persisted to `messages` (`autor='lead'`) by the webhook before the agent loop runs, so the pause path does NOT re-insert it (see Completion Notes)
+  - [x] Add this to the `should_abort` checks alongside optout/blocked/already-bought
+- [x] Task 3: Handoff summary prompt builder (AC: #2)
+  - [x] Create `packages/agent/src/utils/build-handoff-prompt.ts`
+  - [x] Builds a Haiku prompt to produce a structured handoff summary
+  - [x] Output format: markdown with clear sections — Sobre o Lead, O que quer, Objeções, Temperatura, Motivo, Próximo passo sugerido
+  - [x] Pure function (prompt assembly only); the Haiku call lives in the tool use case
+- [x] Task 4: Tool definition + toggle wiring in the registry (AC: #1, #5) — integration point is Story 7.2
+  - [x] In `packages/agent/src/tools/registry.ts`, updated the JSON Schema to `{ motivo: string, conversationSummary: string }` (was `{ motivo, resumo }`)
+  - [x] CONFIGURABLE — gated by `tools_habilitadas.transferir_humano` in `buildToolList`
+  - [x] Wired into `routeToolCall`; no new router
+- [x] Task 5: Tests (AC: #1, #2, #3, #4)
+  - [x] Unit: `transferir_humano` generates the handoff summary via Haiku (mocked) and upserts the `inbox_assignment` with `status='aguardando_humano'` and a populated `resumo_handoff`
+  - [x] Unit: `process-message` skips the agent (no Claude call) when inbox status is `aguardando_humano` / `em_atendimento`
+  - [x] Unit: the operator notification event is emitted with `{ tipo: 'lead_pediu_humano', leadName, tenantId }`
+  - [x] Unit: the tool is excluded from `buildToolList` when toggled off (covered in `registry.test.ts`)
 
 ## Dev Notes
 
@@ -87,20 +87,39 @@ so that complex situations are handled by a person.
 
 ### Agent Model Used
 
-_not yet assigned_
+claude-opus-4-8 (Fullstack Development Specialist)
 
 ### Debug Log References
 
-_none_
+- `pnpm --filter @leedi/agent test` → 15 files / 88 tests passing.
+- `pnpm --filter @leedi/agent run typecheck` → clean.
 
 ### Completion Notes List
 
-_not yet implemented_
+- **AC#4 — inbound message NOT re-persisted in the pause path (important deviation from the literal AC text).** The AC says "saves the message to `messages` with `autor='lead'`", but the inbound message is ALREADY persisted to `messages` (`autor='lead'`, `direction='inbound'`, `status='recebido'`) by `apps/api/src/routes/webhook-meta.ts` (via `saveMessage`) BEFORE the agent loop (`processMessage`) is ever invoked by the QStash `agent-flush` handler. Re-inserting it in the pause path would create a duplicate row and corrupt the conversation history. So the pause check (`loadInboxStatus` → `inbox_paused`) returns early WITHOUT an extra insert. The intent of AC#4 (the lead message is captured + the agent is skipped with no Claude call) is fully satisfied by the existing upstream persistence plus the early return.
+- **Idempotent upsert without a DB constraint.** `inbox_assignments` has no UNIQUE constraint/index on `conversation_window_id` (only an FK), so `onConflictDoUpdate` would throw at runtime. Following the `adicionar-tag.ts` precedent, idempotency is enforced in-app: SELECT by `conversation_window_id`; if found, UPDATE and reuse the id; else INSERT ... RETURNING id. The per-lead `agent_lock` in `processMessage` serializes transfers for a lead, making the SELECT-then-write race-safe. A future migration could add the unique index and switch to a true upsert.
+- **Sender + Anthropic are injectable.** The tool only receives `connectionId` in `ToolContext` (not the encrypted token), so it queries `whatsappConnections` itself to build the provider. Both the `MetaCloudProvider` factory and the Anthropic client are injectable via `TransferirHumanoDeps` (defaults preserve production behavior) so unit tests need no network.
+- **`updateThreadStatus` is 3-arg** `(tenantId, threadId, status)` — used as such; `'pausado'` is a valid `AgentThreadStatus`.
+- **Notification shape.** Persisted as a `lead_journey_events` row with top-level `tipo: 'handoff'` and `detalhes: { tipo: 'lead_pediu_humano', leadName, tenantId }`. `leads.nome` is nullable, so `leadName` falls back to the phone (then `'Lead'`) — never null. Real push delivery is Epic 18.
+- **Registry test fix.** `registry.test.ts` previously asserted `transferir_humano` returns `{ ok:false, reason:'tool_not_implemented' }` (the not-yet-wired stub). Now that it is wired, that assertion was repointed to an unknown tool name so it still covers the structured-pending fallthrough without hitting Anthropic/DB unmocked.
+- **Out-of-scope note (not fixed):** after the tool sends the literal handoff line and returns its `tool_result`, the agent loop continues and Claude may emit a closing text that `processMessage` would also send (a second message). The ACs don't cover this and the thread is now `pausado`; left as-is for a follow-up if product wants to suppress the trailing turn.
 
 ### File List
 
-_not yet implemented_
+**Created**
+
+- `packages/agent/src/tools/transferir-humano.ts`
+- `packages/agent/src/utils/build-handoff-prompt.ts`
+- `packages/agent/src/tools/__tests__/transferir-humano.test.ts`
+- `packages/agent/src/utils/__tests__/build-handoff-prompt.test.ts`
+
+**Modified**
+
+- `packages/agent/src/tools/registry.ts` (schema `resumo`→`conversationSummary`; import + `routeToolCall` wiring)
+- `packages/agent/src/use-cases/process-message.ts` (inbox-pause `should_abort` check + `loadInboxStatus` helper)
+- `packages/agent/src/tools/__tests__/registry.test.ts` (repointed the not-yet-wired stub assertion)
+- `packages/agent/src/use-cases/__tests__/process-message.test.ts` (added `inboxAssignments` mock + AC#4 pause/skip tests)
 
 ### Change Log
 
-_none_
+- 2026-06-02 — Implemented Story 7.6 (human transfer tool, inbox-pause check, handoff prompt builder, registry wiring, tests). Status → review.

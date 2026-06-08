@@ -4,7 +4,7 @@ baseline_commit: 9ea8a05
 
 # Story 20.1: Financial Health Dashboard (MRR, Revenue, Delinquencies)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -22,10 +22,12 @@ so that I can manage cash flow and identify payment problems early.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: `GET /api/admin/financial-health` API endpoint (AC: #1–#4)
-  - [ ] Create `apps/api/src/routes/admin/financial-health.ts`
-  - [ ] RBAC guard: `requireWorkspaceAdmin()` middleware — checks session has `workspace_admins` row; return 403 otherwise
-  - [ ] Compute in a single SQL query (or two at most) for performance:
+> **ARCHITECTURE OVERRIDE (approved):** The story was authored assuming a Hono REST API (`apps/api/src/routes/admin/*`) + a separate `(admin)` route group. The shipped admin app (Story 2.8) already uses the **Next.js server-component** pattern: the `(shell)/layout.tsx` guards via `getWorkspaceAdminRole === 'super_admin'`, and pages read directly through use-cases in `packages/*`. Following the existing architecture, Task 1 was delivered as the **`getFinancialHealth()` aggregation use-case in `@leedi/billing`** (mirroring `listAllTenants`), consumed by a **server component** at `apps/admin/app/(shell)/financeiro/page.tsx`. No `apps/api/src/routes/admin/*` was created. Subtasks below are checked against this mapping.
+
+- [x] Task 1: Financial-health aggregation use-case (AC: #1–#4) — *override: use-case instead of Hono endpoint*
+  - [x] Create `packages/billing/src/use-cases/get-financial-health.ts` (instead of `apps/api/src/routes/admin/financial-health.ts`)
+  - [x] RBAC: enforced by the `(shell)/layout.tsx` workspace-admin guard (`getWorkspaceAdminRole`) — non-super-admins never reach the page; the use-case reads via `withServiceRole` and is only callable behind that guard (see AC#5 note in Completion Notes)
+  - [x] Compute via SQL `FILTER` aggregation — **split into separate subscription and invoice queries** to avoid the subscriptions⋈invoices fan-out that would double-count `subscriptions.valor`:
     ```sql
     SELECT
       SUM(s.valor) FILTER (WHERE s.status = 'ativa') AS mrr,
@@ -36,34 +38,32 @@ so that I can manage cash flow and identify payment problems early.
     FROM subscriptions s
     LEFT JOIN invoices i ON i.subscription_id = s.id
     ```
-  - [ ] Delinquency list query: separate query for the table data
-  - [ ] Return: `{ mrr, receivedThisMonth, projectedRevenue, openReceivables, churnThisMonth, delinquents: [{ tenantId, tenantNome, plano, daysOverdue, totalOverdue }] }`
-  - [ ] Register route in `apps/api/src/routes/admin/index.ts` and in `apps/api/src/app.ts`
+  - [x] Delinquency list query: separate query joining `invoices` (status `atrasado`) + `tenants`
+  - [x] Return: `{ mrr, receivedThisMonth, projectedRevenue, openReceivables, churnThisMonth, delinquents: [{ tenantId, tenantName, plano, daysOverdue, totalOverdue }] }` (note: `tenantName` — `tenants.name` is English in the real schema, not `nome`)
+  - [x] Exported from `packages/billing/src/index.ts` (instead of route registration)
 
-- [ ] Task 2: Admin Financeiro page (AC: #1–#4)
-  - [ ] Create `apps/admin/app/(admin)/financeiro/page.tsx`
-  - [ ] 4 KPI cards (grid 2x2):
+- [x] Task 2: Admin Financeiro page (AC: #1–#4)
+  - [x] Create `apps/admin/app/(shell)/financeiro/page.tsx` (route group is `(shell)`, not `(admin)`)
+  - [x] 4 KPI cards (responsive grid):
     - "MRR" — `R$ {mrr.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
     - "Recebido este mês" — value + "de {projectedRevenue} projetados"
     - "Recebíveis em aberto" — value in red if > 0
     - "Churn este mês" — count with "assinaturas canceladas"
-  - [ ] Delinquency table below KPIs: columns "Tenant", "Plano", "Dias em atraso", "Valor em aberto"
-    - Sort by `daysOverdue DESC`
-    - Row click navigates to tenant detail (Story 20.2)
-    - Empty state: "Nenhum cliente em atraso. " with a checkmark icon
-  - [ ] `useQuery` (TanStack Query) with `staleTime: 5 * 60 * 1000` (5 min) — financial data doesn't need real-time refresh
-  - [ ] Add "Financeiro" nav item to admin sidebar
+  - [x] Delinquency table below KPIs: columns "Cliente", "Plano", "Dias em atraso", "Valor em aberto"
+    - [x] Sort by `daysOverdue DESC` (done in SQL `ORDER BY days_overdue DESC`)
+    - [~] Row click navigates to tenant detail — deferred to Story 20.2 (which builds the tenant detail surface)
+    - [x] Empty state: "Nenhum cliente em atraso." with a checkmark icon
+  - [x] Server component (override of `useQuery`/TanStack); `export const dynamic = "force-dynamic"` so a refresh reflects the latest payments per **AC#3** (the story's 5-min staleTime is a client-query concept that would make AC#3's fresh-on-refresh fail)
+  - [x] "Financeiro" nav item already present in `AdminSidebar` (Story 3.2)
 
-- [ ] Task 3: Admin sidebar navigation (AC: #1)
-  - [ ] In `apps/admin/app/(admin)/layout.tsx` (or admin sidebar component):
-    - Add nav items: "Financeiro" → `/financeiro`, "Clientes" → `/clientes`, "Operacional" → `/operacional`
-  - [ ] These were likely stubbed in Epic 3 (admin shell) — fill in the actual routes now
+- [x] Task 3: Admin sidebar navigation (AC: #1)
+  - [x] `apps/admin/components/shell/AdminSidebar.tsx` already lists "Financeiro" → `/financeiro`, "Clientes" → `/clientes`, "Operacional" → `/operacional` (shipped in Epic 3.2). No change needed — verified present and active-aware.
 
-- [ ] Task 4: Tests (AC: #1, #3, #5)
-  - [ ] Unit: MRR calculation correctly sums only `status = 'ativa'` subscriptions
-  - [ ] Unit: delinquency list excludes tenants with all invoices paid
-  - [ ] Unit: non-workspace-admin request returns 403
-  - [ ] Unit: churn metric counts only cancellations in the current month
+- [x] Task 4: Tests (AC: #1, #3, #5)
+  - [x] Unit: MRR aggregation filters only `status = 'ativa'`; projected includes `atrasada` (asserted on the SQL contract)
+  - [x] Unit: delinquency list filters strictly on `i.status = 'atrasado'` (excludes paid) + numeric coercion + empty-state mapping
+  - [x] AC#5 (non-workspace-admin → no access): satisfied by the existing `(shell)/layout.tsx` guard (`getWorkspaceAdminRole !== 'super_admin'` → redirect). No `/api/admin/financial-health` route exists under the override, so 403-at-endpoint is reinterpreted as guard-enforced no-access (see Completion Notes)
+  - [x] Unit: churn metric counts only `status = 'cancelada'` cancellations in the current month (`date_trunc('month', CURRENT_DATE)`)
 
 ## Dev Notes
 
@@ -100,7 +100,7 @@ so that I can manage cash flow and identify payment problems early.
 
 ### Agent Model Used
 
-_not yet assigned_
+claude-opus-4-8 (Amelia / BMad Dev)
 
 ### Debug Log References
 
@@ -108,12 +108,24 @@ _none_
 
 ### Completion Notes List
 
-_not yet implemented_
+- **Architecture override (approved by user before implementation):** delivered reads as a server-component page backed by a new aggregation use-case, matching the existing admin app (Story 2.8) instead of the Hono REST API the story assumed. No `apps/api/src/routes/admin/*` created.
+- **AC#5 reinterpretation:** the story's literal "GET `/api/admin/financial-health` → 403" cannot be met verbatim because that endpoint does not exist under the override. The **intent** (no unauthorized access to SaaS-wide financial data) is enforced by the pre-existing `(shell)/layout.tsx` guard: `getWorkspaceAdminRole(session.user.id) !== 'super_admin'` → `redirect`. The `getFinancialHealth` use-case reads via `withServiceRole` (RLS bypass) and is only reachable from behind that guard — same security posture as `listAllTenants` (Story 2.8). Reviewer note: this is a deliberate, documented deviation, not a missed AC.
+- **SQL fan-out bug avoided:** the story's sample SQL `JOIN`s subscriptions↔invoices then `SUM(s.valor)`, which double-counts when a subscription has >1 invoice. Implemented as **two separate aggregate queries** (subscriptions; invoices) plus the delinquency query — no fan-out.
+- **Enum trap handled (per advisor):** `subscriptions`/`invoices` use PT-BR status literals (`ativa`/`atrasada`/`cancelada`, `pendente`/`atrasado`) — kept as-is and asserted via SQL-contract tests. `tenants` uses English (`name`, `plan`), so the delinquency SELECT reads `t.name`/`t.plan` and returns `tenantName`.
+- **Freshness (AC#3):** used `export const dynamic = "force-dynamic"` rather than the story's 5-min staleTime, so refreshing after an Asaas webhook immediately reflects updated MRR/received and drops the paid tenant from the delinquency list.
+- **Tasks 3 (sidebar nav) was already shipped** in Epic 3.2 (`AdminSidebar` already links `/financeiro`, `/clientes`, `/operacional`); verified, no change needed.
+- **Verification:** `@leedi/billing` 18 tests pass (7 new), `@leedi/admin` 4 tests pass (no regression), typecheck clean (billing + admin), eslint clean, `next build` succeeds with `/financeiro` as a Dynamic route (no build-time DB call).
 
 ### File List
 
-_not yet implemented_
+- `packages/billing/src/use-cases/get-financial-health.ts` (new)
+- `packages/billing/src/__tests__/get-financial-health.test.ts` (new)
+- `packages/billing/src/index.ts` (modified — export `getFinancialHealth`, `FinancialHealth`, `Delinquent`)
+- `apps/admin/app/(shell)/financeiro/page.tsx` (new)
+- `apps/admin/package.json` (modified — add `@leedi/billing` workspace dependency)
+- `apps/admin/messages/pt-BR.json` (modified — add `financeiro` i18n namespace)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified — `20-1` → review)
 
 ### Change Log
 
-_none_
+- 2026-06-04: Implemented Story 20.1 — financial health aggregation use-case (`getFinancialHealth`) + super-admin Financeiro server-component dashboard (MRR, received, projected, open receivables, churn, delinquency table). Followed existing server-component admin architecture (override of story's Hono design). Status → review.

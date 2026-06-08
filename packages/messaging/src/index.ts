@@ -20,3 +20,16 @@ export type {
   MessageTipo,
   MessageStatus,
 } from './use-cases/save-message.js';
+
+/**
+ * Structured JSON stored in inbox_assignments.resumo_handoff by the transferir_humano tool.
+ * UI must JSON.parse this field and fall back to raw text on parse error (forward-compatible).
+ */
+export interface HandoffSummary {
+  quem_e: string;
+  o_que_quer: string;
+  objecoes: string[];
+  temperatura: 'frio' | 'morno' | 'quente';
+  motivo: string;
+  resposta_sugerida: string;
+}

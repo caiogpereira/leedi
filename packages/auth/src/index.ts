@@ -1,5 +1,8 @@
-export { auth, getSession, hasSessionCookie } from './auth.js';
+export { auth, getSession } from './auth.js';
 export type { Auth, Session } from './auth.js';
+// hasSessionCookie lives in the Edge-safe module (no db/config import). Re-exported
+// here for Node consumers; Edge middleware must import from '@leedi/auth/edge'.
+export { hasSessionCookie } from './edge.js';
 export { registerUser } from './use-cases/register-user.js';
 export type { RegisterInput, RegisterResult } from './use-cases/register-user.js';
 export { loginUser } from './use-cases/login-user.js';

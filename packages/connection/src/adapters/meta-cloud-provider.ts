@@ -1,6 +1,6 @@
 import { env } from '@leedi/config';
 import { decryptToken } from './crypto.js';
-import type { WhatsAppProvider } from '../ports/whatsapp-provider.js';
+import type { WhatsAppProvider, SubmitTemplatePayload } from '../ports/whatsapp-provider.js';
 
 const BASE_URL = 'https://graph.facebook.com';
 
@@ -109,6 +109,77 @@ export class MetaCloudProvider implements WhatsAppProvider {
     const messageId = result.messages[0]?.id;
     if (!messageId) throw new Error('Meta API: missing message ID in response');
     return { messageId };
+  }
+
+  /**
+   * Resolves an inbound media ID to its temporary CDN URL (Story 7.7).
+   *
+   * Inbound audio/image messages deliver only a media ID; the binary lives behind
+   * `GET /{version}/{media-id}`, which returns a short-lived (~5 min) `url`. The
+   * URL itself still requires the Bearer token to fetch (see downloadMedia).
+   */
+  async getMediaUrl(mediaId: string): Promise<{ url: string; mimeType: string }> {
+    const token = decryptToken(this.#accessTokenEncrypted, this.#accessTokenIv);
+    const version = env.WHATSAPP_API_VERSION;
+    const url = `${BASE_URL}/${version}/${mediaId}`;
+
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      throw new Error(`Meta media lookup error: ${res.status}`);
+    }
+
+    const data = (await res.json()) as { url: string; mime_type: string };
+    return { url: data.url, mimeType: data.mime_type };
+  }
+
+  /**
+   * Downloads the bytes of a media CDN URL (Story 7.7). The Meta CDN host (e.g.
+   * `lookaside.fbsbx.com`) requires the same Bearer token as the Graph API.
+   */
+  async downloadMedia(mediaUrl: string): Promise<{ buffer: Buffer; mimeType: string }> {
+    const token = decryptToken(this.#accessTokenEncrypted, this.#accessTokenIv);
+
+    const res = await fetch(mediaUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      throw new Error(`Meta media download error: ${res.status}`);
+    }
+
+    const mimeType = res.headers.get('content-type') ?? 'application/octet-stream';
+    const arrayBuffer = await res.arrayBuffer();
+    return { buffer: Buffer.from(arrayBuffer), mimeType };
+  }
+
+  async submitTemplate(
+    wabaId: string,
+    template: SubmitTemplatePayload
+  ): Promise<{ metaTemplateId: string }> {
+    const token = decryptToken(this.#accessTokenEncrypted, this.#accessTokenIv);
+    const version = env.WHATSAPP_API_VERSION;
+    const url = `${BASE_URL}/${version}/${wabaId}/message_templates`;
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(template),
+    });
+
+    if (!res.ok) {
+      const errBody = (await res.json().catch(() => ({}))) as {
+        error?: { message?: string };
+      };
+      const message = errBody.error?.message ?? `Meta API error: ${res.status}`;
+      throw new Error(message);
+    }
+
+    const data = (await res.json()) as { id: string | number };
+    return { metaTemplateId: String(data.id) };
   }
 
   /**

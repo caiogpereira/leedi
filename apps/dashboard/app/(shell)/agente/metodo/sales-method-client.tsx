@@ -34,13 +34,12 @@ export function SalesMethodClient({ methods, currentMethodId, tenantId }: Props)
     setError(null);
     setSuccess(false);
     try {
-      // Persist to tenants.config.tenant_sales_method_preference
-      // NOTE: Story 7.1 will migrate this to agent_configs.sales_method_id (FK).
-      // This is a temporary storage until agent_configs is created.
-      const res = await fetch(`/api/tenants/${tenantId}/config`, {
+      // Persist to agent_configs.sales_method_id (Story 7.1 wired this — the legacy
+      // tenants.config.tenant_sales_method_preference temporary store is retired).
+      const res = await fetch(`/api/tenants/${tenantId}/agent-config`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tenant_sales_method_preference: selected }),
+        body: JSON.stringify({ salesMethodId: selected }),
       });
 
       if (!res.ok) {
@@ -129,9 +128,6 @@ export function SalesMethodClient({ methods, currentMethodId, tenantId }: Props)
       >
         {saving ? "Salvando..." : "Salvar método"}
       </button>
-
-      {/* KNOWN PENDING ITEM: Story 7.1 must migrate tenant_sales_method_preference
-          from tenants.config to agent_configs.sales_method_id (FK) */}
     </div>
   );
 }

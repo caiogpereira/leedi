@@ -4,7 +4,7 @@ baseline_commit: 0c24cef
 
 # Story 1.1: Initialize Turborepo Monorepo with pnpm Workspaces
 
-Status: review
+Status: done
 
 ## Story
 

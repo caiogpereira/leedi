@@ -4,7 +4,7 @@ baseline_commit: dabf4c71c0d69af6644f573b678ca0de0bc7a2d7
 
 # Story 1.3: Set Up Environment Config Package with Zod Validation
 
-Status: review
+Status: done
 
 ## Story
 
@@ -20,31 +20,31 @@ so that the app never starts with a missing or malformed env var.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create the config package skeleton (AC: #2, #3)
-  - [ ] In `packages/config`, install `zod`
-  - [ ] Create `src/schema.ts` defining a single `z.object({...})` describing all env vars with correct types and coercion (e.g. `NODE_ENV: z.enum(["development","test","production"])`, `DATABASE_URL: z.string().url()`, `SENTRY_DSN: z.string().url()`, `POSTHOG_KEY: z.string().min(1)`, `BETTER_STACK_TOKEN: z.string().min(1)`)
-  - [ ] Use `z.coerce.number()` for any numeric vars (e.g. ports added in 1.6) and sensible defaults where appropriate
-- [ ] Task 2: Implement boot-time validation (AC: #1, #2)
-  - [ ] In `src/index.ts`, run `const parsed = schema.safeParse(process.env)` at module load
-  - [ ] On failure, format `parsed.error.flatten()` into a human-readable list of missing/invalid vars, print to stderr, and `process.exit(1)` (Node) — validation must happen at import time so it runs BEFORE any route registration
-  - [ ] On success, export a frozen, fully-typed `env` object and an inferred `Env` type (`z.infer<typeof schema>`)
-  - [ ] Export the `schema` itself for testing/tooling
-- [ ] Task 3: Provide `.env.example` and documentation (AC: #1)
-  - [ ] Update root `.env.example` to list every required variable with placeholder values and a one-line comment each
-  - [ ] Add a short README in `packages/config` documenting how to add a new env var (schema-first)
-- [ ] Task 4: Enforce no direct `process.env` access elsewhere (AC: #3)
-  - [ ] Add an ESLint rule to `@leedi/eslint-config` (`no-restricted-properties` / `no-process-env`) banning `process.env` access outside `packages/config`
-  - [ ] Add an override in `packages/config`'s own ESLint config to allow `process.env` there
-  - [ ] Run `pnpm lint` and confirm no violations exist (all current stubs use no env yet)
-- [ ] Task 5: Tests (AC: #1, #2)
-  - [ ] Add Vitest to `packages/config`
-  - [ ] Test: parsing a complete fixture env object succeeds and returns the typed object
-  - [ ] Test: parsing with `DATABASE_URL` removed fails and the formatted error message names `DATABASE_URL`
-  - [ ] Test: invalid format (e.g. `DATABASE_URL=not-a-url`) fails with a clear message
-  - [ ] Note: test the pure `schema.safeParse` path; do not test `process.exit` directly (isolate the exit-on-failure logic into a testable function that returns a Result, and call `process.exit` only in the index module entry)
-- [ ] Task 6: Verify acceptance (AC: #1, #2, #3)
-  - [ ] With a missing var, confirm the process exits with code 1 and a clear message
-  - [ ] With all vars present, confirm `env` is typed (hover/`tsc` shows the inferred shape)
+- [x] Task 1: Create the config package skeleton (AC: #2, #3)
+  - [x] In `packages/config`, install `zod`
+  - [x] Create `src/schema.ts` defining a single `z.object({...})` describing all env vars with correct types and coercion (e.g. `NODE_ENV: z.enum(["development","test","production"])`, `DATABASE_URL: z.string().url()`, `SENTRY_DSN: z.string().url()`, `POSTHOG_KEY: z.string().min(1)`, `BETTER_STACK_TOKEN: z.string().min(1)`)
+  - [x] Use `z.coerce.number()` for any numeric vars (e.g. ports added in 1.6) and sensible defaults where appropriate
+- [x] Task 2: Implement boot-time validation (AC: #1, #2)
+  - [x] In `src/index.ts`, run `const parsed = schema.safeParse(process.env)` at module load
+  - [x] On failure, format `parsed.error.flatten()` into a human-readable list of missing/invalid vars, print to stderr, and `process.exit(1)` (Node) — validation must happen at import time so it runs BEFORE any route registration
+  - [x] On success, export a frozen, fully-typed `env` object and an inferred `Env` type (`z.infer<typeof schema>`)
+  - [x] Export the `schema` itself for testing/tooling
+- [x] Task 3: Provide `.env.example` and documentation (AC: #1)
+  - [x] Update root `.env.example` to list every required variable with placeholder values and a one-line comment each
+  - [x] Add a short README in `packages/config` documenting how to add a new env var (schema-first)
+- [x] Task 4: Enforce no direct `process.env` access elsewhere (AC: #3)
+  - [x] Add an ESLint rule to `@leedi/eslint-config` (`no-restricted-properties` / `no-process-env`) banning `process.env` access outside `packages/config`
+  - [x] Add an override in `packages/config`'s own ESLint config to allow `process.env` there
+  - [x] Run `pnpm lint` and confirm no violations exist (all current stubs use no env yet)
+- [x] Task 5: Tests (AC: #1, #2)
+  - [x] Add Vitest to `packages/config`
+  - [x] Test: parsing a complete fixture env object succeeds and returns the typed object
+  - [x] Test: parsing with `DATABASE_URL` removed fails and the formatted error message names `DATABASE_URL`
+  - [x] Test: invalid format (e.g. `DATABASE_URL=not-a-url`) fails with a clear message
+  - [x] Note: test the pure `schema.safeParse` path; do not test `process.exit` directly (isolate the exit-on-failure logic into a testable function that returns a Result, and call `process.exit` only in the index module entry)
+- [x] Task 6: Verify acceptance (AC: #1, #2, #3)
+  - [x] With a missing var, confirm the process exits with code 1 and a clear message
+  - [x] With all vars present, confirm `env` is typed (hover/`tsc` shows the inferred shape)
 
 ## Dev Notes
 
@@ -84,4 +84,24 @@ claude-sonnet-4-6
 
 ### Completion Notes List
 
+> Reconstructed in code review 2026-06-04 from commit `8db00bb` (Dev Agent Record was left empty at hand-off).
+
+- AC 1 verified: `validateEnv` returns a formatted error message naming the missing/invalid variable; `src/index.ts` writes it to stderr and calls `process.exit(1)` at import time, before any consumer wires routes (fail-fast).
+- AC 2 verified: on success, `env` is exported as a frozen object (`Object.freeze`) with the inferred `Env` type from `z.infer<typeof schema>`. Typecheck confirms full typing.
+- AC 3 verified: ESLint `no-restricted-properties` bans `process.env` repo-wide, with a `packages/config` override allowing it inside the package itself.
+- Validation logic isolated in pure `validate.ts` (testable without triggering `process.exit`); `index.ts` performs the exit. Tests cover: complete fixture passes, missing `DATABASE_URL` fails naming the field, invalid URL fails.
+- `index.ts` loads the root `.env` via `process.loadEnvFile` (Node 22+) before validation, wrapped in try/catch so production/CI (env from host) does not error on a missing file.
+- Note: schema later extended with `API_PORT` (Story 1.6) and additional vars by Epic 2+ — those are out of scope for this story's mechanism.
+- ⚠️ Code review 2026-06-04: the `validate.test.ts` `validEnv` fixture had gone stale (later epics added required schema vars without updating it), so 3/5 tests were RED. Fixture repaired to a complete valid env; suite now 5/5 green. Added an in-file note to keep it in sync with `schema.ts`.
+
 ### File List
+
+- packages/config/package.json (modified: zod, @types/node, vitest, scripts)
+- packages/config/src/schema.ts (new — single z.object with all env vars)
+- packages/config/src/validate.ts (new — pure validate-and-format fn, Object.freeze)
+- packages/config/src/index.ts (modified — boot validation, exit-on-failure, exports)
+- packages/config/src/__tests__/validate.test.ts (new — 3 cases)
+- packages/config/vitest.config.ts (new)
+- packages/config/eslint.config.js (modified — process.env override for this package)
+- packages/config/README.md (new — schema-first env var guide)
+- .env.example (modified — required vars documented)

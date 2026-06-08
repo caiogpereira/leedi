@@ -1,6 +1,10 @@
+---
+baseline_commit: 8db00bb # Story 1.3 commit (env config) — added retroactively in code review 2026-06-04
+---
+
 # Story 1.4: Set Up Database Package (Drizzle ORM + Supabase)
 
-Status: review
+Status: done
 
 ## Story
 
@@ -16,26 +20,26 @@ so that any domain package can define its schema and run migrations without data
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Install dependencies and create the client (AC: #2)
-  - [ ] In `packages/db`, install `drizzle-orm`, `postgres` (postgres-js driver), and dev deps `drizzle-kit`
-  - [ ] Create `src/client.ts` constructing the postgres-js connection using `env.DATABASE_URL` from `@leedi/config` and instantiate `drizzle(client, { schema })` via `drizzle-orm/postgres-js`
-  - [ ] Configure the connection for Supabase pooling correctly: use the pooled connection string for the runtime client; for migrations use a single (non-pooled) connection with `max: 1` and `prepare: false` as required by the pooler
-- [ ] Task 2: Establish the schema barrel (AC: #2)
-  - [ ] Create `src/schema/index.ts` that re-exports all table definitions (empty for Epic 1 — just an `export {}` placeholder structure ready for later epics)
-  - [ ] In `src/index.ts`, export `db` (the typed Drizzle client), `schema` (the schema object), and re-export commonly used Drizzle helpers if desired (`sql`, `eq`, etc. — optional)
-- [ ] Task 3: Configure drizzle-kit (AC: #1, #3)
-  - [ ] Create `packages/db/drizzle.config.ts` with `dialect: "postgresql"`, `schema: "./src/schema/index.ts"`, `out: "./migrations"`, and `dbCredentials.url` from `env.DATABASE_URL`
-  - [ ] Create the `packages/db/migrations/` directory (with `.gitkeep`)
-  - [ ] Add `package.json` scripts: `"generate": "drizzle-kit generate"`, `"migrate": "drizzle-kit migrate"`, `"check": "drizzle-kit check"`, `"studio": "drizzle-kit studio"`
-- [ ] Task 4: Implement a programmatic migration runner for CI (AC: #1, #3)
-  - [ ] Create `src/migrate.ts` that uses `drizzle-orm/postgres-js/migrator` `migrate()` against the `migrations/` folder, using a dedicated single-connection client, then closes the connection
-  - [ ] Expose it via a script (`"migrate:run": "tsx src/migrate.ts"`) so CI can apply migrations deterministically before deploy
-- [ ] Task 5: Verify wiring (AC: #1, #2)
-  - [ ] With a valid `DATABASE_URL` (Supabase project or local), run `pnpm --filter @leedi/db generate` (no-op for empty schema) and `pnpm --filter @leedi/db migrate` to confirm the migrations table is created with no errors
-  - [ ] Create a throwaway consumer in a stub package importing `db` and `schema` and confirm `tsc` resolves the types; remove it after
-- [ ] Task 6: Tests (AC: #2)
-  - [ ] Add Vitest; test that `src/index.ts` exports `db` and `schema` (smoke import) without requiring a live DB
-  - [ ] Do not write integration tests against a live DB in this story; that arrives with the first real schema (later epic). Note this explicitly in Completion Notes.
+- [x] Task 1: Install dependencies and create the client (AC: #2)
+  - [x] In `packages/db`, install `drizzle-orm`, `postgres` (postgres-js driver), and dev deps `drizzle-kit`
+  - [x] Create `src/client.ts` constructing the postgres-js connection using `env.DATABASE_URL` from `@leedi/config` and instantiate `drizzle(client, { schema })` via `drizzle-orm/postgres-js`
+  - [x] Configure the connection for Supabase pooling correctly: use the pooled connection string for the runtime client; for migrations use a single (non-pooled) connection with `max: 1` and `prepare: false` as required by the pooler
+- [x] Task 2: Establish the schema barrel (AC: #2)
+  - [x] Create `src/schema/index.ts` that re-exports all table definitions (empty for Epic 1 — just an `export {}` placeholder structure ready for later epics)
+  - [x] In `src/index.ts`, export `db` (the typed Drizzle client), `schema` (the schema object), and re-export commonly used Drizzle helpers if desired (`sql`, `eq`, etc. — optional)
+- [x] Task 3: Configure drizzle-kit (AC: #1, #3)
+  - [x] Create `packages/db/drizzle.config.ts` with `dialect: "postgresql"`, `schema: "./src/schema/index.ts"`, `out: "./migrations"`, and `dbCredentials.url` from `env.DATABASE_URL`
+  - [x] Create the `packages/db/migrations/` directory (with `.gitkeep`)
+  - [x] Add `package.json` scripts: `"generate": "drizzle-kit generate"`, `"migrate": "drizzle-kit migrate"`, `"check": "drizzle-kit check"`, `"studio": "drizzle-kit studio"`
+- [x] Task 4: Implement a programmatic migration runner for CI (AC: #1, #3)
+  - [x] Create `src/migrate.ts` that uses `drizzle-orm/postgres-js/migrator` `migrate()` against the `migrations/` folder, using a dedicated single-connection client, then closes the connection
+  - [x] Expose it via a script (`"migrate:run": "tsx src/migrate.ts"`) so CI can apply migrations deterministically before deploy
+- [x] Task 5: Verify wiring (AC: #1, #2)
+  - [x] With a valid `DATABASE_URL` (Supabase project or local), run `pnpm --filter @leedi/db generate` (no-op for empty schema) and `pnpm --filter @leedi/db migrate` to confirm the migrations table is created with no errors
+  - [x] Create a throwaway consumer in a stub package importing `db` and `schema` and confirm `tsc` resolves the types; remove it after
+- [x] Task 6: Tests (AC: #2)
+  - [x] Add Vitest; test that `src/index.ts` exports `db` and `schema` (smoke import) without requiring a live DB
+  - [x] Do not write integration tests against a live DB in this story; that arrives with the first real schema (later epic). Note this explicitly in Completion Notes.
 
 ## Dev Notes
 
@@ -84,4 +88,15 @@ claude-sonnet-4-6
 
 ### File List
 
-- packages/db/migrations/meta/_journal.json (new)
+- packages/db/package.json (modified: drizzle-orm, postgres, drizzle-kit, tsx, scripts)
+- packages/db/drizzle.config.ts (new — dialect postgresql, schema barrel, out ./migrations)
+- packages/db/src/client.ts (new — postgres-js runtime client, prepare:false for pooler)
+- packages/db/src/index.ts (modified — export db + schema)
+- packages/db/src/schema/index.ts (new — empty schema barrel placeholder)
+- packages/db/src/migrate.ts (new — programmatic runner, dedicated max:1 connection)
+- packages/db/src/__tests__/exports.test.ts (new — smoke test of db/schema exports)
+- packages/db/vitest.config.ts (new)
+- packages/db/migrations/.gitkeep (new)
+- packages/db/migrations/meta/_journal.json (new — manual journal for empty schema, commit fc173d6)
+
+> Note (code review 2026-06-04): the original File List listed only `_journal.json`; reconstructed above from commit `d9f5685`.

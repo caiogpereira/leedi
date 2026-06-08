@@ -1,4 +1,8 @@
-export type { WhatsAppProvider } from './ports/whatsapp-provider.js';
+export type {
+  WhatsAppProvider,
+  SubmitTemplatePayload,
+  TemplateComponentPayload,
+} from './ports/whatsapp-provider.js';
 export { MetaCloudProvider } from './adapters/meta-cloud-provider.js';
 export { encryptToken, decryptToken } from './adapters/crypto.js';
 export {
