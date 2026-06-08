@@ -1,5 +1,5 @@
 ---
-baseline_commit: 2a06ca797c274ac8c2f8ef1bed83f6c991f11aec
+baseline_commit: c7247e797c274ac8c2f8ef1bed83f6c991f11aec
 ---
 
 # Story 18.2: Event-Driven Notifications & User Preferences

@@ -1,5 +1,5 @@
 ---
-baseline_commit: 9ea8a05
+baseline_commit: 992b842
 ---
 
 # Story 17.1: Asaas Integration & Subscription Creation

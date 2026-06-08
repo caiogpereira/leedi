@@ -1,5 +1,5 @@
 ---
-baseline_commit: 9ea8a05
+baseline_commit: 992b842
 ---
 
 # Story 13.5: Quality Gate — Dispatch Pausing on Quality Rating Drop

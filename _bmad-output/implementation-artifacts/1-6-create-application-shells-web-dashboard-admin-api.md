@@ -108,4 +108,4 @@ claude-sonnet-4-6
 - apps/api/package.json (modified — hono, @hono/node-server, tsx)
 - packages/config/src/schema.ts (modified — API_PORT added)
 
-> Note: postcss.config.js files were later renamed to .cjs in Story 1.8 CI fixes (commit 982edb0).
+> Note: postcss.config.js files were later renamed to .cjs in Story 1.8 CI fixes (commit 52e5156).

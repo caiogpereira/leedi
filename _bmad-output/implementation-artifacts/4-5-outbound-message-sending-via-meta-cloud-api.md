@@ -1,7 +1,7 @@
 # Story 4.5: Outbound Message Sending via Meta Cloud API
 
 ---
-baseline_commit: 9ea8a051baa46b95ff2bdc69d31ad25932927f0c
+baseline_commit: 992b8421baa46b95ff2bdc69d31ad25932927f0c
 ---
 
 Status: review

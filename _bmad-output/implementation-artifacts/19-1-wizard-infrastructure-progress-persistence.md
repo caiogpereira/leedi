@@ -1,5 +1,5 @@
 ---
-baseline_commit: 2a06ca7
+baseline_commit: c7247e7
 ---
 
 # Story 19.1: Wizard Infrastructure & Progress Persistence

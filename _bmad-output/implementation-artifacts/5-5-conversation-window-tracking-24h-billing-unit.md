@@ -1,5 +1,5 @@
 ---
-baseline_commit: 9ea8a05
+baseline_commit: 992b842
 ---
 
 # Story 5.5: Conversation Window Tracking — 24h Billing Unit

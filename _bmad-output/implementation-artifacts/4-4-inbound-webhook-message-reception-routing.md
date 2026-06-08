@@ -1,7 +1,7 @@
 # Story 4.4: Inbound Webhook Message Reception & Routing
 
 ---
-baseline_commit: 9ea8a051baa46b95ff2bdc69d31ad25932927f0c
+baseline_commit: 992b8421baa46b95ff2bdc69d31ad25932927f0c
 ---
 
 Status: review

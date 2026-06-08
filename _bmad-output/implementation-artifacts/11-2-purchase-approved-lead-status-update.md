@@ -1,5 +1,5 @@
 ---
-baseline_commit: a20353c5aadc0b72f07d4d7c0b6cf51b0eec6db8
+baseline_commit: dac69f85aadc0b72f07d4d7c0b6cf51b0eec6db8
 ---
 
 # Story 11.2: Purchase Approved — Lead Status Update

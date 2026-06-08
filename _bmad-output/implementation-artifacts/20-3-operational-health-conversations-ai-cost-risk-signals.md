@@ -1,5 +1,5 @@
 ---
-baseline_commit: 9ea8a05
+baseline_commit: 992b842
 ---
 
 # Story 20.3: Operational Health (Conversations, AI Cost, Risk Signals)
@@ -77,8 +77,9 @@ so that I can spot margin problems and proactively prevent churn.
   - [x] Added `USD_TO_BRL_RATE: z.coerce.number().positive().default(5.0)` to `packages/config/src/schema.ts`
   - [x] Updated `.env.example` with the rate + manual-update note
 
-- [x] Task 3: Days at risk calculation for quality (AC: #4)
+- [~] Task 3: Days at risk calculation for quality (AC: #4) — *approximate; precise value deferred*
   - [x] `days_at_risk = CURRENT_DATE - DATE(c.updated_at)` in the quality-risk query (`whatsapp_connections.updated_at`)
+  - [~] **Known limitation (surfaced to user):** `updated_at` is NOT a rating-transition timestamp — the Story 4.3 health-check write path does not bump it per rating change, and there is no `quality_rating_changed_at` column. So `days_at_risk` is "days since the row was last written", a usable proxy but not the exact *consecutive days at rating* AC#4 asks for. The clean fix (bump `updated_at` only on rating change, OR add a dedicated column + migration) was prepared but **reverted by the user** to avoid touching Story 4.3's shipped health-check path / adding a migration into the mid-flight journal. Documented in the use-case + flagged as deferred follow-up. The risk *list membership* (which tenants are at amarelo/vermelho) is exact; only the day-count is approximate.
 
 - [x] Task 4: Admin Operacional page (AC: #1–#5)
   - [x] `apps/admin/app/(shell)/operacional/page.tsx` (server component) reading `env.USD_TO_BRL_RATE`
@@ -140,6 +141,7 @@ claude-opus-4-8 (BMad Dev)
 - **No fan-out:** aggregates run as 3 separate queries (usage / tenants / subscriptions) rather than the story's single multi-JOIN, which would double-count `conversas`/`custo_ia` against multiple subscriptions.
 - **Margin is pure + injected rate:** `computeMarginPct(mrrBrl, aiCostUsd, rate)` is exported and unit-tested; `usdToBrlRate` is passed in from `env.USD_TO_BRL_RATE` so the use-case has no env coupling. MRR=0 returns 0 (no NaN on a fresh workspace).
 - **`custo_ia_usd` stays super-admin only (FR108):** only the aggregate is returned here; never exposed per-tenant.
+- **`days_at_risk` is approximate (AC#4 partial):** derived from `whatsapp_connections.updated_at`, which is not a rating-transition timestamp (the 4.3 health-check path doesn't bump it on rating change, and no `quality_rating_changed_at` column exists). A write-path fix was prepared and **reverted by the user** to avoid modifying the shipped 4.3 path / adding a migration to the mid-flight journal. The at-risk *list* is exact; only the day count is a proxy. **Follow-up:** add `quality_rating_changed_at` (+ bump on transition) when the migration journal is consolidated, then switch the query to it.
 - **UI substitutions (documented like 20.1/20.2):** `@leedi/ui` has no `Progress`/`Tooltip`/`Badge` → inline usage progress bar, `<span title>`/hint text, inline status badges. `refetchInterval` realised as an `AutoRefresh` client component (`router.refresh()` every 5 min) over the `force-dynamic` server page. "Entrar em contato" copies the owner email to the clipboard (V1 scope).
 - **Verification:** `@leedi/billing` 26 tests pass (8 new), `@leedi/admin` 18 tests pass (3 new operacional), `@leedi/config` 5 pass, typecheck + eslint clean (billing/config/admin), `next build` succeeds with `/operacional` as a Dynamic route.
 

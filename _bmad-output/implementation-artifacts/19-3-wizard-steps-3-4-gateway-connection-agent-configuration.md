@@ -1,5 +1,5 @@
 ---
-baseline_commit: 2a06ca7
+baseline_commit: c7247e7
 ---
 
 # Story 19.3: Wizard Steps 3-4 (Gateway Connection & Agent Configuration)

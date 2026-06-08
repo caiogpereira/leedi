@@ -1,5 +1,5 @@
 ---
-baseline_commit: 9ea8a05
+baseline_commit: 992b842
 ---
 
 # Story 9.2: PRD — Onboarding Edge Case & Architecture Webhook Retry/DLQ

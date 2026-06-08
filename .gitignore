@@ -13,3 +13,6 @@ dist/
 coverage/
 .vercel/
 subagents-claude-code/
+
+# temp review artifacts
+_bmad-output/implementation-artifacts/*.diff
