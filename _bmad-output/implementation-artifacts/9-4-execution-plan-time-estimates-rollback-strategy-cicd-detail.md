@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 9.4: Execution Plan — Time Estimates, Rollback Strategy & CI/CD Detail
 
-Status: review
+Status: done
 
 ## Story
 
@@ -98,3 +98,24 @@ _none_
 - Added Drizzle migration rollback procedure (undo migration pattern, no destructive down-migrations) to §8 (2026-06-02)
 - Added "migration applied + broken code" critical procedure to §8 (2026-06-02)
 - Added branch trigger matrix, staging URL pattern, and smoke test definition to §9 (2026-06-02)
+- [review] Fixed duplicate section numbering: renumbered the trailing §8/§9/§10 (Pré-requisitos / Primeira ação / Resumo de decisões) to §11/§12/§13 so the rollback (§8) and CI/CD (§9) targets are unambiguous (2026-06-10)
+
+## Senior Developer Review (AI) — 2026-06-10
+
+**Reviewer:** Caio (via bmad-code-review). **Outcome:** Approved with fix applied. Status → **done**.
+
+### Findings & resolutions
+
+Audited the **current full text** of §7, §8, §9 against every AC sub-clause:
+
+1. **AC#1 + AC#5 (Estimativas §7) — met.** Tabela com Dev-days + Confiança (Alta/Média/Baixa) + Dependência externa por fase (l.233–243); nota explícita Epic 12 "aprovação de templates pela Meta 24–72h, fora do controle, buffer ≥ 3 dias úteis" (l.240).
+2. **AC#2 (Rollback §8) — met.** Vercel rollback via CLI `vercel rollback` + dashboard promote (l.295–303); rollback Drizzle via undo-migration aditiva, "nunca edite migration aplicada" (l.305–326); procedimento crítico "migration aplicada + código quebrado" → reverter código, manter schema, DoD backward-compatible (l.328–349).
+3. **AC#3 (Pipeline CI/CD §9) — met.** Stages presentes: lint → type-check → unit → integration → migrations (db:migrate/db:generate) → build → deploy staging → smoke → promote produção, com comando por stage (l.406–495).
+4. **AC#4 (§9 detalhes) — met.** Branch trigger matrix PR vs main (l.364–368); CD só em main (l.367); staging URL pattern (l.374–382); smoke test = `/health` 200 + canary DB read + auth smoke (l.388–402).
+
+5. **[MEDIUM — fixed] Numeração de seção duplicada** (defeito sinalizado na própria completion note e "passado batido"). O doc tinha §8, §9 e §10 **duas vezes** cada: alvos da story (Rollback/CI-CD) e seções de cauda (Pré-requisitos/Primeira ação/Resumo). As edições caíram nos alvos corretos (primeiras ocorrências), mas a colisão tornava as referências "§8"/"§9" ambíguas e contrariava o intent da story de deixar §7–§9 limpos. **Fix:** renumerada a cauda para §11/§12/§13 (respeitando §10 = Riscos, conforme o pitfall da própria story). Verificado que nenhuma referência interna aponta para "seção 8/9/10" deste doc — renumeração segura. Pré-existia no baseline `992b842`.
+
+### Verification
+
+- `grep '^## '` confirma numeração agora sequencial 0–13 sem duplicatas.
+- Re-read §7/§8/§9; todos os itens de AC presentes. Cross-check: estimativas §7 consistentes com o grafo de dependências §3; rollback §8 consistente com a restrição de migrations aditivas. Documentation-only story — sem testes automatizados.

@@ -27,8 +27,8 @@ export type ModelBucket = keyof typeof SALES_MODELS;
  */
 export const MODEL_PRICING: Record<ModelBucket, { input: number; output: number }> = {
   sonnet: { input: 3 / 1_000_000, output: 15 / 1_000_000 },
-  haiku: { input: 0.25 / 1_000_000, output: 1.25 / 1_000_000 },
-  opus: { input: 15 / 1_000_000, output: 75 / 1_000_000 },
+  haiku: { input: 1 / 1_000_000, output: 5 / 1_000_000 },
+  opus: { input: 5 / 1_000_000, output: 25 / 1_000_000 },
 };
 
 /** Auxiliary AI task → model bucket. The sales conversation uses the configured model. */

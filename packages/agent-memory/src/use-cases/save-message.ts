@@ -7,8 +7,8 @@ import type { AgentMessageContent, AgentMessageRole } from '../types.js';
 // packages/agent/src/config/model-routing.ts (MODEL_PRICING). Keep in sync.
 const MODEL_PRICING: Record<'sonnet' | 'haiku' | 'opus', { input: number; output: number }> = {
   sonnet: { input: 3 / 1_000_000, output: 15 / 1_000_000 },
-  haiku: { input: 0.25 / 1_000_000, output: 1.25 / 1_000_000 },
-  opus: { input: 15 / 1_000_000, output: 75 / 1_000_000 },
+  haiku: { input: 1 / 1_000_000, output: 5 / 1_000_000 },
+  opus: { input: 5 / 1_000_000, output: 25 / 1_000_000 },
 };
 
 /**

@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 7.1: Agent Configuration Panel
 
-Status: review
+Status: done
 
 ## Story
 

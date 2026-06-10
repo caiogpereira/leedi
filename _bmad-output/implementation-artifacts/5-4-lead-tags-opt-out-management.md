@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 5.4: Lead Tags & Opt-out Management
 
-Status: review
+Status: done
 
 ## Story
 
@@ -107,3 +107,11 @@ _none_
 ### Change Log
 
 - 2026-06-01: Story 5-4 implemented — tag management, opt-out/reactivate use cases, interactive detail page, LGPD dispatch-targets seam
+
+### Review Findings
+
+_Code review 2026-06-10 (Opus 4.8, `bmad-code-review`). Full report: `epic-5-code-review-report.md`._
+
+✅ Clean — no findings. Verified: status flip + journey event in ONE tx, `operadorId` from session (never body), triple-scoped tag delete, `list-dispatch-targets` LGPD seam (`status = 'ativo'` excludes optout AND bloqueado), unit-tested. → **done**
+
+- Dismissed (noise): duplicate manual tags allowed (no `UNIQUE(lead_id, tag)`) — no AC requires tag dedup.

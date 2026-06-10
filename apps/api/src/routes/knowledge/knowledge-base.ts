@@ -23,7 +23,11 @@ export function createKnowledgeBaseRouter() {
       tipoRaw === 'faq' || tipoRaw === 'objecao' ? tipoRaw : undefined;
     const categoria = c.req.query('categoria') || undefined;
 
-    const entries = await listKnowledgeBase({ tenantId, tipo, categoria });
+    const entries = await listKnowledgeBase({
+      tenantId,
+      ...(tipo ? { tipo } : {}),
+      ...(categoria ? { categoria } : {}),
+    });
     return c.json(entries);
   });
 

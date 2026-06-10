@@ -54,8 +54,8 @@ describe('saveMessage cost calculation', () => {
       tokensOutput: 1000,
       modelo: 'claude-haiku-4-5-20251001',
     });
-    // 2000 * 0.25/1e6 + 1000 * 1.25/1e6 = 0.0005 + 0.00125 = 0.00175
-    expect(Number(captured.values!.custoUsd)).toBeCloseTo(0.00175, 12);
+    // 2000 * 1/1e6 + 1000 * 5/1e6 = 0.002 + 0.005 = 0.007
+    expect(Number(captured.values!.custoUsd)).toBeCloseTo(0.007, 12);
   });
 
   it('computes custo_usd for an Opus assistant turn', async () => {
@@ -68,8 +68,8 @@ describe('saveMessage cost calculation', () => {
       tokensOutput: 200,
       modelo: 'claude-opus-4-8',
     });
-    // 100 * 15/1e6 + 200 * 75/1e6 = 0.0015 + 0.015 = 0.0165
-    expect(Number(captured.values!.custoUsd)).toBeCloseTo(0.0165, 12);
+    // 100 * 5/1e6 + 200 * 25/1e6 = 0.0005 + 0.005 = 0.0055
+    expect(Number(captured.values!.custoUsd)).toBeCloseTo(0.0055, 12);
   });
 
   it('leaves custo_usd null when no model id is provided', async () => {

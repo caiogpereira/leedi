@@ -1,5 +1,5 @@
 # generated: 2026-05-29
-# last_updated: 2026-05-31  (epics 5/6/7/8/9/10/11/12/13 stories created — all ready-for-dev)
+# last_updated: 2026-06-10  (epic-5 code review complete — stories 5.1–5.5 → done)
 # project: leedi
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-29
-last_updated: 2026-06-09  # epic 3 → done — E2E/a11y harness Phase 1+2 green locally; 3.4 done with documented caveat (CI axe gate deferred to pre-launch). See pendencias-pre-launch.md for all deferred ACs across epics.
+last_updated: 2026-06-10  # epic 6 → done — code review fixed HIGH dashboard build break (@/ alias) + false-confidence test + 4 typecheck errors; all 4 stories review→done. See epic-6-code-review-report.md.
 project: leedi
 project_key: NOKEY
 tracking_system: file-system
@@ -83,65 +83,65 @@ development_status:
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 4: WhatsApp Channel Connection
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-4: in-progress
-  4-1-whatsapp-connection-schema-encrypted-credential-storage: review
-  4-2-connect-whatsapp-number-tenant-configuration: review
-  4-3-connection-health-display-status-quality-tier: review
-  4-4-inbound-webhook-message-reception-routing: review
-  4-5-outbound-message-sending-via-meta-cloud-api: review
+  epic-4: done
+  4-1-whatsapp-connection-schema-encrypted-credential-storage: done
+  4-2-connect-whatsapp-number-tenant-configuration: done
+  4-3-connection-health-display-status-quality-tier: done
+  4-4-inbound-webhook-message-reception-routing: done
+  4-5-outbound-message-sending-via-meta-cloud-api: done
   epic-4-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 5: Lead Management & Conversation Tracking
   # ─────────────────────────────────────────────────────────────────────────────
   epic-5: in-progress
-  5-1-lead-database-schema-list-view: review
-  5-2-lead-detail-page-journey-timeline: review
-  5-3-csv-lead-import: review
-  5-4-lead-tags-opt-out-management: review
-  5-5-conversation-window-tracking-24h-billing-unit: review
+  5-1-lead-database-schema-list-view: done
+  5-2-lead-detail-page-journey-timeline: done
+  5-3-csv-lead-import: done
+  5-4-lead-tags-opt-out-management: done
+  5-5-conversation-window-tracking-24h-billing-unit: done
   epic-5-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 6: Product Knowledge Base & Sales Methods
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-6: in-progress
-  6-1-product-catalog-crud: review
-  6-2-sales-arguments-differentials-social-proofs: review
-  6-3-faq-objection-counter-library: review
-  6-4-sales-methods-seed-selection: review
+  epic-6: done  # epic-6 code review (Opus, 2026-06-10): fixed HIGH dashboard build break (@/ alias not configured → ArgumentList import) + vacuous toThrow(undefined) test + 4 typecheck errors; all 4 stories review→done. See epic-6-code-review-report.md.
+  6-1-product-catalog-crud: done
+  6-2-sales-arguments-differentials-social-proofs: done
+  6-3-faq-objection-counter-library: done
+  6-4-sales-methods-seed-selection: done
   epic-6-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 7: Intelligent Sales Agent
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-7: in-progress
-  7-1-agent-configuration-panel: review
-  7-2-agent-core-processing-loop: review
-  7-3-lead-context-tools-history-offers-eligibility: review
-  7-4-sales-conversion-tools-checkout-intent-tagging: review
-  7-5-objection-handling-knowledge-base-consultation: review
-  7-6-human-transfer-tool: review
-  7-7-multimodal-input-processing-audio-image: review
-  7-8-model-routing-cost-optimization: review
+  epic-7: done
+  7-1-agent-configuration-panel: done
+  7-2-agent-core-processing-loop: done
+  7-3-lead-context-tools-history-offers-eligibility: done
+  7-4-sales-conversion-tools-checkout-intent-tagging: done
+  7-5-objection-handling-knowledge-base-consultation: done
+  7-6-human-transfer-tool: done
+  7-7-multimodal-input-processing-audio-image: done
+  7-8-model-routing-cost-optimization: done
   epic-7-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 8: Agent Playground
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-8: in-progress
-  8-1-playground-chat-interface: review
-  8-2-scenario-simulation-tool-transparency: review
+  epic-8: done
+  8-1-playground-chat-interface: done
+  8-2-scenario-simulation-tool-transparency: done
   epic-8-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 9: Documentation Quality Corrections
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-9: in-progress
-  9-1-prd-nfrs-success-metrics-lgpd-requirements: review
-  9-2-prd-onboarding-edge-case-architecture-webhook-retry-dlq: review
-  9-3-architecture-redis-ttl-byok-enterprise-audit-log-retention: review
-  9-4-execution-plan-time-estimates-rollback-strategy-cicd-detail: review
+  epic-9: done
+  9-1-prd-nfrs-success-metrics-lgpd-requirements: done
+  9-2-prd-onboarding-edge-case-architecture-webhook-retry-dlq: done
+  9-3-architecture-redis-ttl-byok-enterprise-audit-log-retention: done
+  9-4-execution-plan-time-estimates-rollback-strategy-cicd-detail: done
   epic-9-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────

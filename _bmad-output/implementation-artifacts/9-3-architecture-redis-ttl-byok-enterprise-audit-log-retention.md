@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 9.3: Architecture — Redis TTL, BYOK Enterprise & Audit Log Retention
 
-Status: review
+Status: done
 
 ## Story
 
@@ -87,3 +87,21 @@ _none_
 
 - Updated §9.9 retention to explicitly specify monthly cron archival procedure (day 1 of each month, JSONL to S3) (2026-06-02)
 - Added CSV export capability for super-admin audit log compliance requests (2026-06-02)
+
+## Senior Developer Review (AI) — 2026-06-10
+
+**Reviewer:** Caio (via bmad-code-review). **Outcome:** Approved, no changes needed. Status → **done**.
+
+### Findings & resolutions
+
+Audited the **current full text** of Architecture §9.7, §9.8, §9.9 against every AC sub-clause (completion notes claimed §9.7/§9.8 "already satisfied" — verified against the live doc):
+
+1. **AC#1 + AC#4 (Redis TTL §9.7) — met.** Tabela de TTL com: buffer/debounce 30s (l.795), lock `lock:agent:{tenantId}:{leadPhone}` 300s (l.797), rate-limit 60s (l.796), BullMQ job metadata 7 dias (l.801), playground `playground:{tenantId}:{sessionId}` 1800s/30min (l.800). Valores consistentes com Stories 4.4 (debounce), 7.2 (lock), 8.1 (playground).
+2. **AC#2 (BYOK §9.8) — met.** §9.8.2: tenant fornece Anthropic key própria, `agent_configs.byok_key_encrypted` (nullable) com envelope encryption (l.837), adapter em `@leedi/agent` usa override se não-null senão chave da plataforma (l.838), gated ao Enterprise (l.840), nota de schema-target sem migration (l.842).
+3. **AC#3 (Audit Log §9.9) — met.** Hot 90 dias Supabase (l.875); cron mensal dia 1 exporta `created_at < now()-90d` em JSONL para S3 e deleta hot após upload (l.876); GDPR `expires_at = now()+30d` (l.877); export CSV super-admin no painel admin (l.878).
+
+**Observação (não-bloqueante):** os ACs da story escrevem a tabela como `audit_logs` (plural); o Architecture usa `audit_log` (singular), consistente com a referência da §5.7 do PRD. Discrepância apenas no texto do AC — o doc é internamente consistente. Nenhuma ação.
+
+### Verification
+
+- Re-read §9.7/§9.8/§9.9; todos os itens de AC presentes. Documentation-only story — sem testes automatizados.

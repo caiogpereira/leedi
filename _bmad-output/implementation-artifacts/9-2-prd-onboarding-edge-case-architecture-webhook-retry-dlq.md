@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 9.2: PRD — Onboarding Edge Case & Architecture Webhook Retry/DLQ
 
-Status: review
+Status: done
 
 ## Story
 
@@ -87,3 +87,22 @@ _none_
 
 - Added "Gate de ativação" paragraph to PRD MÓDULO 2 explicitly stating agent is inactive until wizard complete (2026-06-02)
 - Added acceptance criterion: "Tenant with incomplete onboarding does NOT process lead messages" (2026-06-02)
+
+## Senior Developer Review (AI) — 2026-06-10
+
+**Reviewer:** Caio (via bmad-code-review). **Outcome:** Approved, no changes needed. Status → **done**.
+
+### Findings & resolutions
+
+Audited the **current full text** of PRD MÓDULO 2 and Architecture §9.6 against every AC sub-clause (the completion notes claimed §9.6 was "already satisfied in a prior session" — verified the claim against the live doc, not the diff):
+
+1. **AC#1 (PRD onboarding incompleto) — met.** Super-admin vê tenant `status=onboarding` com badge "⚠️ Setup em progresso" + passo alcançado (l.160–163); re-nudge automático > 48h sem progresso (l.166); "Gate de ativação" — agente inativo até wizard concluir, não processa mensagens (l.179).
+2. **AC#2 (ARQ §9.6 retry/DLQ) — met.** Retry 3x exponencial 1s→4s→16s (l.768); DLQ `{tenantId}:webhook:dlq` (l.769); alerta Sentry > 10 eventos/tenant/h (l.769); replay manual super-admin V1 BullMQ Job API / V2 botão UI (l.770).
+3. **AC#3 (idempotência) — met.** Hotmart `gateway_events.processado=true` (l.774); Meta `messages.meta_message_id` UNIQUE (l.775).
+4. **AC#4 (debounce Meta) — met.** Janela 6s, chave `buffer:msg:{tenantId}:{leadPhone}` TTL 30s, cada mensagem persistida em `messages` antes do debounce (l.777). Consistente com a TTL declarada em §9.7.
+
+Nenhuma contradição entre §9.6 e as descrições de BullMQ das demais seções.
+
+### Verification
+
+- Re-read MÓDULO 2 + §9.6; todos os itens de AC presentes. Documentation-only story — sem testes automatizados.

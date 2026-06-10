@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 7.2: Agent Core Processing Loop
 
-Status: review
+Status: done
 
 ## Story
 

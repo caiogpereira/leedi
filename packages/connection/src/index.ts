@@ -5,6 +5,8 @@ export type {
 } from './ports/whatsapp-provider.js';
 export { MetaCloudProvider } from './adapters/meta-cloud-provider.js';
 export { encryptToken, decryptToken } from './adapters/crypto.js';
+export { mapQualityRating, mapMessagingTier } from './adapters/meta-mappers.js';
+export type { QualityRatingValue, MessagingTierValue } from './adapters/meta-mappers.js';
 export {
   connectWhatsappNumber,
   InvalidCredentialsError,

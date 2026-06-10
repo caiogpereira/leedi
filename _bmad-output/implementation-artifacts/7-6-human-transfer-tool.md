@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 7.6: Human Transfer Tool
 
-Status: review
+Status: done
 
 ## Story
 
@@ -123,3 +123,4 @@ claude-opus-4-8 (Fullstack Development Specialist)
 ### Change Log
 
 - 2026-06-02 — Implemented Story 7.6 (human transfer tool, inbox-pause check, handoff prompt builder, registry wiring, tests). Status → review.
+- 2026-06-10 — Code review (Epic 7). **HIGH fix:** `transferir-humano.ts` dynamic-imports `@leedi/notification` but the package was never declared in `packages/agent/package.json` → `tsc` failed (`TS2307`) and pnpm would not resolve the import at runtime. Added `@leedi/notification: workspace:*` plus `jsx: "react-jsx"` to `packages/agent/tsconfig.json` (notification's type graph includes a React email template — same convention apps/api already uses). Verified the `sendNotificationToTenantRole` call signature matches. Agent typecheck clean, 119 tests green. Status → done.

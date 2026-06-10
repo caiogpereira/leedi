@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArgumentList } from "@/components/knowledge/ArgumentList";
+import { ArgumentList } from "../../../../../components/knowledge/ArgumentList";
 import type { ProductRow } from "@leedi/knowledge";
 
 type Tab = "basico" | "argumentos" | "diferenciais" | "provas" | "garantia" | "bonus";

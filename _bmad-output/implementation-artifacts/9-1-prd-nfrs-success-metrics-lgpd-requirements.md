@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 9.1: PRD — NFRs, Success Metrics & LGPD Requirements
 
-Status: review
+Status: done
 
 ## Story
 
@@ -102,3 +102,23 @@ _none_
 - Expanded §5.7 opt-out to cover all flows: agent, follow-up, reengagement, dispatch (2026-06-02)
 - Added "Direitos do Titular" table with platform mechanism for each LGPD right (2026-06-02)
 - Added portability note (LGPD Art. 18 VI) and CSV export reference in §5.7 (2026-06-02)
+- [review] Fixed duplicated word in §5.5 throughput bullet ("Throughput de throughput de disparos" → "Throughput de disparos") (2026-06-10)
+
+## Senior Developer Review (AI) — 2026-06-10
+
+**Reviewer:** Caio (via bmad-code-review). **Outcome:** Approved with fix applied. Status → **done**.
+
+### Findings & resolutions
+
+The completion notes claimed several ACs were "already satisfied" with no diff. I audited the **current full text** of §5.5, §5.6, §5.7 (not just the diff) against every AC sub-clause:
+
+1. **AC#1 (NFRs §5.5) — met.** P95 < 800ms "entre chegada de mensagem e envio de resposta inicial" (l.651), 99.9% uptime (l.659), 1.000 msg/min throughput (l.655), RTO < 15min + RPO < 1min (l.660–661). All explicit.
+2. **AC#2 (KPIs §5.6) — met.** Time-to-first-sale < 72h (KPI #6, l.681), AI cost ceiling < 20% do ticket (l.678), conversão > 10% vs 3–5% (l.676).
+3. **AC#3/#4 (LGPD §5.7) — met.** Data Processor/Controller (l.697), opt-out em todos os fluxos (l.702–708), retenção 1 ano hot → cold (l.709), "Direitos do Titular" table com mecanismo da plataforma (l.714–723), portabilidade CSV + Art. 18 VI (l.722, l.725).
+4. **AC#5 (no conflicts) — met.** Cross-check das três seções sem contradições.
+
+5. **[LOW — fixed] Typo pré-existente em §5.5:** "Throughput de **throughput** de disparos" (palavra duplicada) no bullet exato do AC#1(c). Corrigido para "Throughput de disparos". Pré-existia no baseline `992b842`, mas está na seção alvo desta story.
+
+### Verification
+
+- Re-read §5.5/§5.6/§5.7 após o fix; todos os itens de AC presentes no texto. Documentation-only story — sem testes automatizados (conforme Testing standards).

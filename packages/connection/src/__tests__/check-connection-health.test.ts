@@ -66,6 +66,7 @@ describe('checkConnectionHealth', () => {
       }),
       sendText: vi.fn(),
       sendTemplate: vi.fn(),
+      submitTemplate: vi.fn(),
     };
 
     await checkConnectionHealth({ tenantId: 'tenant-1' }, () => fakeProvider);
@@ -74,6 +75,9 @@ describe('checkConnectionHealth', () => {
     expect(capturedSets[0]!['status']).toBe('conectado');
     expect(capturedSets[0]!['displayName']).toBe('Test Shop');
     expect(capturedSets[0]!['lastHealthCheckAt']).toBeInstanceOf(Date);
+    // Meta's raw GREEN / TIER_10K must be mapped to the DB domain enums.
+    expect(capturedSets[0]!['qualityRating']).toBe('verde');
+    expect(capturedSets[0]!['messagingTier']).toBe('10k');
   });
 
   it('sets status to erro on token-expired / auth failure', async () => {
@@ -112,6 +116,7 @@ describe('checkConnectionHealth', () => {
       validateConnection: vi.fn().mockRejectedValue(new Error('Meta API error: 401')),
       sendText: vi.fn(),
       sendTemplate: vi.fn(),
+      submitTemplate: vi.fn(),
     };
 
     await checkConnectionHealth({ tenantId: 'tenant-1' }, () => fakeProvider);
@@ -144,7 +149,12 @@ describe('checkConnectionHealth', () => {
       });
     });
 
-    const fakeProvider = { validateConnection: vi.fn(), sendText: vi.fn(), sendTemplate: vi.fn() };
+    const fakeProvider = {
+      validateConnection: vi.fn(),
+      sendText: vi.fn(),
+      sendTemplate: vi.fn(),
+      submitTemplate: vi.fn(),
+    };
 
     await checkConnectionHealth({ tenantId: 'tenant-no-conn' }, () => fakeProvider);
 

@@ -20,7 +20,8 @@ export const createProductSchema = z.object({
   gatewayProductId: z.string().optional(),
 });
 
-export type CreateProductInput = z.infer<typeof createProductSchema>;
+// Use z.input so callers may omit fields with schema defaults (e.g. `tipo`).
+export type CreateProductInput = z.input<typeof createProductSchema>;
 
 export interface ProductRow {
   id: string;

@@ -378,6 +378,9 @@ importers:
       '@leedi/knowledge':
         specifier: workspace:*
         version: link:../knowledge
+      '@leedi/notification':
+        specifier: workspace:*
+        version: link:../notification
       '@upstash/qstash':
         specifier: ^2.11.0
         version: 2.11.0

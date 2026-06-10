@@ -7,7 +7,7 @@ vi.mock('@leedi/db', () => {
   const update = vi.fn().mockReturnValue({ set });
   const tx = { update };
   return {
-    withTenant: vi.fn((_id: string, fn: (tx: typeof tx) => unknown) => fn(tx)),
+    withTenant: vi.fn((_id: string, fn: (t: typeof tx) => unknown) => fn(tx)),
     schema: {
       products: {
         id: 'products.id',
@@ -50,9 +50,8 @@ describe('updateProductArguments', () => {
   });
 
   it('rejects empty string items', async () => {
-    const { updateProductArguments, ProductValidationError } = await import(
-      '../update-product-arguments.js'
-    );
+    const { updateProductArguments } = await import('../update-product-arguments.js');
+    const { ProductValidationError } = await import('../create-product.js');
     await expect(
       updateProductArguments({
         tenantId: '11111111-1111-4111-8111-111111111111',

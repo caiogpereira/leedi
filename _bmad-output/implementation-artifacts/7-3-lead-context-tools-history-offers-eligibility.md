@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 7.3: Lead Context Tools (History, Offers, Eligibility)
 
-Status: review
+Status: done
 
 ## Story
 

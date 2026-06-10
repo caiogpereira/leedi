@@ -9,8 +9,8 @@
 > (`epic-{1,2,3}-code-review-report.md`), `epic-1-test-ci-backlog.md`, and the
 > embedded deferral notes inside individual story files.
 >
-> **Living document.** Only **Epics 1, 2, 3** have had a formal code review so far
-> (others are `review` status). Items for Epics 4–20 below come from each story's own
+> **Living document.** Only **Epics 1, 2, 3, 4** have had a formal code review so far
+> (others are `review` status). Items for Epics 5–20 below come from each story's own
 > "deferred" notes; the list for those epics will **grow as each epic gets its formal
 > review**. Re-run the review per epic and fold new findings in here.
 >
@@ -22,7 +22,7 @@
 > - **P2 — V2 / post-launch.** Explicitly descoped from V1. Listed so nothing is forgotten,
 >   not expected before launch.
 >
-> Last updated: 2026-06-09.
+> Last updated: 2026-06-10.
 
 ---
 
@@ -67,6 +67,16 @@
   check / `Content-Type` assertion. Add at least an Origin/Content-Type assertion (or CSRF
   token) before launch. Source: `deferred-work.md` (Epic 2 cross-cutting). *Exit:* mutating
   routes reject cross-origin/forged requests beyond SameSite alone.
+
+- [ ] **PL-15 · [Epic 5 / Story 5.5 → Epic 16] Rolling `messages` partition maintenance.**
+  Migration `0006` created partitions for `2026_06`/`2026_07`/`2026_08` **only**. An inbound
+  message with `created_at >= 2026-09-01` has no partition → the insert throws and
+  `processMessage(...).catch(captureException)` swallows it = **silent message loss** after
+  Aug 31, 2026. The fix is the scheduled rolling-partition maintenance (Supabase Edge Function,
+  monthly — see `project_partition_maintenance` memory, owned by Epic 16). Deploy and verify it
+  before launch (and unconditionally before 2026-08-31). Source: `epic-5-code-review-report.md`
+  Finding F4. *Exit:* a scheduled job creates next-month partitions ahead of time; verified by
+  inserting a row dated next month in staging without error.
 
 ---
 
@@ -131,6 +141,33 @@
   integration), 4.4 (6s debounce flush — needs Redis). Run these on staging once PL-3/PL-4 land.
   *Exit:* cross-tenant reads verified empty under the `leedi_app` role; integration paths exercised.
 
+- [ ] **PL-14 · [Epic 4 → cross-cutting] Internal API URL derivation breaks in production
+  (Finding 5, deferred).** Internal/job/webhook URLs are derived via
+  `env.BETTER_AUTH_URL.replace(':3000', \`:${env.API_PORT}\`)` in ~40 sites (originated in
+  `webhook-meta.ts`). In a production `BETTER_AUTH_URL` with no `:3000` port (e.g.
+  `https://app.leedi.com`), the replace is a **no-op** → the derived URL points at the wrong host,
+  silently breaking QStash callbacks / inter-service calls (inbound debounce flush, dispatch jobs,
+  campaign transitions, billing/followup jobs). **Fix before the first production client:** introduce
+  a dedicated `INTERNAL_API_URL` (or `API_BASE_URL`) env var in `@leedi/config` and replace the
+  string-hack at all call sites (use a dynamic/explicit port, not a hardcoded `:3000`→`:PORT`
+  substitution). Source: `epic-4-code-review-report.md` Finding 5 + `deferred-work.md`.
+  *Exit:* every internal URL resolves correctly under the real production `BETTER_AUTH_URL`
+  (verified in staging), with no reliance on the `:3000` substring being present.
+
+- [ ] **PL-16 · [Epic 8 / Stories 8.1 & 8.2] End-to-end playground smoke test.** The review fixed
+  a HIGH bug where the playground 500'd on every message (`leadId: 'playground-lead'` → uuid
+  `22P02`) and a sandbox side-effect (`consultar_base_conhecimento` writing `lead_journey_events`).
+  The uuid fix is proven at the DB level and the side-effect is locked by a unit test, BUT the
+  feature's tests mock `@leedi/db`, so no full live run (real `agent_config` + Anthropic call +
+  Upstash Redis session) was executed. *Exit:* in staging, send a message in each of the 3
+  scenarios (novo_lead / lead_recorrente / lead_com_objecao), confirm WhatsApp-style bubbles +
+  tool-call panels render, "Reiniciar conversa" resets, and **no** `leads`/`agent_*`/
+  `lead_journey_events`/`conversation_windows`/`usage_counters` rows are created for the session.
+  Specifically verify the two scenarios whose synthetic history ends on a `user` turn
+  (lead_recorrente, lead_com_objecao) return a 200 on the first message — the API merges consecutive
+  same-role turns per claude-api guidance, but confirm against the live model — and that
+  lead_com_objecao's first agent turn engages the "preço" objection (AC#2).
+
 ---
 
 ## C. P2 — V2 / post-launch (descoped from V1 — listed for memory)
@@ -170,13 +207,17 @@
 - **Epic 3 — Design System & UI Shell:** PL-9 (nightly E2E/axe CI gate, P1). All 4 stories
   `done`; 3.4 done **with documented caveat** (local-green axe accepted; CI enforcement = PL-9).
 - **Epic 4 — WhatsApp Connection:** PL-11 (webhook rate limiting, P1), PL-13 (4.3/4.4
-  integration tests, P1). 4.5 multi-message dispatcher was deferred → **wired in Epic 7** (closed).
-  *Not yet formally code-reviewed.*
+  integration tests, P1), PL-14 (internal API URL derivation, P1). 4.5 multi-message dispatcher was
+  deferred → **wired in Epic 7** (closed). **Formally code-reviewed 2026-06-10** (`epic-4-code-review-report.md`):
+  all 5 stories `done`; HIGH enum-mapping bug (Meta `GREEN`/`TIER_1K` → pt-BR pgEnums, `22P02`) fixed
+  + 3 minor patches; Finding 5 deferred → PL-14.
 - **Epic 5 — Lead Management:** no deferred ACs surfaced yet. *Not yet formally code-reviewed.*
 - **Epic 6 — Knowledge Base:** PL-6 (typecheck), PL-13 (6.1 RLS tests); P2: pgvector. *Not yet reviewed.*
 - **Epic 7 — Sales Agent:** PL-6 (typecheck: `@leedi/notification`), PL-12 (tag-dedup race);
   P2: 7.7 Deepgram/provider config. *Not yet reviewed.*
-- **Epic 8 — Playground:** no deferred ACs surfaced yet. *Not yet reviewed.*
+- **Epic 8 — Playground:** PL-16 (e2e playground smoke test, P1). Reviewed 2026-06-10; stories
+  8.1 & 8.2 `done`. Two HIGH bugs fixed (uuid `22P02` on every message; sandbox `lead_journey_events`
+  write) + AC#1a campaign selector added. Live end-to-end run deferred → PL-16.
 - **Epic 9 — Doc Corrections:** documentation-only epic; no runtime pre-launch items expected.
 - **Epic 10 — Campaigns:** PL-6 (typecheck), PL-13 (10.1 RLS test); P2: 10.2 journey events. *Not yet reviewed.*
 - **Epic 11 — Hotmart Gateway:** lint debt only so far (→ PL-7). *Not yet reviewed.* **⚠ Money path

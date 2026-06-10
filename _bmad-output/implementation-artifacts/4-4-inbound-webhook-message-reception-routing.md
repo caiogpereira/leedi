@@ -4,7 +4,7 @@
 baseline_commit: 992b8421baa46b95ff2bdc69d31ad25932927f0c
 ---
 
-Status: review
+Status: done
 
 ## Story
 
@@ -130,3 +130,22 @@ claude-sonnet-4-6
 ## Change Log
 
 - 2026-05-31: Story 4.4 implemented — webhook GET/POST, HMAC signature, dedup, debounce buffer with QStash flush, message persistence. 5 unit tests.
+
+### Review Findings (2026-06-09 — bmad-code-review)
+
+Full report: `epic-4-code-review-report.md`. **Signature discipline verified**: HMAC computed on the
+raw bytes via `timingSafeEqual` (length-checked) **before** `JSON.parse`; dedup via Redis `SET NX`;
+GET handshake checks `hub.verify_token`. Live `messages` table confirmed to have the columns
+`saveMessage` writes (`autor`/`tipo`/`conversation_window_id`).
+
+- [x] [Review][Patch] LOW — internal API URL derived with a hardcoded `:3003` instead of the
+  project's `:${env.API_PORT}` convention (~40 other sites). Fixed. [`apps/api/src/routes/webhook-meta.ts:346`]
+- [ ] [Review][Defer] INFO — `BETTER_AUTH_URL.replace(':3000', …)` breaks in production URLs without a
+  `:3000` port (cross-cutting, ~40 sites). Deferred to `deferred-work.md`; proper fix is a dedicated
+  `INTERNAL_API_URL` env var. [`apps/api/src/routes/webhook-meta.ts`]
+- [x] [Review][Dismiss] INFO — migration `0004` shape differs from `message.ts`; superseded by the
+  Story 5.5 reconciliation (migration 0006), verified applied on the live DB. Not a defect.
+
+> Edge case noted for the Epic 7 agent-loop review: the debounce buffer TTL (6 s) equals the QStash
+> flush delay (6 s) — under clock skew the flush may read an expired buffer. Inbound rows are still
+> persisted immediately via `saveMessage`, so no data loss; the agent-flush consumer is Epic 7.

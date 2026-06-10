@@ -246,3 +246,57 @@ validate in staging. No code changes needed — the capability is shipped.
 - **[Epic 17] `@leedi/api`** — `routes/billing.ts` (`sql` unused), `routes/__tests__/billing.test.ts` (`proxy` → `const`), `jobs/daily-billing-check.ts` (unused).
 - **[Epic 18] `@leedi/dashboard`** — ⚠️ `src/lib/push-registration.ts:~10` uses `process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY` directly → trips the Epic 1 `no-process-env` guard. **This is a legitimate exception, not a real violation**: `@leedi/config` is server-only (loads `node:path` at import, crashes in the browser bundle) and Next.js inlines `NEXT_PUBLIC_*` at build time. Fix = add a justified `eslint-disable-next-line no-restricted-properties` with a comment; do **not** route client code through `@leedi/config`.
 - **[Epic 19] `@leedi/api`** — `src/__tests__/{onboarding-complete,onboarding-hotmart,onboarding}.test.ts`: unused vars / `prefer-const`.
+
+## Deferred from: code review of Epic 4 (2026-06-09)
+
+- **[Epic 4 → cross-cutting] Internal API URL derivation breaks in production.** Internal/job/webhook
+  URLs are derived via `env.BETTER_AUTH_URL.replace(':3000', \`:${env.API_PORT}\`)` in ~40 sites
+  (originating from `apps/api/src/routes/webhook-meta.ts`). In a production `BETTER_AUTH_URL` with no
+  `:3000` port (e.g. `https://app.leedi.com`), the replace is a no-op and the derived URL points at the
+  wrong host, breaking QStash callbacks / inter-service calls. **Proper fix:** introduce a dedicated
+  `INTERNAL_API_URL` (or `API_BASE_URL`) env var in `@leedi/config` and replace the string-hack at all
+  call sites. Out of scope for the Epic 4 review (touches ~40 files across api + dashboard). See
+  `epic-4-code-review-report.md` Finding 5.
+
+## Deferred from: code review of Epic 5 (2026-06-10)
+
+- **[Epic 5 → Epic 16] Rolling `messages` partition maintenance (silent message loss after 2026-08-31).**
+  Migration `0006` ships only `2026_06`/`2026_07`/`2026_08` partitions; inbound after Aug 31 2026 throws
+  on insert and the error is swallowed by `processMessage(...).catch(captureException)`. Mitigation is the
+  scheduled rolling-partition Edge Function (Epic 16, `project_partition_maintenance`). Promoted to launch
+  gate **PL-15** in `pendencias-pre-launch.md`. See `epic-5-code-review-report.md` F4.
+- **[Epic 5 → messaging/agent epic] `ultima_interacao` never refreshed on inbound.** `findOrCreateLeadByPhone`
+  returns early for existing leads and never bumps `ultima_interacao`; the message-save path doesn't touch
+  `leads` either. The list view sorts `ultima_interacao DESC NULLS LAST`, so active leads never float up.
+  No Epic 5 AC mandates the update; owned by whichever epic owns inbound side effects. See F6.
+- **[Epic 5 · perf] `messages` UPDATEs scan all partitions.** `recordOutboundMessage.markSent/markFailed`
+  and `webhook-meta.handleStatusUpdate` filter by `id`/`meta_message_id` without `created_at`, defeating
+  partition pruning. Correct, just slower as partitions accumulate. See F3.
+- **[Epic 5 · CSV] Phone normalization over-accepts non-mobile numbers.** `parse-leads-csv.normalizeToE164`
+  only prefixes `+55` for 11-digit non-`55` strings; a 10-digit landline passes the E.164 regex while
+  missing a country code. Acceptable V1 heuristic; stricter `libphonenumber-js` pass later. See F5.
+- **[Epic 5 → cross-cutting / test infra] `@leedi/notification` eager `webpush.setVapidDetails` at import.**
+  Importing the notification barrel runs `setVapidDetails(env.VAPID_SUBJECT, …)` at module load, throwing
+  when VAPID env is empty (e.g. in tests). It broke the Epic 5 webhook suite (fixed there by mocking) and
+  **still breaks**, at HEAD (2026-06-10), these api suites whose code paths import `@leedi/usage` /
+  `@leedi/notification` without mocking them:
+  - `apps/api/src/jobs/__tests__/process-dispatch-batch.test.ts` — fix in **Epic 13** review
+  - `apps/api/src/use-cases/connection/__tests__/handle-quality-update.test.ts` — fix in **Epic 13** review
+  - `apps/api/src/__tests__/health.test.ts` — owning epic TBD (likely Epic 1 / infra)
+
+  **AGREED ACTION (Caio, 2026-06-10): do NOT fix these now.** When each owning epic gets its formal
+  `bmad-code-review`, apply the **same fix used in Epic 5's `webhook-meta.test.ts`** — add the two missing
+  module mocks at the top of the failing suite (adjust the mocked surface to whatever that suite actually
+  calls):
+  ```ts
+  vi.mock('@leedi/usage', () => ({
+    checkUsageBlock: vi.fn().mockResolvedValue({ blocked: false }),
+    incrementUsage: vi.fn().mockResolvedValue({ alertsDue: [] }),
+  }));
+  vi.mock('@leedi/notification', () => ({
+    sendNotificationToTenantRole: vi.fn().mockResolvedValue(undefined),
+  }));
+  ```
+  **Proper root-cause fix** (makes the per-suite mocks unnecessary going forward): lazy-init the push
+  provider in `packages/notification/src/adapters/push-provider.ts` so `setVapidDetails` is not called at
+  import time (or a shared test env-stub). That belongs to **Epic 18's review**.

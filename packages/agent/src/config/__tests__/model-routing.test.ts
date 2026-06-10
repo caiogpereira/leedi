@@ -36,9 +36,9 @@ describe('model-routing', () => {
   it('prices are per-token (already divided by 1e6)', () => {
     expect(MODEL_PRICING.sonnet.input).toBeCloseTo(0.000003, 12);
     expect(MODEL_PRICING.sonnet.output).toBeCloseTo(0.000015, 12);
-    expect(MODEL_PRICING.haiku.input).toBeCloseTo(0.00000025, 12);
-    expect(MODEL_PRICING.haiku.output).toBeCloseTo(0.00000125, 12);
-    expect(MODEL_PRICING.opus.input).toBeCloseTo(0.000015, 12);
-    expect(MODEL_PRICING.opus.output).toBeCloseTo(0.000075, 12);
+    expect(MODEL_PRICING.haiku.input).toBeCloseTo(0.000001, 12);
+    expect(MODEL_PRICING.haiku.output).toBeCloseTo(0.000005, 12);
+    expect(MODEL_PRICING.opus.input).toBeCloseTo(0.000005, 12);
+    expect(MODEL_PRICING.opus.output).toBeCloseTo(0.000025, 12);
   });
 });

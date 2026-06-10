@@ -556,7 +556,7 @@ ANTHROPIC_API_KEY=sk-...
 
 ---
 
-## 8. Pré-requisitos de contas e credenciais
+## 11. Pré-requisitos de contas e credenciais
 
 Antes de começar, garanta acesso a:
 
@@ -573,7 +573,7 @@ Antes de começar, garanta acesso a:
 
 ---
 
-## 9. Primeira ação concreta
+## 12. Primeira ação concreta
 
 Quando você abrir o Claude Code:
 
@@ -588,7 +588,7 @@ A partir daí, siga o grafo da seção 3, uma fase por vez, fechando o Definitio
 
 ---
 
-## 10. Resumo de decisões travadas (referência rápida)
+## 13. Resumo de decisões travadas (referência rápida)
 
 | Tema               | Decisão                                                                                                      |
 | ------------------ | ------------------------------------------------------------------------------------------------------------ |

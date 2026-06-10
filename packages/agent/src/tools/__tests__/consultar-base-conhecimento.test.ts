@@ -159,4 +159,18 @@ describe('consultarBaseConhecimento', () => {
       detalhes: { categoria: null },
     });
   });
+
+  // Story 8.1 sandbox guard: the playground lead is synthetic (nil-UUID, no real
+  // `leads` row), so the journey-event INSERT must be skipped — both to keep the
+  // sandbox side-effect-free AND to avoid the FK violation on lead_journey_events.
+  it('does NOT log a journey event in sandbox mode but still returns entries (Story 8.1)', async () => {
+    state.rows = [OBJECTION_ROW];
+    const { consultarBaseConhecimento } = await import('../consultar-base-conhecimento.js');
+    const res = await consultarBaseConhecimento(
+      { tipo: 'objecao', categoria: 'preco' },
+      { ...ctx, sandboxMode: true }
+    );
+    expect(res).toEqual({ entries: [OBJECTION_ROW] });
+    expect(state.inserts).toHaveLength(0);
+  });
 });

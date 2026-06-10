@@ -24,7 +24,7 @@ vi.mock('@leedi/db', () => {
   const select = vi.fn().mockReturnValue({ from });
   const tx = { select };
   return {
-    withTenant: vi.fn((_id: string, fn: (tx: typeof tx) => unknown) => fn(tx)),
+    withTenant: vi.fn((_id: string, fn: (t: typeof tx) => unknown) => fn(tx)),
     schema: {
       products: {
         id: 'products.id',

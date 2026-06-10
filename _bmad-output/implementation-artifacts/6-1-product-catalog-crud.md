@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 6.1: Product Catalog CRUD
 
-Status: review
+Status: done
 
 ## Story
 
@@ -29,7 +29,7 @@ so that the agent knows exactly what to sell, at what price, and how to send the
   - [x] Define `products` table: `id` (uuid pk, defaultRandom), `tenantId` (uuid, FK → `tenants.id`, notNull), `nome` (text notNull), `descricao` (text nullable), `preco` (numeric notNull), `parcelas` (integer nullable), `precoParcelado` (numeric nullable, column `preco_parcelado`), `linkCheckout` (text notNull, column `link_checkout`), `tipo` (productTipoEnum, notNull, default `'principal'`), `argumentos` (jsonb notNull default `[]`), `diferenciais` (jsonb notNull default `[]`), `provasSociais` (jsonb notNull default `[]`, column `provas_sociais`), `garantia` (text nullable), `bonus` (jsonb notNull default `[]`), `gatewayProductId` (text nullable, column `gateway_product_id`), `ativo` (boolean notNull default `true`), `createdAt`, `updatedAt` (both `timestamp with timezone`, defaultNow notNull)
   - [x] Define `knowledgeBaseTipoEnum` via `pgEnum('knowledge_base_tipo', ['faq', 'objecao'])`
   - [x] Define `knowledge_base` table in the SAME file (needed by Story 6.3): `id` (uuid pk), `tenantId` (FK → `tenants.id`, notNull), `tipo` (knowledgeBaseTipoEnum notNull), `perguntaOuObjecao` (text notNull, column `pergunta_ou_objecao`), `respostaOuContorno` (text notNull, column `resposta_ou_contorno`), `categoria` (text nullable), `embedding` (nullable — declare as a placeholder; see Dev Notes on pgvector deferral), `ativo` (boolean notNull default `true`), `createdAt`, `updatedAt`
-  - [x] Generate migration `0006_knowledge_schema.sql` via Drizzle Kit
+  - [x] Generate migration `0007_knowledge_schema.sql` via Drizzle Kit
   - [x] In the migration: `ENABLE ROW LEVEL SECURITY` + `FORCE ROW LEVEL SECURITY` on both `products` and `knowledge_base`
   - [x] Add policy `CREATE POLICY tenant_isolation ON products USING (tenant_id = current_setting('app.tenant_id', true)::uuid);` and the same for `knowledge_base`
   - [x] Add `updated_at` triggers on both tables reusing the existing `set_updated_at()` DB function (created in Story 4.1) — do NOT redefine the function
@@ -51,9 +51,9 @@ so that the agent knows exactly what to sell, at what price, and how to send the
   - [x] Gate all routes with `requireTenantSession()`; resolve `tenantId` from `c.get('resolvedTenantId')`
   - [x] Register the products router in `apps/api/src/app.ts`
 - [x] Task Products UI (AC: #2, #3, #5, #6)
-  - [x] Create `apps/dashboard/app/(dashboard)/conhecimento/produtos/page.tsx` — list with `nome`, `tipo` badge, `preco`, status; "Novo produto" CTA; archived toggle
-  - [x] Create `apps/dashboard/app/(dashboard)/conhecimento/produtos/novo/page.tsx` — new product form
-  - [x] Create `apps/dashboard/app/(dashboard)/conhecimento/produtos/[id]/page.tsx` — edit form with all base fields (the jsonb material fields are added in Story 6.2)
+  - [x] Create `apps/dashboard/app/(shell)/conhecimento/produtos/page.tsx` — list with `nome`, `tipo` badge, `preco`, status; "Novo produto" CTA; archived toggle
+  - [x] Create `apps/dashboard/app/(shell)/conhecimento/produtos/novo/page.tsx` — new product form
+  - [x] Create `apps/dashboard/app/(shell)/conhecimento/produtos/[id]/page.tsx` — edit form with all base fields (the jsonb material fields are added in Story 6.2)
   - [x] Form validation: `link_checkout` required (exact message from AC #3); `preco` must be a positive number; mirror the Zod schema used server-side
   - [x] "Arquivar" action with confirmation dialog
 - [x] Task `consultar_ofertas_ativas` use case — agent tool foundation (AC: #4)
@@ -68,7 +68,7 @@ so that the agent knows exactly what to sell, at what price, and how to send the
 
 ## Dev Notes
 
-- Files to create: `packages/db/src/schema/knowledge.ts`, `packages/db/migrations/0007_knowledge_schema.sql`, `packages/knowledge/` (new package — see CRITICAL-2 fix below), `packages/knowledge/src/index.ts`, `packages/knowledge/src/use-cases/{create-product,update-product,list-products,archive-product,get-active-offers}.ts`, `apps/api/src/routes/knowledge/products.ts`, `apps/dashboard/app/(dashboard)/conhecimento/produtos/page.tsx`, `.../produtos/novo/page.tsx`, `.../produtos/[id]/page.tsx`.
+- Files to create: `packages/db/src/schema/knowledge.ts`, `packages/db/migrations/0007_knowledge_schema.sql`, `packages/knowledge/` (new package — see CRITICAL-2 fix below), `packages/knowledge/src/index.ts`, `packages/knowledge/src/use-cases/{create-product,update-product,list-products,archive-product,get-active-offers}.ts`, `apps/api/src/routes/knowledge/products.ts`, `apps/dashboard/app/(shell)/conhecimento/produtos/page.tsx`, `.../produtos/novo/page.tsx`, `.../produtos/[id]/page.tsx`.
 - Files to modify: `packages/db/src/schema/index.ts` (re-export knowledge), `apps/api/src/app.ts` (register products router), `pnpm-workspace.yaml` (add `packages/knowledge`).
 - npm dependencies: none new — reuse `@leedi/db` (`withTenant`, `schema`, `eq`, `and`), `zod`, `@leedi/ui` primitives (`Button`, `Input`, `Badge`, `Dialog`). No axios.
 - **CRITICAL-2 FIX — `@leedi/knowledge` package:** Create `packages/knowledge/` with the standard domain structure (same as `@leedi/leads`, `@leedi/agent`). ALL knowledge use cases (CRUD for products, knowledge_base, and the agent-tool `getActiveOffers`) live in `packages/knowledge/src/use-cases/`. The Hono routes in `apps/api/src/routes/knowledge/products.ts` call `@leedi/knowledge` use cases — they do NOT embed use-case logic. This corrects a prior architecture violation where use cases were placed in `apps/api/src/use-cases/knowledge/` (API layer) and in `packages/db/src/use-cases/knowledge/` (data layer). The API layer must remain thin.
@@ -94,7 +94,7 @@ so that the agent knows exactly what to sell, at what price, and how to send the
 
 ### Pitfalls to avoid
 
-- Do NOT create separate migrations for `products` and `knowledge_base` — one migration (`0006_knowledge_schema.sql`).
+- Do NOT create separate migrations for `products` and `knowledge_base` — one migration (`0007_knowledge_schema.sql`).
 - Do NOT enable pgvector or build vector indexes now — `embedding` stays nullable/deferred.
 - Do NOT forget `FORCE ROW LEVEL SECURITY` on both tables.
 - Do NOT redefine `set_updated_at()` — reuse the existing function.
@@ -159,3 +159,4 @@ claude-sonnet-4-6 (1M context)
 ### Change Log
 
 - 2026-06-01: Story 6.1 implemented — knowledge schema, @leedi/knowledge package, products CRUD API and UI, get-active-offers agent tool, 4 unit tests passing.
+- 2026-06-10: Code review (Opus). Fixed `CreateProductInput` type modeling (`z.infer` → `z.input` so callers may omit the defaulted `tipo`) and the recursive `typeof tx` (TS2502) in the product/offers test mocks — `@leedi/knowledge` now typechecks clean (13/13 tests pass). Doc fixes: migration corrected to `0007_knowledge_schema.sql` (was `0006` in two places); UI paths corrected to `app/(shell)/conhecimento/...` (Epic 3 shell-group refactor). Schema/RLS verified correct (products + knowledge_base: ENABLE+FORCE RLS, tenant_isolation policy, set_updated_at triggers). KNOWN-PENDING: `getActiveOffers` ignores `activeCampaignPhaseId` (campaign scoping deferred to Epic 10). Story 6.1 → done. See epic-6-code-review-report.md.

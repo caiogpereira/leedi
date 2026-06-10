@@ -1,4 +1,5 @@
 import { withTenant, schema, eq } from '@leedi/db';
+import { mapQualityRating, mapMessagingTier } from '../adapters/meta-mappers.js';
 import type { WhatsAppProvider } from '../ports/whatsapp-provider.js';
 
 export interface CheckConnectionHealthInput {
@@ -57,8 +58,10 @@ export async function checkConnectionHealth(
         .set({
           status: 'conectado',
           displayName: result.displayName,
-          qualityRating: result.qualityRating as 'verde' | 'amarelo' | 'vermelho' | null,
-          messagingTier: result.messagingTier as '1k' | '10k' | '100k' | 'unlimited' | null,
+          // Map Meta's raw values (GREEN/TIER_1K/…) to the DB domain enums;
+          // unmappable values (UNKNOWN, TIER_50, …) become null.
+          qualityRating: mapQualityRating(result.qualityRating),
+          messagingTier: mapMessagingTier(result.messagingTier),
           lastHealthCheckAt: now,
         })
         .where(eq(schema.whatsappConnections.tenantId, tenantId));

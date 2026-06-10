@@ -12,6 +12,16 @@ import { buildScenarioContext } from './scenarios.js';
 
 const SESSION_TTL_SECONDS = 1800; // 30 minutes
 
+/**
+ * Sentinel ids for the sandbox playground turn. These flow into `processMessage`
+ * and end up in uuid-typed `WHERE` clauses (loadAgentContext's lead lookup, the
+ * read-side tools). They MUST be valid UUIDs — a non-uuid string like
+ * 'playground-lead' makes Postgres raise `22P02 invalid input syntax for type
+ * uuid` and the route 500s on the first message. The nil UUID matches no row, so
+ * the lead lookup falls back to the synthetic default and no real data is touched.
+ */
+const SANDBOX_ID = '00000000-0000-0000-0000-000000000000';
+
 type Scenario = 'novo_lead' | 'lead_recorrente' | 'lead_com_objecao';
 
 interface PlaygroundSession {
@@ -91,10 +101,10 @@ export function createPlaygroundRouter() {
     const result = await processMessage(
       {
         tenantId,
-        connectionId: 'sandbox',
-        leadId: 'playground-lead',
+        connectionId: SANDBOX_ID,
+        leadId: SANDBOX_ID,
         leadPhone: '+5511999000001',
-        conversationWindowId: 'sandbox-window',
+        conversationWindowId: SANDBOX_ID,
         userText: message,
         sandboxMode: true,
         seedHistory: session.history,

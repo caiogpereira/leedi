@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 7.8: Model Routing & Cost Optimization
 
-Status: review
+Status: done
 
 ## Story
 
@@ -120,3 +120,4 @@ _none_
 | Date       | Version | Description | Author |
 |------------|---------|-------------|--------|
 | 2026-06-02 | 0.1     | Implemented Story 7.8 — canonical model-routing config (single source of truth for all `claude-*` ids), routed Haiku tasks (tag/handoff/improve-text), sales-model selection + Enterprise Opus guard stub, per-message cost tracking in `saveMessage`. Fixed the interim `claude-haiku-4-5` id bug. Tests green; status → review. | claude-opus-4-8 |
+| 2026-06-10 | 0.2     | Code review (Epic 7). **MEDIUM fix:** `MODEL_PRICING` carried stale per-token prices for the configured 4.x models — Haiku was `$0.25/$1.25` (Haiku 3.5 era) and Opus was `$15/$75` (Opus 3 era), feeding 4×-low / 3×-high estimates into `agent_messages.custo_usd` dashboards. Corrected to current pricing: Haiku 4.5 `$1/$5`, Opus 4.8 `$5/$25` (Sonnet 4.6 `$3/$15` was already correct). Applied to both the canonical table and the deliberately-duplicated copy in `@leedi/agent-memory/save-message.ts` (kept in sync to avoid the agent→agent-memory dependency cycle); updated both unit-test suites. The model **ids** were already current and correct. Tests green; status → done. | claude-opus-4-8 |

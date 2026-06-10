@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 8.2: Scenario Simulation & Tool Transparency
 
-Status: review
+Status: done
 
 ## Story
 
@@ -110,3 +110,45 @@ claude-sonnet-4-6
 
 - feat(scenarios): buildScenarioContext for 3 playground scenarios (Story 8.2)
 - feat(tool-transparency): ToolCallPanel component with collapsible details (Story 8.2)
+
+## Senior Developer Review (AI) — 2026-06-10
+
+**Reviewer:** Caio (via bmad-code-review). **Outcome:** Approved with fixes (shared with Story 8.1). Status → **done**.
+
+### Findings & resolutions
+
+1. **[HIGH — fixed, cross-story] `consultar_base_conhecimento` violated tool transparency's
+   sandbox contract.** AC#2 has the `lead_com_objecao` scenario fire `consultar_base_conhecimento`
+   for the "preco" category on turn one. That tool was inserting a real `lead_journey_events`
+   row (FK to `leads`) — pollution of real tables in a sandbox, directly against this story's own
+   pitfall ("Do NOT inject the synthetic history into the real `agent_threads`/`agent_messages`
+   tables"). Fixed by gating the write on `sandboxMode`; the tool still returns the matched
+   entries, so the `ToolCallPanel` transparency (AC#3/#4) is unaffected. See Story 8.1 review
+   finding #2 for the full write-up and the `22P02` id bug that shared the same scenario path.
+
+2. **[LOW — verified safe] Consecutive same-role `user` messages on turn one.** For
+   `lead_recorrente` (synthetic history ends on a user turn) and `lead_com_objecao` (history is the
+   single injected objection), the first sandbox call sends `messages = [...seedHistory, {role:'user',
+   userText}]` ending in two consecutive `user` turns. Per the authoritative claude-api guidance,
+   **the Messages API combines consecutive same-role messages into a single turn** on current Claude
+   models — it does not 400 ("roles must alternate" is legacy behavior). So this does not crash. Folded
+   into PL-16 to confirm live.
+3. **[LOW — noted] AC#2 UX nuance.** AC#2 envisions the injected objection *opening* the conversation
+   and firing `consultar_base_conhecimento` on the agent's first turn. The implementation prepends the
+   objection to the operator's first typed message rather than auto-driving an agent turn on session
+   init. Functionally the objection is in context and the agent addresses it, but the "fires on
+   initialization, before the operator types" reading of AC#2 is not literally met. Acceptable for V1;
+   a future improvement is to auto-send the objection on load. Tracked under PL-16's scenario checks.
+4. **[LOW — noted] Scenario realism vs. live tool reads.** The synthetic `lead_recorrente`
+   history (AC#1) is injected via `seedHistory` into the Anthropic `messages` array, which is what
+   makes the agent reference the prior interaction. If the agent *also* calls `buscar_historico_lead`
+   (which resolves by `leadPhone`, not the sandbox lead row), it returns "no history" — the two
+   views aren't reconciled. Acceptable for V1 (the conversational context already carries the
+   history); worth a note if a future scenario depends on the tool reflecting the synthetic lead.
+
+### Verification
+
+- Scenario builder tests **4/4** (`buildScenarioContext` shapes for all 3 scenarios).
+- `ToolCallPanel`: empty array → renders nothing; N tool calls → N `<details>` (native collapse,
+  no per-panel React state — matches the pitfall). Verified by reading the component + AC mapping.
+- Full verification summary in Story 8.1's review section (shared agent/api test runs).

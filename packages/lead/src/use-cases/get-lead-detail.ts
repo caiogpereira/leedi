@@ -63,8 +63,8 @@ function asRecord(value: unknown): Record<string, unknown> {
  * All reads go through withTenant so RLS scopes rows to the caller's tenant. Tags are
  * ordered created_at ASC; journey events created_at DESC (most recent first).
  *
- * conversationCount is hard-coded to 0 until conversation_windows lands.
- * TODO(Story 5.5): wire conversationCount to conversation_windows.
+ * conversationCount is the number of conversation_windows opened for this lead
+ * (the 24h billing unit from Story 5.5).
  */
 export async function getLeadDetail(input: GetLeadDetailInput): Promise<LeadDetail | null> {
   if (!UUID_RE.test(input.leadId)) {
@@ -123,6 +123,13 @@ export async function getLeadDetail(input: GetLeadDetailInput): Promise<LeadDeta
       .where(eq(schema.leadJourneyEvents.leadId, input.leadId))
       .orderBy(sql`${schema.leadJourneyEvents.createdAt} DESC`);
 
+    const windowCountRows = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(schema.conversationWindows)
+      .where(eq(schema.conversationWindows.leadId, input.leadId));
+
+    const conversationCount = windowCountRows[0]?.count ?? 0;
+
     return {
       id: lead.id,
       tenantId: lead.tenantId,
@@ -153,8 +160,7 @@ export async function getLeadDetail(input: GetLeadDetailInput): Promise<LeadDeta
         detalhes: asRecord(e.detalhes),
         createdAt: e.createdAt,
       })),
-      // TODO(Story 5.5): replace with real count from conversation_windows.
-      conversationCount: 0,
+      conversationCount,
     };
   });
 }

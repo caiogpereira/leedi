@@ -343,7 +343,7 @@ async function processMessage(
   // We pass leadId/connectionId/conversationWindowId so the agent loop (Epic 7) does NOT
   // re-resolve the conversation window — re-calling resolveConversationWindow would
   // double-bump message_count.
-  const apiBaseUrl = env.BETTER_AUTH_URL.replace(':3000', ':3003');
+  const apiBaseUrl = env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
   await qstash.publishJSON({
     url: `${apiBaseUrl}/api/internal/agent-flush`,
     delay: 6,

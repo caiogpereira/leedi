@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 8.1: Playground Chat Interface
 
-Status: review
+Status: done
 
 ## Story
 
@@ -27,7 +27,7 @@ so that I can verify the agent behaves correctly before releasing it to real lea
   - [x] Add `sandboxMode?: boolean` to the `ProcessMessageContext` interface in `packages/agent/src/use-cases/process-message.ts`
   - [x] When `sandboxMode: true`: skip the `MetaCloudProvider.sendText()` call; instead collect all segment strings and return them as `{ segments: string[], toolCalls: ToolCallLog[] }` to the caller
   - [x] When `sandboxMode: true`: skip billable `conversation_window` creation; use a transient in-memory thread (or create `agent_threads` row with `sandboxMode: true` flag if persistence is needed for multi-turn) — ensure `usage_counters` is NEVER incremented
-  - [x] When `sandboxMode: true`: still persist `agent_messages` and `agent_tool_calls` (tool transparency requires the log — see Story 8.2); skip only billing/sending side effects
+  - [x] ~~When `sandboxMode: true`: still persist `agent_messages` and `agent_tool_calls`~~ — **superseded by the implementation's design decision (see Dev Agent Record):** sandbox is Redis-only with NO `agent_threads`/`agent_messages`/`agent_tool_calls` writes. Tool transparency (Story 8.2) is served by the `ToolCallLog[]` returned in the API response, not a DB read. This avoids synthetic rows polluting real tables (Story 8.2 pitfall).
   - [x] Add a `ToolCallLog` type: `{ toolName: string; input: unknown; output: unknown }` returned in `processMessage` result when `sandboxMode: true`
   - [x] Unit test: `process-message` with `sandboxMode: true` does NOT call `MetaCloudProvider.sendText()` (verify with mock)
   - [x] Unit test: `usage_counters` increment is NOT triggered when `sandboxMode: true`
@@ -132,3 +132,54 @@ claude-sonnet-4-6
 - feat(sandbox): add sandboxMode seam to process-message (Story 8.1)
 - feat(playground): Hono API router with Redis session storage
 - feat(playground-ui): chat interface with WhatsApp-style bubbles and scenario selector
+- fix(playground): use a valid sentinel UUID for sandbox lead/connection/window ids (review)
+- fix(agent): skip lead_journey_events write in sandbox consultar_base_conhecimento (review)
+- feat(playground-ui): render disabled "Sem campanha ativa" campaign selector (AC#1a, review)
+
+## Senior Developer Review (AI) — 2026-06-10
+
+**Reviewer:** Caio (via bmad-code-review). **Outcome:** Approved with fixes applied. Status → **done**.
+
+### Findings & resolutions
+
+1. **[HIGH — fixed] Playground 500s on every message (non-UUID id → Postgres `22P02`).**
+   The API route passed `leadId: 'playground-lead'`, `connectionId: 'sandbox'`,
+   `conversationWindowId: 'sandbox-window'`. The sandbox path calls
+   `loadAgentContext(tenantId, leadId)` → `WHERE leads.id = 'playground-lead'`, and `leads.id`
+   is a `uuid` column. Reproduced directly against the live DB:
+   `ERROR: 22P02: invalid input syntax for type uuid: "playground-lead"`. The route has no
+   try/catch, so this surfaces as a 500 on the first message. The unit tests mock `@leedi/db`,
+   so they were green while the feature was broken (same blind-spot class as prior epics).
+   **Fix:** replaced the three uuid-typed placeholders with a nil sentinel UUID
+   (`00000000-0000-0000-0000-000000000000`) — valid syntax, matches no row, lead falls back to
+   the synthetic default. Verified: `SELECT … WHERE id = '0000…'` → `0` rows, no error.
+   Files: `apps/api/src/routes/playground/index.ts`.
+
+2. **[HIGH — fixed] Sandbox was NOT side-effect-free: `consultar_base_conhecimento` wrote a real
+   `lead_journey_events` row.** That tool is configurable (not in `SANDBOX_STUBS`) and, on a
+   matched objection, inserts a journey event keyed by `ctx.leadId`. The `lead_com_objecao`
+   scenario triggers it on turn one. With the nil-UUID lead this would hit the FK
+   `lead_journey_events.lead_id → leads` (confirmed present) and throw; in any case it breaches
+   the Story 8.1 sandbox guarantee and the Story 8.2 pitfall ("do NOT write synthetic history to
+   real tables"). **Fix:** `consultarBaseConhecimento` now takes `sandboxMode` and skips the
+   insert in sandbox while still returning entries (transparency intact). Regression test added.
+   Files: `packages/agent/src/tools/consultar-base-conhecimento.ts` (+ test).
+
+3. **[MEDIUM — fixed] AC#1(a) campaign selector was checked `[x]` but not rendered.** Neither
+   `page.tsx` nor `playground-client.tsx` had a campaign dropdown. **Fix:** added a disabled
+   "Sem campanha ativa" `<select>` (campaign-aware behavior remains Story 10.3).
+   Files: `apps/dashboard/app/(shell)/agente/playground/playground-client.tsx`.
+
+4. **[LOW — noted, not changed] Stale `baseline_commit: 992b842`** (end of Epic 2). Epics 7–20
+   landed in one checkpoint (`a6b9844`) and the hashes were deliberately re-set after a
+   git-history secret purge (`460a15c`), so there is no clean per-story baseline to point at.
+   Left as-is intentionally rather than fabricate a hash. Review scoped via the story File Lists.
+
+### Verification
+
+- `@leedi/agent` typecheck clean; tests **120/120** (was 119; +1 sandbox-guard regression test).
+- `apps/api` playground tests **4/4**; no new `tsc` errors (the 2 remaining `jobs/` errors are
+  Epic 16/campaigns, out of scope).
+- `@leedi/dashboard` typecheck: no playground errors (2 remaining errors are Epics 9 & 18).
+- The uuid fix is proven at the DB level, but a full end-to-end playground run (live Anthropic +
+  Redis + a real `agent_config`) was **not** executed this session → tracked as **PL-16**.

@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 5.1: Lead Database Schema & List View
 
-Status: review
+Status: done
 
 ## Story
 
@@ -124,3 +124,11 @@ _none_
 ### Change Log
 
 - 2026-06-01: Story 5-1 implemented — lead schema, migration 0005, `@leedi/lead` use case, API route, dashboard list page
+
+### Review Findings
+
+_Code review 2026-06-10 (Opus 4.8, `bmad-code-review`). Full report: `epic-5-code-review-report.md`._
+
+- [x] [Review][Defer] `ultima_interacao` never refreshed on inbound [packages/lead/src/use-cases/find-or-create-lead-by-phone.ts] — deferred, product-completeness gap (list sorts by `ultima_interacao DESC` but it freezes at lead creation). No AC mandates the update; owned by the inbound/agent epic.
+
+✅ Verified: schema §6.3 complete, RLS ENABLE+FORCE on all 3 tables, `UNIQUE(tenant_id, telefone)`, `pageSize` capped at 100, filters synced to URL. Tests 36 passed, `tsc` clean. → **done**

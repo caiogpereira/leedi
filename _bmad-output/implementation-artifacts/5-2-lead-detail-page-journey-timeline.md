@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 5.2: Lead Detail Page & Journey Timeline
 
-Status: review
+Status: done
 
 ## Story
 
@@ -95,3 +95,11 @@ _none_
 ### Change Log
 
 - 2026-06-01: Story 5-2 implemented — lead detail use case, API route, dashboard detail page with timeline
+
+### Review Findings
+
+_Code review 2026-06-10 (Opus 4.8, `bmad-code-review`). Full report: `epic-5-code-review-report.md`._
+
+- [x] [Review][Patch] **AC#1: conversationCount permanently 0 — FIXED** [packages/lead/src/use-cases/get-lead-detail.ts] — was hard-coded `0` with a `TODO(Story 5.5)`; Story 5.5 has since landed `conversation_windows`, so the count is now a real tenant-scoped `count(*)` over `conversation_windows` for the lead. Unit test's stale "always 0" assertion replaced by two tests (real count `= 3`; defaults to 0 with no windows). Tests green, `tsc` clean.
+
+✅ Verified: timeline DESC, optout banner driven strictly by `status`, empty-state copy, UUID guard → 404. → **done**

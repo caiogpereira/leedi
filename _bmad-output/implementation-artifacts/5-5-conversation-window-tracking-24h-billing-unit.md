@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 5.5: Conversation Window Tracking — 24h Billing Unit
 
-Status: review
+Status: done
 
 ## Story
 
@@ -123,3 +123,13 @@ _none_
 ### Change Log
 
 - 2026-06-01: Story 5-5 implemented — messaging schema reconcile, messages partitioned (3 months), conversation windows + inbox assignments, inbound flow wired end-to-end
+
+### Review Findings
+
+_Code review 2026-06-10 (Opus 4.8, `bmad-code-review`). Full report: `epic-5-code-review-report.md`._
+
+- [x] [Review][Patch] **Webhook integration suite was red — FIXED** [apps/api/src/__tests__/webhook-meta.test.ts] — Epic 16 wired `checkUsageBlock`/`incrementUsage` (`@leedi/usage`) and `sendNotificationToTenantRole` (`@leedi/notification`) into `processMessage`, but this suite's mocks were never updated; importing `webhook-meta` pulled in the real `@leedi/notification` whose `push-provider.ts` throws on `webpush.setVapidDetails` at load. Added the two missing `vi.mock` calls → 5/5 green. 5.5's webhook wiring is now test-verified.
+- [x] [Review][Defer] Message UPDATEs scan all partitions [packages/messaging/src/use-cases/record-outbound-message.ts, apps/api/src/routes/webhook-meta.ts] — deferred, perf-only. `markSent`/`markFailed`/`handleStatusUpdate` filter by `id`/`meta_message_id` without `created_at`, so no partition pruning. Correct, just slower as partitions accumulate.
+- [x] [Review][Defer] **messages partitions end 2026-08-31** [packages/db/migrations/0006_messaging_conversation_windows_partition.sql] — deferred to **pre-launch** (`pendencias-pre-launch.md`). Inbound after Aug 31 2026 has no partition → insert throws and `processMessage(...).catch(captureException)` swallows it = silent message loss. Mitigation = rolling-partition maintenance Edge Function (Epic 16). AC#4 only requires partitioning *exists* (it does), so this does not block the story.
+
+✅ Verified: atomic `message_count` increment, correct 24h boundary (exactly-24h → close+new), Redis-authoritative dedup, partitioned PK `(id, created_at)`. Messaging tests 6 passed; webhook 5 passed. → **done**

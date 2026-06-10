@@ -4,7 +4,7 @@ baseline_commit: 992b8421baa46b95ff2bdc69d31ad25932927f0c
 
 # Story 4.1: WhatsApp Connection Schema & Encrypted Credential Storage
 
-Status: review
+Status: done
 
 ## Story
 
@@ -131,3 +131,10 @@ claude-sonnet-4-6
 ### Change Log
 
 - 2026-05-30: Story 4.1 implemented — whatsapp_connections schema, AES-256-GCM envelope encryption, WhatsAppProvider port, MetaCloudProvider adapter, migration with RLS applied to Supabase.
+
+### Review Findings (2026-06-09 — bmad-code-review)
+
+Full report: `epic-4-code-review-report.md`. Verdict: **✅ clean**. Crypto (per-record DEK wrapped
+by KEK, GCM tag verified on decrypt, tampering throws), private `#` fields + redacting `toJSON()`,
+RLS enabled+forced with `tenant_isolation` policy — all verified against spec and live DB enums.
+No defects in this story's surface.

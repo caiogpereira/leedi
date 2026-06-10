@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 6.2: Sales Arguments, Differentials & Social Proofs
 
-Status: review
+Status: done
 
 ## Story
 
@@ -38,19 +38,19 @@ so that the agent has rich, persuasive commercial material to draw from during c
   - [x] Add a per-context improvement prompt: for `sales_argument`, instruct Claude to make it more persuasive and benefit-focused, concise (max 2 sentences), in pt-BR — go through the existing port, never instantiate the Anthropic SDK in the route
   - [x] Keep streaming behavior and the `accent-ai` violet indicator from Story 3.3
 - [x] Task 4: Product detail page sections (AC: #1, #3, #5)
-  - [x] Add a tabbed or section-based layout to `apps/dashboard/app/(dashboard)/conhecimento/produtos/[id]/page.tsx`: Argumentos | Diferenciais | Provas Sociais | Garantia | Bônus
+  - [x] Add a tabbed or section-based layout to `apps/dashboard/app/(shell)/conhecimento/produtos/[id]/page.tsx`: Argumentos | Diferenciais | Provas Sociais | Garantia | Bônus
   - [x] Argumentos, Diferenciais, Provas Sociais, Bônus each use `ArgumentList`
   - [x] Garantia is a single `AIAssistedTextarea` (context `"guarantee"`), not a list
   - [x] Persist via the endpoints from Task 1
 - [x] Task 5: Tests (AC: #2, #4)
   - [x] Unit: improve-text returns a suggestion for the `sales_argument` context (mock the `AIProvider` port; assert model `claude-haiku-4-5-20251001` is requested)
   - [x] Unit: `update-product-arguments` replaces the array correctly and preserves order; rejects non-string / empty items
-  - [x] Component: `ArgumentList` accept flow applies the AI suggestion via `onChange`; reorder produces the expected ordered array; empty state renders the exact copy
+  - [ ] Component: `ArgumentList` accept flow applies the AI suggestion via `onChange`; reorder produces the expected ordered array; empty state renders the exact copy — **NOT DONE** (code review 2026-06-10): no automated test exists and `apps/dashboard` has NO component-test infrastructure (no `vitest.config`, no Testing Library setup). Behaviour was verified by reading the component + call sites; AC#4 reorder logic + AC#5 exact empty-state copy confirmed on disk. Tracked as a follow-up to stand up dashboard component-test infra.
 
 ## Dev Notes
 
 - Files to create: `packages/knowledge/src/use-cases/update-product-arguments.ts` (in `@leedi/knowledge`, NOT in `apps/api`), `apps/dashboard/components/knowledge/ArgumentList.tsx`.
-- Files to modify: `apps/api/src/routes/knowledge/products.ts` (add jsonb replace endpoints — thin routes calling `@leedi/knowledge`), `apps/api/src/routes/ai.ts` (add knowledge `context` values + prompts), `apps/dashboard/app/(dashboard)/conhecimento/produtos/[id]/page.tsx` (add material sections), `packages/knowledge/src/use-cases/get-active-offers.ts` (confirm it returns all material fields — it already should per Story 6.1).
+- Files to modify: `apps/api/src/routes/knowledge/products.ts` (add jsonb replace endpoints — thin routes calling `@leedi/knowledge`), `apps/api/src/routes/ai.ts` (add knowledge `context` values + prompts), `apps/dashboard/app/(shell)/conhecimento/produtos/[id]/page.tsx` (add material sections), `packages/knowledge/src/use-cases/get-active-offers.ts` (confirm it returns all material fields — it already should per Story 6.1).
 - npm dependencies: a drag-and-drop lib for reorder (prefer `@dnd-kit/core` + `@dnd-kit/sortable`, accessible and React 18 friendly) added to `apps/dashboard`. Reuse `@leedi/ui` `AIAssistedTextarea`, `Button`, `Tabs`. No axios.
 - The improve-text endpoint already exists (Story 3.3) — this story only EXTENDS its accepted `context` values and per-context prompts. Reusing the `AIProvider` port keeps the Anthropic SDK isolated to `claude-provider.ts`.
 - `argumentos`/`diferenciais`/`provasSociais`/`bonus` are jsonb arrays of strings. The replace endpoints overwrite the whole array — this is the simplest correct model for reorder and avoids index-based race conditions.
@@ -107,3 +107,4 @@ _see git diff_
 ### Change Log
 
 - 2026-06-01: Implemented.
+- 2026-06-10: Code review (Opus). Fixed HIGH build break: `product-detail-client.tsx` imported `ArgumentList` via the `@/` alias, which is NOT configured anywhere in the repo (every other dashboard import is relative) — the product-detail material sections (AC#1–#5) failed to typecheck/build. Switched to a relative import. Fixed `ArgumentList` reorder: `moved` was `string | undefined` (noUncheckedIndexedAccess) — added a guard. AC verification: argumentos empty-state copy is exact per AC#5; AI improve goes through `/api/ai/improve-text` with the correct per-context value; improve-text Haiku-model test passes (4/4). NOTE: diferenciais/provas/bônus tabs reuse a copy-pasted empty-state string ("...Adicione argumentos...") — cosmetic only, AC#5 pins only the argumentos copy. Story 6.2 → done. See epic-6-code-review-report.md.

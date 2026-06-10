@@ -42,6 +42,7 @@ describe('connectWhatsappNumber', () => {
       validateConnection: vi.fn().mockRejectedValue(new Error('Meta API error: 400')),
       sendText: vi.fn(),
       sendTemplate: vi.fn(),
+      submitTemplate: vi.fn(),
     };
 
     await expect(
@@ -83,6 +84,7 @@ describe('connectWhatsappNumber', () => {
       }),
       sendText: vi.fn(),
       sendTemplate: vi.fn(),
+      submitTemplate: vi.fn(),
     };
 
     await connectWhatsappNumber(
@@ -96,6 +98,10 @@ describe('connectWhatsappNumber', () => {
     expect(stored['accessTokenEncrypted']).toBeTruthy();
     expect(stored['accessTokenIv']).toBeTruthy();
     expect(JSON.stringify(stored)).not.toContain(plainToken);
+    // Meta's raw GREEN / TIER_1K must be mapped to the DB domain enums before
+    // persisting — writing the raw strings throws `invalid input value for enum`.
+    expect(stored['qualityRating']).toBe('verde');
+    expect(stored['messagingTier']).toBe('1k');
   });
 
   it('returns token-free response on success', async () => {
@@ -122,6 +128,7 @@ describe('connectWhatsappNumber', () => {
       }),
       sendText: vi.fn(),
       sendTemplate: vi.fn(),
+      submitTemplate: vi.fn(),
     };
 
     const result = await connectWhatsappNumber(

@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 5.3: CSV Lead Import
 
-Status: review
+Status: done
 
 ## Story
 
@@ -104,3 +104,11 @@ _none_
 ### Change Log
 
 - 2026-06-01: Story 5-3 implemented — CSV import utility, use case, API endpoint, dashboard UI
+
+### Review Findings
+
+_Code review 2026-06-10 (Opus 4.8, `bmad-code-review`). Full report: `epic-5-code-review-report.md`._
+
+- [x] [Review][Defer] Phone normalization over-accepts non-mobile numbers [apps/api/src/utils/parse-leads-csv.ts] — deferred, acceptable V1 heuristic. `normalizeToE164` only prefixes `+55` for 11-digit non-`55` strings; a 10-digit landline passes `^\+\d{10,15}$` as "valid" but is missing a country code. A stricter `libphonenumber-js` pass can be added later.
+
+✅ Verified: two-level dedup (in-file + DB `onConflictDoNothing`), 5MB guard, partial-success errors, LGPD count-only logging. → **done**

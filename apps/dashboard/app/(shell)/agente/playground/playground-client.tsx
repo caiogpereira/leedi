@@ -118,6 +118,24 @@ export function PlaygroundClient({ tenantId }: Props) {
       {/* Controls */}
       <div className="flex items-center gap-4 mb-4 flex-wrap">
         <div className="flex items-center gap-2">
+          <label htmlFor="campaign-select" className="text-sm font-medium whitespace-nowrap">
+            Campanha:
+          </label>
+          {/* AC#1(a): campaign selector. Campaign-aware product switching lands in
+              Story 10.3 — until then the only option is "Sem campanha ativa", so the
+              control is rendered but disabled. */}
+          <select
+            id="campaign-select"
+            className="text-sm border rounded-md px-2 py-1 bg-background text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
+            value=""
+            disabled
+            aria-label="Campanha (disponível na Story 10.3)"
+          >
+            <option value="">Sem campanha ativa</option>
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
           <label htmlFor="scenario-select" className="text-sm font-medium whitespace-nowrap">
             Cenário:
           </label>

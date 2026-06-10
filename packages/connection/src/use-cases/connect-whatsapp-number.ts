@@ -1,5 +1,6 @@
 import { withTenant, schema } from '@leedi/db';
 import { encryptToken } from '../adapters/crypto.js';
+import { mapQualityRating, mapMessagingTier } from '../adapters/meta-mappers.js';
 import type { WhatsAppProvider } from '../ports/whatsapp-provider.js';
 
 export interface ConnectWhatsappInput {
@@ -61,6 +62,12 @@ export async function connectWhatsappNumber(
     throw new InvalidCredentialsError();
   }
 
+  // Validation succeeded — map Meta's raw values to the DB domain enums (GREEN →
+  // verde, TIER_1K → 1k, UNKNOWN/unexpected → null) before persisting. Writing
+  // the raw Meta strings would throw `invalid input value for enum`.
+  const qualityRating = mapQualityRating(validated.qualityRating);
+  const messagingTier = mapMessagingTier(validated.messagingTier);
+
   // Validation succeeded — now persist the encrypted credentials
   await withTenant(tenantId, async (tx) => {
     await tx
@@ -73,8 +80,8 @@ export async function connectWhatsappNumber(
         accessTokenIv: iv,
         status: 'conectado',
         displayName: validated.displayName,
-        qualityRating: validated.qualityRating as 'verde' | 'amarelo' | 'vermelho' | null,
-        messagingTier: validated.messagingTier as '1k' | '10k' | '100k' | 'unlimited' | null,
+        qualityRating,
+        messagingTier,
         lastHealthCheckAt: new Date(),
       })
       .onConflictDoUpdate({

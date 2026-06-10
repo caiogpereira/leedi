@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 7.7: Multimodal Input Processing (Audio + Image)
 
-Status: review
+Status: done
 
 ## Story
 

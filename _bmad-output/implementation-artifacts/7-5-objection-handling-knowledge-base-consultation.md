@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 7.5: Objection Handling & Knowledge Base Consultation
 
-Status: review
+Status: done
 
 ## Story
 

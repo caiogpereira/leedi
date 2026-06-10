@@ -48,7 +48,7 @@ export interface ConsultarBaseConhecimentoResult {
  */
 export async function consultarBaseConhecimento(
   input: ConsultarBaseConhecimentoInput,
-  ctx: Pick<ToolContext, 'tenantId' | 'leadId'>
+  ctx: Pick<ToolContext, 'tenantId' | 'leadId' | 'sandboxMode'>
 ): Promise<ConsultarBaseConhecimentoResult> {
   const { tipo, categoria } = input;
 
@@ -81,7 +81,11 @@ export async function consultarBaseConhecimento(
     const entries = rows as KnowledgeEntry[];
 
     // Task 4: record the objection-handling event — objections only, non-empty only.
-    if (tipo === 'objecao' && entries.length > 0) {
+    // Sandbox mode (Story 8.1): the playground lead is synthetic (no real `leads`
+    // row), so writing a lead_journey_events row would violate the FK on lead_id
+    // AND breach the sandbox "no real side-effects" guarantee. Return the entries
+    // (tool transparency still works) but skip the write.
+    if (tipo === 'objecao' && entries.length > 0 && !ctx.sandboxMode) {
       const top = entries[0]!;
       await tx.insert(schema.leadJourneyEvents).values({
         tenantId: ctx.tenantId,

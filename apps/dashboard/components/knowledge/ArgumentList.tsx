@@ -92,6 +92,11 @@ export function ArgumentList({
     }
     const next = [...items];
     const [moved] = next.splice(dragIndex, 1);
+    if (moved === undefined) {
+      setDragIndex(null);
+      setOverIndex(null);
+      return;
+    }
     next.splice(dropIndex, 0, moved);
     onChange(next);
     setDragIndex(null);

@@ -652,7 +652,7 @@ Cada método tem `system_prompt_template` bem construído (por Claude) + fases. 
 - **Latência de webhook:** < 100ms para acuso de recebimento de evento (Meta/Hotmart)
 - **Latência de UI:** < 200ms (P95) para renderização de interações (página de lead, campanhas, templates)
 - **Throughput de conversas simultâneas:** Mínimo 100 conversas simultâneas por tenant (escala a 1000+ em Opus Enterprise)
-- **Throughput de throughput de disparos:** 1.000 mensagens/minuto por tenant (respeita tier Meta)
+- **Throughput de disparos:** 1.000 mensagens/minuto por tenant (respeita tier Meta)
 
 ### Disponibilidade
 

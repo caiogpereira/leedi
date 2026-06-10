@@ -13,6 +13,7 @@ const orderByCalls: unknown[] = [];
 let leadRows: unknown[] = [];
 let tagRows: unknown[] = [];
 let eventRows: unknown[] = [];
+let windowCountRows: unknown[] = [];
 
 vi.mock('@leedi/db', () => {
   const leadsTable = {
@@ -48,6 +49,10 @@ vi.mock('@leedi/db', () => {
     detalhes: 'lead_journey_events.detalhes',
     createdAt: 'lead_journey_events.created_at',
   };
+  const conversationWindowsTable = {
+    id: 'conversation_windows.id',
+    leadId: 'conversation_windows.lead_id',
+  };
   return {
     withTenant: vi.fn(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -71,6 +76,7 @@ vi.mock('@leedi/db', () => {
               if (table === leadsTable) rows = leadRows;
               else if (table === leadTagsTable) rows = tagRows;
               else if (table === leadJourneyEventsTable) rows = eventRows;
+              else if (table === conversationWindowsTable) rows = windowCountRows;
               return Promise.resolve(rows).then(resolve);
             };
             return chain;
@@ -81,6 +87,7 @@ vi.mock('@leedi/db', () => {
       leads: leadsTable,
       leadTags: leadTagsTable,
       leadJourneyEvents: leadJourneyEventsTable,
+      conversationWindows: conversationWindowsTable,
     },
     eq: vi.fn((col: unknown, val: unknown) => ({ op: 'eq', col, val })),
     and: vi.fn((...args: unknown[]) => ({ op: 'and', args })),
@@ -100,6 +107,7 @@ describe('getLeadDetail', () => {
     leadRows = [];
     tagRows = [];
     eventRows = [];
+    windowCountRows = [];
     vi.clearAllMocks();
   });
 
@@ -185,30 +193,41 @@ describe('getLeadDetail', () => {
     expect((eventOrder as any).strings.join('')).toContain('DESC');
   });
 
-  it('always sets conversationCount to 0', async () => {
+  const baseLead = {
+    id: VALID_UUID,
+    tenantId: 'tenant-1',
+    telefone: '+5511999999999',
+    nome: null,
+    email: null,
+    origem: null,
+    temperatura: 'frio',
+    status: 'ativo',
+    comprou: false,
+    produtoCompradoId: null,
+    dataCompra: null,
+    primeiraInteracao: null,
+    ultimaInteracao: null,
+    qualificacao: {},
+    leadRecorrente: false,
+    createdAt: new Date('2026-05-01T10:00:00Z'),
+    updatedAt: new Date('2026-05-01T10:00:00Z'),
+  };
+
+  it('reports the real conversation_windows count for the lead', async () => {
     const { getLeadDetail } = await import('../get-lead-detail.js');
 
-    leadRows = [
-      {
-        id: VALID_UUID,
-        tenantId: 'tenant-1',
-        telefone: '+5511999999999',
-        nome: null,
-        email: null,
-        origem: null,
-        temperatura: 'frio',
-        status: 'ativo',
-        comprou: false,
-        produtoCompradoId: null,
-        dataCompra: null,
-        primeiraInteracao: null,
-        ultimaInteracao: null,
-        qualificacao: {},
-        leadRecorrente: false,
-        createdAt: new Date('2026-05-01T10:00:00Z'),
-        updatedAt: new Date('2026-05-01T10:00:00Z'),
-      },
-    ];
+    leadRows = [baseLead];
+    windowCountRows = [{ count: 3 }];
+
+    const result = await getLeadDetail({ tenantId: 'tenant-1', leadId: VALID_UUID });
+    expect(result!.conversationCount).toBe(3);
+  });
+
+  it('defaults conversationCount to 0 when the lead has no windows', async () => {
+    const { getLeadDetail } = await import('../get-lead-detail.js');
+
+    leadRows = [baseLead];
+    windowCountRows = []; // count query returned no row
 
     const result = await getLeadDetail({ tenantId: 'tenant-1', leadId: VALID_UUID });
     expect(result!.conversationCount).toBe(0);

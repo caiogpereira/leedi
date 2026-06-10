@@ -23,7 +23,7 @@ vi.mock('@leedi/db', () => {
   const insert = vi.fn().mockReturnValue({ values });
   const tx = { insert };
   return {
-    withTenant: vi.fn((_id: string, fn: (tx: typeof tx) => unknown) => fn(tx)),
+    withTenant: vi.fn((_id: string, fn: (t: typeof tx) => unknown) => fn(tx)),
     schema: {
       products: {
         id: 'products.id',

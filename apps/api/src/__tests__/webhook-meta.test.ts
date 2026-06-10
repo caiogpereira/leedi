@@ -64,6 +64,19 @@ vi.mock('@leedi/lead', () => ({
   findOrCreateLeadByPhone: vi.fn().mockResolvedValue({ id: 'lead-1', telefone: '+5511', isNew: true }),
 }));
 
+// Usage metering (Story 16.1/16.3) and notifications (Epic 18) were wired into
+// processMessage AFTER this suite was first written; mock them so importing
+// webhook-meta does not pull in their real module-load side effects (e.g. webpush
+// setVapidDetails) and so the inbound flow does not hit real usage/notification logic.
+vi.mock('@leedi/usage', () => ({
+  checkUsageBlock: vi.fn().mockResolvedValue({ blocked: false }),
+  incrementUsage: vi.fn().mockResolvedValue({ alertsDue: [] }),
+}));
+
+vi.mock('@leedi/notification', () => ({
+  sendNotificationToTenantRole: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@leedi/auth', () => ({ getSession: vi.fn() }));
 vi.mock('@leedi/connection', () => ({
   connectWhatsappNumber: vi.fn(),

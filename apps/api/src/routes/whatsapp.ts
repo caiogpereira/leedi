@@ -85,7 +85,9 @@ export function createWhatsappRouter(
     }
   });
 
-  // POST /api/tenants/:tenantId/whatsapp/health-check — on-demand health refresh (owner | operator)
+  // POST /api/tenants/:tenantId/whatsapp/health-check — on-demand health refresh.
+  // Any authenticated member of the tenant may trigger a refresh (read-only effect
+  // on Meta; only updates the tenant's own connection row under RLS).
   router.post('/health-check', requireTenantSession(), async (c) => {
     const tenantId = c.get('resolvedTenantId');
 

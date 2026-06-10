@@ -4,7 +4,7 @@
 baseline_commit: 992b8421baa46b95ff2bdc69d31ad25932927f0c
 ---
 
-Status: review
+Status: done
 
 ## Story
 
@@ -126,3 +126,14 @@ claude-sonnet-4-6
 ## Change Log
 
 - 2026-05-31: Story 4.2 implemented — connect-whatsapp-number use case (validate-before-persist), Hono API route with session auth + owner check, dashboard settings page + server action form with green badge/inline error, 20 tests (unit + integration + E2E spec).
+
+### Review Findings (2026-06-09 — bmad-code-review)
+
+Full report: `epic-4-code-review-report.md`. Validate-before-persist invariant, owner check
+(route + server action), and form a11y all verified. Defects found and **fixed this session**:
+
+- [x] [Review][Patch] **HIGH** — Meta `quality_rating`/`messaging_limit_tier` (GREEN/TIER_1K) written
+  raw into pt-BR pgEnums → connect **throws `22P02` in production** (proven on live DB). Fixed via
+  `meta-mappers.ts` (null default) applied before the DB write. [`packages/connection/src/use-cases/connect-whatsapp-number.ts`]
+- [x] [Review][Patch] LOW — test `fakeProvider` literals missing `submitTemplate` → `tsc --noEmit`
+  failed. Added `submitTemplate: vi.fn()`. [`packages/connection/src/__tests__/connect-whatsapp-number.test.ts`]

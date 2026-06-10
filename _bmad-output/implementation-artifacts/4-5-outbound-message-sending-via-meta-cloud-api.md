@@ -4,7 +4,7 @@
 baseline_commit: 992b8421baa46b95ff2bdc69d31ad25932927f0c
 ---
 
-Status: review
+Status: done
 
 ## Story
 
@@ -112,3 +112,13 @@ claude-sonnet-4-6
 ## Change Log
 
 - 2026-05-31: Story 4.5 implemented — sendText/sendTemplate with retry backoff, messages schema/migration, record-outbound-message use case. 7 unit tests.
+
+### Review Findings (2026-06-09 — bmad-code-review)
+
+Full report: `epic-4-code-review-report.md`. Verdict: **✅ clean**. `sendText`/`sendTemplate`
+exponential backoff (retries 429/5xx only, honors `Retry-After`, fails fast on other 4xx, throws on
+missing message id), token decrypted in-memory only at header build, `recordOutboundMessage` flips
+`enviado`→`falhou` on failure. No defects in this story's surface.
+
+> Observation (no fix): `recordInboundMessage` appears partially superseded by `saveMessage` (the
+> webhook uses `saveMessage`); `recordOutboundMessage` is in active use. Flagged for a dead-code sweep.

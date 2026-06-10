@@ -14,6 +14,9 @@ coverage/
 .vercel/
 subagents-claude-code/
 
+# Claude Code per-project memory (personal — never commit to public repo)
+.claude/projects/
+
 # temp review artifacts
 _bmad-output/implementation-artifacts/*.diff
 

@@ -23,6 +23,7 @@
     "@leedi/config": "workspace:*",
     "@leedi/connection": "workspace:*",
     "@leedi/db": "workspace:*",
-    "@leedi/knowledge": "workspace:*"
+    "@leedi/knowledge": "workspace:*",
+    "@leedi/notification": "workspace:*"
   }
 }

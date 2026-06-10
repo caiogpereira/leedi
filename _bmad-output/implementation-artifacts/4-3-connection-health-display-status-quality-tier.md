@@ -4,7 +4,7 @@
 baseline_commit: 992b8421baa46b95ff2bdc69d31ad25932927f0c
 ---
 
-Status: review
+Status: done
 
 ## Story
 
@@ -115,3 +115,19 @@ claude-sonnet-4-6
 ## Change Log
 
 - 2026-05-31: Story 4.3 implemented (Tasks 1, 3, 4, 5 partial). Task 2 (BullMQ cron) blocked pending scheduler architecture decision. 14 new tests in connection, 18 in dashboard.
+
+### Review Findings (2026-06-09 — bmad-code-review)
+
+Full report: `epic-4-code-review-report.md`. `health-display.ts` defensively handles both Meta-raw
+and domain values; HealthPanel a11y verified. Defects found and **fixed this session**:
+
+- [x] [Review][Patch] **HIGH** — `checkConnectionHealth` wrote Meta's raw `GREEN`/`TIER_10K` into the
+  pt-BR pgEnums → scheduled health-check **throws `22P02`** on every run (proven on live DB). Fixed via
+  `mapQualityRating`/`mapMessagingTier` before the `.set`. [`packages/connection/src/use-cases/check-connection-health.ts`]
+- [x] [Review][Patch] LOW — `/health-check` route comment claimed `(owner | operator)` but enforces no
+  role (any tenant member). Corrected the comment; behavior unchanged. [`apps/api/src/routes/whatsapp.ts`]
+- [x] [Review][Patch] LOW — test `fakeProvider` literals missing `submitTemplate` → `tsc --noEmit`
+  failed. Added `submitTemplate: vi.fn()`. [`packages/connection/src/__tests__/check-connection-health.test.ts`]
+
+> Note: Task 2 (scheduled health-check cron) was implemented via QStash in a later epic
+> (`/api/internal/whatsapp/health-check-all`), superseding the BullMQ block noted above.

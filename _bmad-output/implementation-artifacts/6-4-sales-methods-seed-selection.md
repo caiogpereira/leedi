@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 6.4: Sales Methods Seed & Selection
 
-Status: review
+Status: done
 
 ## Story
 
@@ -50,7 +50,7 @@ For now, the save action persists the selected `sales_method_id` to a `tenant_sa
   - [x] Create use case `list-sales-methods.ts` (location: `apps/api/src/use-cases/knowledge/` or a `sales-method/` subfolder) returning all global methods
   - [x] Register the route in `apps/api/src/app.ts`
 - [x] Task 4: Sales method selector UI (AC: #2, #3)
-  - [x] Create `apps/dashboard/app/(dashboard)/agente/metodo/page.tsx`
+  - [x] Create `apps/dashboard/app/(shell)/agente/metodo/page.tsx`
   - [x] Radio card group showing the 4 methods with `titulo`, `descricao`, and phase pills (rendered from each method's `phases`)
   - [x] On save: persist the selected `sales_method_id` to the `tenants.config` preference key (see Story 7.1 Dependency) via the existing tenant-config endpoint; mark the wiring to `agent_configs` as pending in code comments
   - [x] Clearly indicate in the UI that this choice affects agent behavior
@@ -60,7 +60,7 @@ For now, the save action persists the selected `sales_method_id` to a `tenant_sa
 
 ## Dev Notes
 
-- Files to create: `packages/db/src/schema/sales-method.ts`, `packages/db/migrations/0007_sales_methods.sql`, `packages/db/src/seed/sales-methods.ts`, sales-methods Hono route + `list-sales-methods.ts` use case in `apps/api`, `apps/dashboard/app/(dashboard)/agente/metodo/page.tsx`.
+- Files to create: `packages/db/src/schema/sales-method.ts`, `packages/db/migrations/0008_sales_methods.sql`, `packages/db/src/seed/sales-methods.ts`, sales-methods Hono route + `list-sales-methods.ts` use case in `apps/api`, `apps/dashboard/app/(shell)/agente/metodo/page.tsx`.
 - Files to modify: `packages/db/src/schema/index.ts` (re-export sales-method), `packages/db/package.json` (add `seed:sales-methods` script), `apps/api/src/app.ts` (register route).
 - npm dependencies: none new — reuse `@leedi/db`, `zod`, `@leedi/ui` (`RadioGroup`/card, `Badge` for phase pills, `Button`). Seed runner uses `tsx` (already in the toolchain).
 - `sales_methods` deliberately has NO `updated_at` and NO RLS (Architecture §6.7 + task note). Both are intentional — do not add them.
@@ -115,3 +115,4 @@ _see git diff_
 ### Change Log
 
 - 2026-06-01: Implemented.
+- 2026-06-10: Code review (Opus). No code defects. Verified: migration `0008_sales_methods.sql` (no RLS, no `updated_at` — correct per Architecture §6.7), `tenants.config` jsonb added in the same migration, seed is idempotent (skips on existing `nome` + `is_global`), 4 global methods with non-empty `system_prompt_template` and non-empty `phases` (Storytelling = Identificação→Conflito→Transformação→Convite per PRD, NOT Contexto→Conflito→Resolução), `GET /api/sales-methods` returns globals. Seed test 7/7 pass. Doc fix: corrected the stray `0007_sales_methods.sql` in Dev Notes (was contradicting the rest → `0008`); UI path corrected to `app/(shell)/agente/metodo`. NOTE: `GET /api/sales-methods` is unauthenticated — acceptable (global, non-sensitive template data). KNOWN-PENDING (by design): selection persists to `tenants.config`; Story 7.1 migrates it to `agent_configs.sales_method_id`. Story 6.4 → done. See epic-6-code-review-report.md.
