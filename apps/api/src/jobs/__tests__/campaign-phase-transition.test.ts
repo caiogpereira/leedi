@@ -83,7 +83,7 @@ describe('schedulePhaseTransitionJob', () => {
     });
     expect(mockPublishJSON).toHaveBeenCalledOnce();
     expect(jobId).toBe('job-123');
-    const call = mockPublishJSON.mock.calls[0][0] as { url: string; body: object; delay: number };
+    const call = mockPublishJSON.mock.calls[0]![0] as { url: string; body: object; delay: number };
     expect(call.url).toContain('/api/internal/campaign-phase-transition');
     expect(call.delay).toBeGreaterThan(0);
   });

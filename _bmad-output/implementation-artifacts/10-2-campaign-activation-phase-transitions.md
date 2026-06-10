@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 10.2: Campaign Activation & Phase Transitions
 
-Status: review
+Status: done
 
 ## Story
 
@@ -120,3 +120,29 @@ apps/api/src/jobs/__tests__/campaign-phase-transition.test.ts
 - `lead_journey_events` for phase transitions deferred: schema requires lead_id NOT NULL (see Task 2 note).
 - `syncPhaseTransitionJobs` (PATCH→QStash wiring) tested directly in scheduler test suite.
 - RBAC: follows project-wide convention of `requireTenantSession()` without role enforcement.
+
+### Senior Developer Review (2026-06-10)
+
+Two real defects found and **fixed**:
+
+- **HIGH — AC#7 violation: terminal `encerrada` campaigns could be reactivated.** `activateCampaign`
+  set `status='ativa'` without checking the target's current status, so an `encerrada` campaign
+  (terminal per AC#7) could be brought back to life. The Task 7 item *"end-campaign is a terminal
+  state — subsequent activate throws"* was claimed done but **no such test existed** (the activate
+  test only covered conflict + happy path). Fix: `activateCampaign` now fetches current status and
+  throws the new `CampaignEndedCannotReactivateError` (409) for `encerrada`; router maps it; added
+  the missing unit test (`refuses to reactivate an encerrada campaign`).
+- **MEDIUM — wrong HTTP status on invalid transitions.** The `/transition` route mapped errors via
+  `err.message.includes('transição')` (lowercase), but `InvalidPhaseTransitionError`'s message is
+  `"Transição de fase inválida…"` (capital T) — case-sensitive `includes` never matched, so invalid
+  transitions surfaced as **500 instead of 400**. (`PerpetualCampaignTransitionError` matched only by
+  luck — its message contains lowercase "transição".) Fix: router now maps `InvalidPhaseTransitionError`
+  + `PerpetualCampaignTransitionError` → 400 and `CampaignAlreadyEndedError` → 409 via `instanceof`.
+  Added `routes/campaigns/__tests__/campaigns-router.test.ts` driving the real use case → real error
+  class → router catch via `app.request(...)` (asserts 400 / 409) — the HTTP-mapping layer the
+  original unit tests never touched. **api campaign suite 30/30** (use-cases + job + routes).
+- **LOW — pre-existing tsc error** in `campaign-phase-transition.test.ts` (`mock.calls[0]` possibly
+  undefined under `noUncheckedIndexedAccess`) fixed; Epic 10 files now type-clean.
+- AC#4 ✅ internal `/api/internal/campaign-phase-transition` endpoint is QStash-signature-verified
+  (`verifyQStash` → 401). `syncPhaseTransitionJobs` reschedule (cancel old `scheduledJobId` → enqueue)
+  verified. Task 2 `lead_journey_events` deferral remains legit → tracked in pre-launch checklist §C.

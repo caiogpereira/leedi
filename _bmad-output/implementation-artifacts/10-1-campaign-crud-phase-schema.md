@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 10.1: Campaign CRUD & Phase Schema
 
-Status: review
+Status: done
 
 ## Story
 
@@ -160,3 +160,11 @@ apps/dashboard/app/api/tenants/[tenantId]/campaigns/[id]/end/route.ts
 - UI not browser-tested (requires full stack running). TypeScript clean, component logic verified.
 - Partial unique index behavior verified via Supabase MCP (see Task 5 note).
 - RBAC: follows project-wide convention of `requireTenantSession()` without role enforcement.
+
+### Senior Developer Review (2026-06-10)
+
+- Reviewed file-based at HEAD (baseline `992b842` predates the monolithic epics-7–20 checkpoint, so a clean isolated diff does not exist). Schema, migration `0010`, CRUD use cases, and router audited against ACs.
+- AC#1 ✅ tables/enums/RLS+FORCE/partial-unique-index all present in `0010_campaign_schema.sql`. AC#2 ✅ `createCampaign` defaults `fase: 'aquecimento'`, `status: 'rascunho'`. AC#6 ✅ `assertNoActiveCampaign` + DB partial unique index `campaigns_tenant_active_unique`.
+- `_journal.json`: `0010` registered (idx 10). Note: `when` epoch for 0010+ is smaller than 0006–0009 (cosmetic — drizzle applies by idx order, not `when`). Not a defect.
+- Behavioral cross-tenant RLS test remains deferred to a real non-BYPASSRLS env → tracked as PL-13.
+- Verified at HEAD: api campaign tests green; `campaign.ts` type-clean.

@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 10.3: Active Campaign as Agent Context
 
-Status: review
+Status: done
 
 ## Story
 
@@ -95,3 +95,19 @@ apps/api/src/routes/playground/index.ts
 ### Change Log
 
 - Story 10.3 implemented: campaign-aware agent tool, playground campaignId override (Date: 2026-06-02)
+
+### Senior Developer Review (2026-06-10)
+
+- No code changes required — implementation holds up against all 8 ACs.
+- **Breaking-change audit (the main risk):** return type changed `ActiveOffer[]` → `OfertasAtivasResult`
+  and the tool dropped `getActiveOffers` from `@leedi/knowledge`. Grepped the whole repo: no surviving
+  caller treats the result as an array — `registry.ts` returns the tool result straight to the LLM, so
+  the shape change is serialized safely. `@leedi/knowledge` still exports `getActiveOffers` for its own
+  use; no dangling consumer. ✅
+- **Downsell resolution is single-pathed (no drift):** `transitionCampaignPhase` only mutates `fase`;
+  the effective product is resolved exclusively in `consultarOfertasAtivas` from live state via
+  `config.downsell.produto_id` (matches 10.1 AC#5). No second drifting code path. ✅ (AC#5)
+- AC#3 empty-state `{ produtos: [], campanha: null }` and AC#7/#8 exact `instrucao_comercial` strings
+  verified against the ACs. Playground `campaignId` is `z.string().uuid()`-validated → avoids the
+  non-UUID-500 class of bug seen in Epic 8.
+- Verified at HEAD: full `@leedi/agent` suite 120/120 green, agent typecheck clean.

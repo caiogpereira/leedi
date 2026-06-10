@@ -147,10 +147,10 @@ development_status:
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 10: Campaign Management
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-10: in-progress
-  10-1-campaign-crud-phase-schema: review
-  10-2-campaign-activation-phase-transitions: review
-  10-3-active-campaign-as-agent-context: review
+  epic-10: done
+  10-1-campaign-crud-phase-schema: done
+  10-2-campaign-activation-phase-transitions: done
+  10-3-active-campaign-as-agent-context: done
   epic-10-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────

@@ -13,6 +13,12 @@ import {
   UpdateCampaignSchema,
 } from '../../use-cases/campaigns/update-campaign.js';
 import { ActiveCampaignConflictError } from '../../use-cases/campaigns/assert-no-active-campaign.js';
+import { CampaignEndedCannotReactivateError } from '../../use-cases/campaigns/activate-campaign.js';
+import {
+  InvalidPhaseTransitionError,
+  PerpetualCampaignTransitionError,
+} from '../../use-cases/campaigns/transition-campaign-phase.js';
+import { CampaignAlreadyEndedError } from '../../use-cases/campaigns/end-campaign.js';
 import { syncPhaseTransitionJobs } from '../../jobs/campaign-phase-transition.js';
 import { withTenant, schema, eq, and } from '@leedi/db';
 import type { CampaignConfig } from '../../use-cases/campaigns/update-campaign.js';
@@ -132,7 +138,10 @@ export function createCampaignsRouter() {
       const campaign = await activateCampaign(tenantId, campaignId);
       return c.json(campaign);
     } catch (err) {
-      if (err instanceof ActiveCampaignConflictError) {
+      if (
+        err instanceof ActiveCampaignConflictError ||
+        err instanceof CampaignEndedCannotReactivateError
+      ) {
         return c.json({ error: err.message }, 409);
       }
       throw err;
@@ -155,7 +164,10 @@ export function createCampaignsRouter() {
       const campaign = await transitionCampaignPhase(tenantId, campaignId, targetPhase);
       return c.json(campaign);
     } catch (err) {
-      if (err instanceof Error && err.message.includes('transição')) {
+      if (
+        err instanceof InvalidPhaseTransitionError ||
+        err instanceof PerpetualCampaignTransitionError
+      ) {
         return c.json({ error: err.message }, 400);
       }
       throw err;
@@ -184,7 +196,7 @@ export function createCampaignsRouter() {
       if (!campaign) return c.json({ error: 'Campanha não encontrada.' }, 404);
       return c.json(campaign);
     } catch (err) {
-      if (err instanceof Error && err.message.includes('encerrada')) {
+      if (err instanceof CampaignAlreadyEndedError) {
         return c.json({ error: err.message }, 409);
       }
       throw err;

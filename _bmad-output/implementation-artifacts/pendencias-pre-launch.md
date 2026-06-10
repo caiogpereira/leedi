@@ -219,7 +219,12 @@
   8.1 & 8.2 `done`. Two HIGH bugs fixed (uuid `22P02` on every message; sandbox `lead_journey_events`
   write) + AC#1a campaign selector added. Live end-to-end run deferred → PL-16.
 - **Epic 9 — Doc Corrections:** documentation-only epic; no runtime pre-launch items expected.
-- **Epic 10 — Campaigns:** PL-6 (typecheck), PL-13 (10.1 RLS test); P2: 10.2 journey events. *Not yet reviewed.*
+- **Epic 10 — Campaigns:** PL-13 (10.1 behavioral RLS test); P2: 10.2 journey events (§C). Reviewed
+  2026-06-10; stories 10.1–10.3 + epic-10 `done`. Fixed: HIGH — `activateCampaign` reactivated
+  terminal `encerrada` campaigns (10.2 AC#7 violation; claimed test was absent → added); MEDIUM —
+  transition endpoint returned 500 instead of 400 (case-sensitive `.includes('transição')` vs
+  `"Transição…"` message → switched to `instanceof` mapping); LOW — pre-existing tsc error in the
+  10.2 job test. Epic 10 files now type-clean; repo-wide PL-6 still RED from Epic 17 debt.
 - **Epic 11 — Hotmart Gateway:** lint debt only so far (→ PL-7). *Not yet reviewed.* **⚠ Money path
   — prioritize its formal review** (webhook → purchase → lead status; idempotency, signature verification).
 - **Epic 12 — Meta Templates:** PL-6 (typecheck), PL-7 (⚠ `no-use-before-define`). *Not yet reviewed.*
