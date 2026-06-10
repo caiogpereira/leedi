@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-29
-last_updated: 2026-06-08  # epic 20 complete — 20-1/20-2/20-3 all in review
+last_updated: 2026-06-09  # epic 3 → done — E2E/a11y harness Phase 1+2 green locally; 3.4 done with documented caveat (CI axe gate deferred to pre-launch). See pendencias-pre-launch.md for all deferred ACs across epics.
 project: leedi
 project_key: NOKEY
 tracking_system: file-system
@@ -59,25 +59,25 @@ development_status:
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 2: Multi-Tenant Identity & Access
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-2: in-progress
-  2-1-user-registration-email-verification: review
-  2-2-user-login-persistent-session: review
-  2-3-password-recovery-via-email: review
-  2-4-tenant-schema-workspace-membership-with-rls: review
-  2-5-role-based-access-control-rbac: review
-  2-6-team-member-invitation-flow: review
-  2-7-multi-tenant-switching: review
-  2-8-super-admin-workspace-tenant-impersonation: review
+  epic-2: done  # all 8 stories done after the 2026-06-09 code review (2.4 RLS + 2.8 impersonation validation batched into the Supabase Pro/staging milestone — deferred-work.md)
+  2-1-user-registration-email-verification: done
+  2-2-user-login-persistent-session: done
+  2-3-password-recovery-via-email: done
+  2-4-tenant-schema-workspace-membership-with-rls: done  # RLS net built+applied (migration 0018); DB-level activation deferred (Supabase shared pooler rejects custom roles) — Caio accepted app-layer-only isolation; see epic-2-code-review-report.md §9
+  2-5-role-based-access-control-rbac: done
+  2-6-team-member-invitation-flow: done  # AC#1 listing implemented 2026-06-08 (listTenantMembers/listPendingInvitations); AC#2 accept→/login correct under email-verification (auto-session = Epic 19)
+  2-7-multi-tenant-switching: done
+  2-8-super-admin-workspace-tenant-impersonation: done  # AC#2 audit-on-mutation implemented (impersonation-aware requireTenantSession + audit, fail-closed); empirical staging exercise batched into the Supabase Pro/staging milestone (deferred-work.md)
   epic-2-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 3: Design System & UI Shell
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-3: in-progress
-  3-1-dashboard-navigation-shell-layout: review
-  3-2-admin-shell-navigation: review
-  3-3-ai-assisted-textarea-component: review
-  3-4-accessibility-foundations-wcag-aa-compliance: review
+  epic-3: done  # E2E/a11y harness Phase 1+2 built & green locally (dashboard auth 13/13, admin 3/3); 2026-06-09
+  3-1-dashboard-navigation-shell-layout: done  # authed E2E delivered & green (theme persist/FOUC/active-route/mobile drawer)
+  3-2-admin-shell-navigation: done  # authed E2E delivered & green (5-item admin sidebar, active route, ADMIN indicator)
+  3-3-ai-assisted-textarea-component: done  # modal stream→accept E2E green (component-behaviour test, both transports mocked — Caio: mock is correct, no real-AI variant)
+  3-4-accessibility-foundations-wcag-aa-compliance: done  # CAVEAT: axe sweep delivered & green LOCALLY (zero serious/critical on /,/leads,/settings/team); the CI-enforced axe gate (nightly job) is NOT yet wired — Caio accepted local-green as sufficient for now and moved the nightly+dedicated-E2E-Supabase to the pre-launch checklist (pendencias-pre-launch.md)
   epic-3-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────

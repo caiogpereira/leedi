@@ -216,6 +216,15 @@ Toda tabela de negócio carrega `tenant_id`. O isolamento é garantido em **duas
 
 O super-admin tem um papel especial que, em modo "impersonate", assume o `tenant_id` do cliente para dar suporte — com tudo logado em auditoria.
 
+> **Tenant ativo (nota de implementação — decisão do code review da Epic 2, 2026-06-08):** o
+> `current_tenant_id` ativo é carregado num cookie httpOnly `leedi_tenant` (e, durante impersonation,
+> em `leedi_impersonating` + `leedi_impersonation_expires`), **não** num campo da sessão Better-Auth.
+> O cookie é **sempre re-validado contra as memberships do usuário** (`listUserTenants`) antes de
+> qualquer acesso a dados; o middleware Edge apenas o encaminha como header `x-leedi-tenant-id` e
+> nunca confia nele isoladamente (não pode — não tem acesso ao banco). A resolução de role por tenant
+> (RBAC) acontece nos Server Components via `apps/dashboard/lib/tenant-context.ts`. Modelo aceito como
+> alternativa a um campo de sessão custom (funcionalmente membership-checked e resistente a spoofing).
+
 ### 5.3 Papéis (RBAC)
 
 Dentro de um tenant:

@@ -1,26 +1,20 @@
-import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
-import { getSession, hasPermission, type TenantRole } from "@leedi/auth";
+import { listTenantMembers, listPendingInvitations } from "@leedi/tenancy";
 import { InviteForm } from "./invite-form";
+import { requireTenantRouteAccess } from "../../../../lib/tenant-context";
 
 export default async function TeamSettingsPage() {
   const t = await getTranslations("team");
-  const session = await getSession(await headers());
 
-  if (!session) {
-    return (
-      <div className="mx-auto max-w-2xl p-8">
-        <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="mt-4 text-muted-foreground">{t("noPermission")}</p>
-      </div>
-    );
-  }
+  // RBAC enforcement (Story 2.5/2.7): /settings/team is owner/admin only. The
+  // membership-backed role is resolved here (the Edge middleware can't), and a
+  // viewer/operator is redirected to /403 before any content renders.
+  const ctx = await requireTenantRouteAccess("/settings/team");
 
-  // TODO(Story 2.7): resolve the caller's per-tenant role and the active tenantId
-  // from the session's active membership. Until that exists, `userRole` is
-  // undefined and the invite form is hidden (fail-closed).
-  const userRole: TenantRole | undefined = undefined;
-  const canManageTeam = userRole ? hasPermission(userRole, "team:manage") : false;
+  const [members, pending] = await Promise.all([
+    listTenantMembers(ctx.tenant.tenantId),
+    listPendingInvitations(ctx.tenant.tenantId),
+  ]);
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
@@ -28,15 +22,57 @@ export default async function TeamSettingsPage() {
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">{t("membersHeading")}</h2>
-        <p className="text-sm text-muted-foreground">{t("emptyMembers")}</p>
+        {members.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t("emptyMembers")}</p>
+        ) : (
+          <ul className="divide-y rounded-md border">
+            {members.map((m) => (
+              <li
+                key={m.userId}
+                className="flex items-center justify-between px-4 py-3 text-sm"
+              >
+                <span>{m.name ? `${m.name} · ${m.email}` : m.email}</span>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
+                  {t(`roles.${m.role}`)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
-      {canManageTeam && (
-        <section>
-          <h2 className="mb-3 text-lg font-semibold">{t("inviteHeading")}</h2>
-          <InviteForm allowOwnerRole={userRole === "owner"} />
-        </section>
-      )}
+      <section>
+        <h2 className="mb-3 text-lg font-semibold">{t("pendingHeading")}</h2>
+        {pending.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t("emptyPending")}</p>
+        ) : (
+          <ul className="divide-y rounded-md border">
+            {pending.map((inv) => (
+              <li
+                key={inv.email}
+                className="flex items-center justify-between px-4 py-3 text-sm"
+              >
+                <span>{inv.email}</span>
+                <span className="flex items-center gap-2">
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
+                    {t(`roles.${inv.role}`)}
+                  </span>
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                    {t("statusPending")}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-lg font-semibold">{t("inviteHeading")}</h2>
+        {/* Only an owner may grant the owner role (also enforced server-side in
+            inviteMember). */}
+        <InviteForm allowOwnerRole={ctx.role === "owner"} />
+      </section>
     </div>
   );
 }

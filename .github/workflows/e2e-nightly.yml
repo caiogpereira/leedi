@@ -1,0 +1,117 @@
+name: E2E (nightly, non-blocking)
+
+# Phase 2 of the Epic 3 E2E harness. UNLIKE ci.yml this job runs the authenticated
+# Playwright suites, which seed and sign in against a REAL Supabase — so it needs
+# real secrets, not the structural placeholders ci.yml uses.
+#
+# Deliberately NEVER triggered by pull_request/push: it must not gate merges and it
+# performs an outward-facing, recurring action (seeding + scoped cleanup of the
+# `[E2E]` namespace in a shared database). It is dispatch-only by default.
+#
+# TO ENABLE THE NIGHTLY SCHEDULE (a decision for the maintainer):
+#   1. Add the repository secrets listed under `env:` below (at minimum
+#      E2E_DATABASE_URL and E2E_BETTER_AUTH_SECRET — the rest only need structurally
+#      valid placeholders for @leedi/config boot validation).
+#   2. Point E2E_DATABASE_URL at a Supabase the harness may write to. STRONGLY
+#      prefer a dedicated E2E/staging project over production — see
+#      _bmad-output/implementation-artifacts/deferred-work.md ("migrate to a
+#      separate Supabase project before the first real customer").
+#   3. Uncomment the `schedule:` block.
+#
+# The E2E step is gated on E2E_DATABASE_URL being present, so until secrets are wired
+# a manual run no-ops cleanly instead of failing every night.
+
+on:
+  workflow_dispatch: {}
+  # schedule:
+  #   - cron: "0 6 * * *" # 06:00 UTC nightly (~03:00 BRT)
+
+env:
+  # Real DB + auth secret are REQUIRED for the authed suites (session minting).
+  DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
+  BETTER_AUTH_SECRET: ${{ secrets.E2E_BETTER_AUTH_SECRET }}
+  # The remaining vars are only needed so @leedi/config validates at boot; the E2E
+  # paths never call these services. Placeholders are fine.
+  NODE_ENV: test
+  SENTRY_DSN: https://ci@sentry.io/1
+  POSTHOG_KEY: phc_ci_placeholder
+  BETTER_STACK_TOKEN: ci_better_stack_token
+  API_PORT: "3003"
+  BETTER_AUTH_URL: http://localhost:3000
+  RESEND_API_KEY: re_ci_placeholder
+  UPSTASH_REDIS_REST_URL: https://ci.upstash.io
+  UPSTASH_REDIS_REST_TOKEN: ci_upstash_token
+  WORKSPACE_ID: 00000000-0000-0000-0000-000000000000
+  ANTHROPIC_API_KEY: sk-ant-ci-placeholder
+  ENCRYPTION_MASTER_KEY: BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc=
+  WHATSAPP_APP_SECRET: ci_whatsapp_app_secret
+  WHATSAPP_WEBHOOK_VERIFY_TOKEN: ci_whatsapp_verify_token
+  QSTASH_TOKEN: ci_qstash_token
+  QSTASH_CURRENT_SIGNING_KEY: sig_ci_current
+  QSTASH_NEXT_SIGNING_KEY: sig_ci_next
+  ASAAS_API_KEY: ci_asaas_key
+  ASAAS_WEBHOOK_TOKEN: ci_asaas_webhook_token
+  VAPID_PUBLIC_KEY: BPXkn26tyFEGWOuXyoxReJvpnk6lXnCX6Lg4fiaCrVtk6ej0RxyvZZKb2bAIMejGcBzgArZuO_7Wynmvie-9vmY
+  VAPID_PRIVATE_KEY: h4XDU8qE3m3z0Kib7ERi8vqpRTIVFJtNZonZUlgSJjE
+  VAPID_SUBJECT: mailto:ci@leedi.digital
+
+jobs:
+  e2e:
+    name: Playwright E2E (dashboard + admin)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Guard — skip cleanly if E2E secrets are not configured
+        id: guard
+        run: |
+          if [ -z "${DATABASE_URL}" ]; then
+            echo "E2E_DATABASE_URL secret not set — skipping the authed E2E run."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Playwright Chromium
+        if: steps.guard.outputs.ready == 'true'
+        run: pnpm --filter @leedi/dashboard exec playwright install --with-deps chromium
+
+      # CI runners are slower than local and `reuseExistingServer` is off, so each
+      # route's cold Next-dev compile is paid fresh. If runs flake on timeout, raise
+      # `timeout` in the two playwright.config.ts files (currently 120s).
+      - name: E2E — dashboard (public + auth)
+        if: steps.guard.outputs.ready == 'true'
+        run: pnpm --filter @leedi/dashboard test:e2e
+        env:
+          E2E_AUTH: "1"
+          CI: "1"
+
+      - name: E2E — admin (public + auth)
+        if: steps.guard.outputs.ready == 'true'
+        run: pnpm --filter @leedi/admin test:e2e
+        env:
+          E2E_AUTH: "1"
+          CI: "1"
+
+      - name: Upload Playwright reports
+        if: ${{ always() && steps.guard.outputs.ready == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-reports
+          path: |
+            apps/dashboard/playwright-report
+            apps/admin/playwright-report
+          retention-days: 7
+          if-no-files-found: ignore

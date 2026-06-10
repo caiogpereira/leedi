@@ -10,5 +10,10 @@
       "Bash(git add *)",
       "Bash(git commit *)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase",
+    "bmad-method",
+    "asaas"
+  ]
 }

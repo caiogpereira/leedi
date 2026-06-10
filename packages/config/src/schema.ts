@@ -3,6 +3,14 @@ import { z } from 'zod';
 export const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   DATABASE_URL: z.string().url('DATABASE_URL must be a valid URL'),
+  // RLS-enforced application connection (Story 2.4 / Workstream B). When set, it
+  // points at a NON-BYPASSRLS role (e.g. `leedi_app`) used ONLY by the
+  // `withTenant`/`withUser` tenant-data path, so RLS policies are actually
+  // enforced there. OPTIONAL: when unset, that path falls back to DATABASE_URL and
+  // behavior is unchanged (RLS bypassed under the privileged role). The deliberate
+  // service-role path (`withServiceRole`) and direct `db` access always use
+  // DATABASE_URL.
+  APP_DATABASE_URL: z.string().url('APP_DATABASE_URL must be a valid URL').optional(),
   SENTRY_DSN: z.string().url('SENTRY_DSN must be a valid URL'),
   POSTHOG_KEY: z.string().min(1, 'POSTHOG_KEY is required'),
   BETTER_STACK_TOKEN: z.string().min(1, 'BETTER_STACK_TOKEN is required'),

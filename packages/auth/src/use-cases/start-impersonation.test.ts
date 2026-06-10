@@ -1,30 +1,45 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Capture the insert/values mock so we can assert on the audited payload.
-const { insertValues } = vi.hoisted(() => ({ insertValues: vi.fn() }));
+// Capture the insert/values mock so we can assert on the audited payload, and a
+// mutable holder for the `withServiceRole` tenant lookup result (the target-tenant
+// existence + workspace-ownership check added by the 2.8 security patch).
+const { insertValues, tenantRowsRef, WORKSPACE_ID } = vi.hoisted(() => ({
+  insertValues: vi.fn(),
+  tenantRowsRef: { current: [] as Array<{ workspaceId: string }> },
+  WORKSPACE_ID: '11111111-1111-1111-1111-111111111111',
+}));
 
 vi.mock('../workspace-guard.js', () => ({
   getWorkspaceAdmin: vi.fn(),
 }));
 vi.mock('@leedi/db', () => ({
   db: {
-    insert: vi.fn().mockReturnValue({
-      values: insertValues.mockResolvedValue(undefined),
-    }),
+    insert: vi.fn().mockReturnValue({ values: insertValues }),
   },
-  schema: { auditLogs: {} },
+  // startImpersonation looks the target tenant up via withServiceRole to verify it
+  // exists AND belongs to the admin's workspace before writing the audit row.
+  withServiceRole: vi.fn(async (fn: (tx: unknown) => unknown) =>
+    fn({
+      select: () => ({
+        from: () => ({ where: () => ({ limit: () => tenantRowsRef.current }) }),
+      }),
+    })
+  ),
+  eq: vi.fn(),
+  schema: { auditLogs: {}, tenants: { id: {}, workspaceId: {} } },
 }));
 
 import { getWorkspaceAdmin } from '../workspace-guard.js';
 import { startImpersonation } from './start-impersonation.js';
 
 const mockGetAdmin = vi.mocked(getWorkspaceAdmin);
-const WORKSPACE_ID = '11111111-1111-1111-1111-111111111111';
 
 describe('startImpersonation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     insertValues.mockResolvedValue(undefined);
+    // Default: the target tenant exists and belongs to the admin's workspace.
+    tenantRowsRef.current = [{ workspaceId: WORKSPACE_ID }];
   });
 
   it('rejects the support role (only super_admin may impersonate)', async () => {
@@ -51,6 +66,22 @@ describe('startImpersonation', () => {
       expect(result.expiresAt).toBeGreaterThanOrEqual(before + 3_599_000);
       expect(result.workspaceId).toBe(WORKSPACE_ID);
     }
+  });
+
+  it('rejects a tenant that does not exist (no audit row written)', async () => {
+    mockGetAdmin.mockResolvedValueOnce({ role: 'super_admin', workspaceId: WORKSPACE_ID });
+    tenantRowsRef.current = []; // target tenant not found
+    const result = await startImpersonation('u1', 'tenant-x');
+    expect(result.success).toBe(false);
+    expect(insertValues).not.toHaveBeenCalled();
+  });
+
+  it('rejects a tenant in a different workspace (no audit row written)', async () => {
+    mockGetAdmin.mockResolvedValueOnce({ role: 'super_admin', workspaceId: WORKSPACE_ID });
+    tenantRowsRef.current = [{ workspaceId: '22222222-2222-2222-2222-222222222222' }];
+    const result = await startImpersonation('u1', 'tenant-x');
+    expect(result.success).toBe(false);
+    expect(insertValues).not.toHaveBeenCalled();
   });
 
   it('writes an impersonate_start audit row with the REAL workspaceId (uuid)', async () => {

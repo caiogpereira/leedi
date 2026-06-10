@@ -113,6 +113,34 @@ claude-sonnet-4-6
 - `apps/dashboard/app/(dashboard)/settings/team/page.tsx`
 - `apps/dashboard/app/(dashboard)/settings/team/invite-form.tsx`
 
+## Code Review Follow-up (2026-06-08)
+
+Re-verified against HEAD + **fixes applied this session** (see `epic-2-code-review-report.md`). All
+2026-06-04 findings are **FIXED**:
+
+- `[Decision]` link-possession-only → **FIXED**: `acceptInvitation` now binds to `currentUserEmail`
+  (rejects a logged-in user redeeming an invite for another address).
+- `[Decision]` re-invite role silently dropped → **FIXED**: `onConflictDoUpdate` applies the invited
+  role (upgrade).
+- `[Patch]` try/catch + `WHERE accepted_at IS NULL` + new-user password policy → **FIXED**.
+- `[Patch]` DB partial-unique index → **FIXED** (`0016_epic2_invitation_pending_unique.sql`).
+- `[Patch]` missing `accept-invitation.test.ts` → **FIXED** (exists).
+- `[Defer]` invite UI not wired → **FIXED 2026-06-08**: `InviteForm` now submits to `inviteAction`
+  (resolves tenant + inviter role server-side → `inviteMember`); team page renders it for owner/admin
+  via `requireTenantRouteAccess`.
+
+**Update 2026-06-08 (closure):** the members + pending-invitation listing was **implemented** —
+new `listTenantMembers` + `listPendingInvitations` use-cases (`@leedi/tenancy`, RLS-scoped via
+`withTenant`, unit-tested → tenancy 31/31) render on the team page with a "Pendente" badge; `inviteAction`
+calls `revalidatePath('/settings/team')`. **AC#1 ✅ / AC#3 ✅.** AC#2: the membership is created with the
+assigned role; the accept flow redirects to `/login?invited=success` rather than `/dashboard` — the
+**correct** behavior under `requireEmailVerification` (a new invitee has no verified session yet). The
+spec's "redirect to dashboard" assumed auto-session-on-accept, which is Epic 19 (onboarding/session)
+work — tracked in `deferred-work.md`. Story moved `review → done` on this basis.
+
+**Reenviar/Cancelar** pending-invite actions (Task 5 polish, beyond AC#1's listing requirement) remain
+optional follow-up.
+
 ## Review Findings (Code Review 2026-06-04)
 
 - [ ] [Review][Decision] `acceptInvitation` is link-possession-only — there is no check that the authenticated user matches the invited email; any holder of the link can redeem it (or create an account under the invited email with an attacker-chosen password). Token entropy (32 random bytes) is fine; the gap is the missing session/email binding. Decide: require login + email match vs. accept the link-possession model. [packages/tenancy/src/use-cases/accept-invitation.ts:4509-4576]

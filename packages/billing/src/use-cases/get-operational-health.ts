@@ -20,7 +20,11 @@ export interface QualityRiskTenant {
   tenantName: string;
   /** PT-BR enum: 'amarelo' | 'vermelho' (green/'verde' is never at risk). */
   qualityRating: string;
-  /** Whole days the number has been at the current (yellow/red) rating. */
+  /**
+   * Approx. whole days at the current (yellow/red) rating. Derived from
+   * `whatsapp_connections.updated_at` (no rating-transition timestamp exists yet);
+   * see the query comment. Exact value is deferred follow-up work.
+   */
   daysAtRisk: number;
 }
 
@@ -142,6 +146,11 @@ export async function getOperationalHealth(usdToBrlRate: number): Promise<Operat
         t.id AS tenant_id,
         t.name AS tenant_name,
         c.quality_rating,
+        -- APPROXIMATION (AC#4): there is no dedicated rating-transition timestamp on
+        -- whatsapp_connections, and the health-check write path does not bump
+        -- updated_at per rating change, so this is days-since-last-row-write: a
+        -- usable proxy, not the exact consecutive-days-at-rating. A precise value
+        -- needs a quality_rating_changed_at column (deferred follow-up).
         CURRENT_DATE - DATE(c.updated_at) AS days_at_risk
       FROM whatsapp_connections c
       JOIN tenants t ON t.id = c.tenant_id

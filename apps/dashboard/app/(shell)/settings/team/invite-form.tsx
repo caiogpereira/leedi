@@ -1,28 +1,30 @@
 "use client";
 
+import { useActionState } from "react";
 import { useTranslations } from "next-intl";
+import { inviteAction, type InviteState } from "./actions";
 
 interface InviteFormProps {
   /** Only an owner may grant the owner role (mirrors the server-side guard). */
   allowOwnerRole: boolean;
 }
 
+const INITIAL_STATE: InviteState = {};
+
 /**
- * Invite form — SCAFFOLD (Story 2.6).
+ * Invite form (Story 2.6 AC#1/AC#3).
  *
- * The submit is intentionally disabled: the inviting flow needs the active
- * tenantId and the caller's role resolved server-side, which is DEFERRED to
- * Story 2.7 (see the page's note). The fields, role options and the owner-role
- * gate are in place so the real server action — calling `inviteMember` from
- * `@leedi/tenancy` — can be wired in without reworking the UI.
+ * Submits to the `inviteAction` Server Action, which resolves the active tenant +
+ * inviter role server-side and calls `inviteMember`. The tenantId and inviter role
+ * are NEVER taken from the form body. A duplicate-pending invite surfaces AC#3's
+ * message returned by the use-case.
  */
 export function InviteForm({ allowOwnerRole }: InviteFormProps) {
   const t = useTranslations("team");
+  const [state, formAction, pending] = useActionState(inviteAction, INITIAL_STATE);
 
   return (
-    // TODO(Story 2.7): set `action` to a server action that resolves the active
-    // tenantId + inviter role, then calls inviteMember({ email, role, tenantId, ... }).
-    <form className="space-y-4">
+    <form action={formAction} className="space-y-4">
       <div>
         <label htmlFor="email" className="mb-1 block text-sm font-medium">
           {t("emailLabel")}
@@ -51,9 +53,21 @@ export function InviteForm({ allowOwnerRole }: InviteFormProps) {
           {allowOwnerRole && <option value="owner">{t("roles.owner")}</option>}
         </select>
       </div>
+
+      {state.error && (
+        <p role="alert" className="text-sm text-red-600">
+          {state.error}
+        </p>
+      )}
+      {state.success && (
+        <p role="status" className="text-sm text-green-600">
+          {t("inviteSent")}
+        </p>
+      )}
+
       <button
         type="submit"
-        disabled
+        disabled={pending}
         className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
       >
         {t("submitButton")}

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { hasSessionCookie, getRequiredRoles, type TenantRole } from '@leedi/auth/edge';
+import { hasSessionCookie } from '@leedi/auth/edge';
 
 // Routes that don't require authentication.
 const PUBLIC_PATHS = ['/api/health'];
@@ -36,27 +36,17 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // RBAC route gating (Story 2.5). `getRequiredRoles` returns null for
-  // unrestricted routes (most of the dashboard) and the allowed roles for
-  // owner/admin-only areas like /settings/*. Prefix-matched, so nested routes
-  // inherit the requirement.
-  const requiredRoles = getRequiredRoles(pathname);
-  if (requiredRoles) {
-    // FAIL-CLOSED: the caller's per-tenant role is NOT resolvable in the Edge
-    // runtime today — that needs a memberships lookup keyed by current_tenant_id,
-    // which the optimistic cookie check deliberately avoids (the pg adapter can't
-    // run on Edge). So `userRole` is undefined here and restricted routes are
-    // denied. This is safe: it's deny-by-default, and no /settings/* pages exist
-    // yet to lock out. The authoritative enforcement for restricted routes will
-    // live in their Server Components via `getSession` + `hasPermission`.
-    // TODO(Story 2.7): resolve the tenant role from the session context once the
-    // multi-tenant session token carries (or the Edge can derive) current role,
-    // then replace `undefined` below with that value.
-    const userRole: TenantRole | undefined = undefined;
-    if (!userRole || !requiredRoles.includes(userRole)) {
-      return NextResponse.redirect(new URL('/403', request.url));
-    }
-  }
+  // RBAC route gating is NOT done here. The Edge runtime cannot resolve the
+  // caller's per-tenant role — that needs a memberships lookup keyed by the active
+  // tenant, and the pg adapter can't run on Edge (the optimistic cookie check
+  // deliberately avoids any DB call). Enforcement therefore lives in the restricted
+  // Server Components via `requireTenantRouteAccess` (src/lib/tenant-context.ts),
+  // where the membership-backed role IS available. `ROUTE_PERMISSION_MAP` remains
+  // the single source of truth, consumed there.
+  //
+  // (Earlier this block hard-coded `userRole = undefined` and 403'd EVERY restricted
+  // route — once real /settings/* pages shipped, that locked out every user including
+  // owners. Fixed in the Epic 2 code review: gate at the page, not the Edge.)
 
   // Forward the active tenant (Story 2.7) to Server Components via a request
   // header so they can read it without parsing cookies themselves. This is a

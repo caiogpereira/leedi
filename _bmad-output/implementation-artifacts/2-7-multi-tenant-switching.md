@@ -101,6 +101,19 @@ claude-sonnet-4-6
 - `apps/dashboard/app/layout.tsx`
 - `apps/dashboard/middleware.ts` (updated)
 
+## Code Review Follow-up (2026-06-08)
+
+Re-verified against HEAD + **fixes applied this session** (see `epic-2-code-review-report.md`):
+
+- `[Patch]` switch into blocked/cancelled tenant → **FIXED**: `switchTenant` gates on
+  `SWITCHABLE_STATUSES` (`active`/`trial`).
+- `[Decision]` active tenant in `leedi_tenant` cookie (not the Better-Auth session) → **ACCEPTED**
+  (Caio, 2026-06-08): functionally membership-checked + spoofing-resistant; the architecture note
+  should be updated to document the cookie model rather than refactoring to session-backed state.
+- The **per-tenant role resolution** this story was meant to deliver is now implemented
+  (`apps/dashboard/lib/tenant-context.ts`), which unblocked the dashboard route-gating (Story 2.5) and
+  the team invite UI (Story 2.6).
+
 ## Review Findings (Code Review 2026-06-04)
 
 - [ ] [Review][Decision] Active tenant stored in a `leedi_tenant` cookie, not the Better-Auth session — deviates from the documented architecture ("the session is the single source of truth for `current_tenant_id`; the switch use-case is the only writer"). Functionally membership-checked and spoofing-resistant, but the design constraint is violated. Decide: accept the cookie approach (update the architecture note) vs. refactor to session-backed state. [apps/dashboard/app/api/tenant/switch/route.ts:787; apps/dashboard/app/layout.tsx:828]

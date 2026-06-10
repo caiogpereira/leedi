@@ -103,6 +103,23 @@ claude-sonnet-4-6
 - `apps/dashboard/app/403/page.tsx`
 - `apps/dashboard/src/hooks/use-permission.ts`
 
+## Code Review Follow-up (2026-06-08)
+
+Re-verified against HEAD + **fixes applied this session** (see `epic-2-code-review-report.md`):
+
+- `[Patch]` 403 i18n — **FIXED**: dashboard + admin 403 pages use `useTranslations("forbidden")`. (The
+  API `require-role.ts` keeps a fixed string — acceptable for a service boundary.)
+- `[Defer]` route-gating fail-closed — was a **LIVE BUG** (real `/settings/{team,uso,whatsapp}` pages
+  403'd for every user incl. owners, because `middleware.ts` hardcoded `userRole = undefined` while
+  later epics shipped the pages). **FIXED 2026-06-08**: per-tenant role resolution now lives in
+  `apps/dashboard/lib/tenant-context.ts` (`getCurrentTenantContext` / `requireTenantRouteAccess`,
+  membership-backed via `listUserTenants`); each restricted settings page enforces its
+  `ROUTE_PERMISSION_MAP` requirement; the broken Edge role gate was removed (Edge keeps auth-presence +
+  tenant-header forwarding only).
+- `[Defer]` AC#2 — API RBAC is **wired** (`tenant-session.ts` → `requirePermission` in
+  `billing.ts`/`usage.ts`); dashboard now gates write surfaces server-side (team invite form, whatsapp
+  connect form). `usePermission` client hook remains for client-component gating in later epics.
+
 ## Review Findings (Code Review 2026-06-04)
 
 - [ ] [Review][Patch] 403 message is hardcoded, not sourced from next-intl (Task 2 violation) — duplicated literal in dashboard/admin 403 pages and the API `FORBIDDEN_MESSAGE`. [apps/dashboard/app/403/page.tsx; apps/admin/app/403/page.tsx; apps/api/src/middleware/require-role.ts]

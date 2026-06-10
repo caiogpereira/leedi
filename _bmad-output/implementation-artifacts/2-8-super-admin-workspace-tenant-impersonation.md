@@ -180,6 +180,54 @@ Modified:
 - `apps/dashboard/messages/pt-BR.json` (impersonation strings)
 - `pnpm-lock.yaml` (admin workspace links)
 
+## Code Review Follow-up (2026-06-08)
+
+Re-verified against HEAD + **fixes applied this session** (see `epic-2-code-review-report.md`). All four
+2026-06-04 `[Patch]` items are **FIXED**:
+
+- `stop-impersonation` route now requires a valid session whose user matches the `leedi_real_user_id`
+  cookie, clears cookies BEFORE the audit write, and wraps it in `try/catch` (no longer fail-open).
+- `impersonate` route validates `tenantId` is a UUID (400, not 500).
+- `startImpersonation` verifies the target tenant exists AND belongs to the admin's workspace before
+  setting cookies / writing the audit row.
+- The 1-hour expiry is re-validated server-side in `(shell)/layout.tsx` (`expiresAt <= Date.now()` →
+  fall back to admin context), not just via cookie max-age.
+
+**Also fixed this session:** `start-impersonation.test.ts` was **RED at HEAD** — its `@leedi/db` mock
+lacked `withServiceRole`/`eq`/`schema.tenants` after the tenant-existence patch landed (the Epic 1
+"stale fixture" pattern). Mock repaired + 2 tests added (reject nonexistent / foreign-workspace tenant):
+`@leedi/auth` now 57/57 green.
+
+**Update 2026-06-08 (AC#2 implemented — Option B, Caio's call):** the dashboard proxies forward cookies
+to `apps/api`, and **all** `/api/tenants/*` routers use `requireTenantSession` — so that middleware is
+the universal chokepoint. It is now **impersonation-aware**: `resolveImpersonation`
+(`apps/api/src/middleware/impersonation.ts`, 10 unit tests) authorizes a super-admin for the impersonated
+tenant at owner level WITHOUT a membership, validating `session.user === leedi_real_user_id` +
+super_admin via `workspace_admins` + tenant ∈ admin's workspace + expiry (mirrors `startImpersonation`).
+**Every mutating request under impersonation writes an `audit_logs` row** (actor = real super-admin,
+target = tenant), **fail-closed** (a failed audit insert rejects the request — no silent writes). The
+normal membership path is unchanged (existing route tests still 23/23).
+
+**AC#2 ✅ in code.** **Pending (Caio):** validate the impersonated write+audit flow in **staging** —
+this privilege-sensitive auth change cannot be runtime-tested here, so the story stays in `review` until
+that sign-off. **Known gap (documented):** mutations via direct dashboard server actions (not the
+`/api/tenants/*` proxies, e.g. the team inviteAction) are outside this API-layer audit; the integration
+surfaces you'll use (WhatsApp/Hotmart/agent/campaigns) DO go through the proxies and are covered.
+
+**Closure 2026-06-09 (Caio's decision — done now, validate at the Pro/staging milestone):** AC#1 ✅,
+AC#3 ✅, AC#2 ✅ in code (impersonation-aware auth + audit-on-mutation, fail-closed, every mutating route
+verified behind the guard, 10 unit tests; route tests 23/23). The remaining item is an **empirical
+first-use exercise** of the impersonated write+audit flow in a deployed environment — this is
+*acceptance*, not *correction*, and the **fail-closed design means a bug yields "no impersonated access"
+(403), never unauthorized access**. Batched into the **Supabase Pro / staging milestone**
+(`deferred-work.md`) per Caio. (Note: the 2.8 audit flow itself does NOT require Supabase Pro — it writes
+via the current privileged connection; only 2.4's RLS activation needs the Dedicated Pooler. Both are
+grouped under that milestone for a single validation pass.) Story moved `review → done` on this basis.
+
+**STILL OPEN (Low / deferred, `deferred-work.md`):** shared `requireWorkspaceAdmin` wrapper +
+dashboard→admin redirect (partial); `getWorkspaceAdmin` workspace scoping (Low); CSRF defense-in-depth
+(cross-cutting).
+
 ## Review Findings (Code Review 2026-06-04)
 
 - [ ] [Review][Patch] `stop-impersonation` route has NO session auth and is fail-OPEN on error — it reads `leedi_real_user_id`/`leedi_impersonating` from request cookies with no `getSession` check (forged cookies can write attacker-controlled `impersonate_end` audit rows), and it `await`s `stopImpersonation` BEFORE clearing cookies, so a DB error 500s and leaves the admin trapped in tenant scope (contradicts the route's own fail-open-on-exit comment). Fix: verify session; clear cookies first / wrap the audit write in try/catch. [apps/dashboard/app/api/admin/stop-impersonation/route.ts:17-29]

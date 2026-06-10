@@ -1,23 +1,11 @@
-import { headers } from 'next/headers';
-import { getSession } from '@leedi/auth';
-import { listUserTenants } from '@leedi/tenancy';
 import { UsageSettingsClient } from './usage-settings-client';
+import { requireTenantRouteAccess } from '../../../../lib/tenant-context';
 
 export default async function UsageSettingsPage() {
-  const requestHeaders = await headers();
-  const session = await getSession(requestHeaders);
+  // RBAC enforcement (Story 2.5/2.7): /settings/* is owner/admin only. The role is
+  // resolved from membership data here (the Edge middleware can't); operator/viewer
+  // are redirected to /403.
+  const ctx = await requireTenantRouteAccess('/settings/uso');
 
-  if (!session) {
-    return <div className="p-8 text-muted-foreground">Sessão expirada.</div>;
-  }
-
-  const tenants = await listUserTenants(session.user.id);
-  const headerTenantId = requestHeaders.get('x-leedi-tenant-id');
-  const currentTenant = tenants.find((t) => t.tenantId === headerTenantId) ?? tenants[0];
-
-  if (!currentTenant) {
-    return <div className="p-8 text-muted-foreground">Nenhum workspace encontrado.</div>;
-  }
-
-  return <UsageSettingsClient tenantId={currentTenant.tenantId} />;
+  return <UsageSettingsClient tenantId={ctx.tenant.tenantId} />;
 }

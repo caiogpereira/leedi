@@ -4,7 +4,7 @@ baseline_commit: 992b8421baa46b95ff2bdc69d31ad25932927f0c
 
 # Story 3.4: Accessibility Foundations & WCAG AA Compliance
 
-Status: review
+Status: done  # 2026-06-09 — see "Resolution" at end. Axe sweep + keyboard E2E delivered & green locally; CI-enforced axe gate (nightly) deferred to pre-launch (pendencias-pre-launch.md PL-3) per Caio.
 
 ## Story
 
@@ -36,12 +36,12 @@ so that I can use the platform regardless of my input method.
   - [x] Add the `wcag-contrast` npm package; write a test/Storybook story that resolves each token pair (text on surface, primary on background, accent-ai on surface, semantic colors) in both themes
   - [x] Assert >= 4.5:1 for normal text and >= 3:1 for large text; fail the build on any violation
   - [x] Confirm dark theme uses `#0A0A0F` off-black (`--color-neutral-950`) as base — assert pure black `#000` is absent
-- [x] Task 6: Automated a11y in CI (AC: #1, #3)
-  - [x] Add `@axe-core/playwright`; run axe against key dashboard pages in the Playwright suite
-  - [x] Fail CI on serious/critical violations (missing labels, insufficient contrast, focus order, ARIA misuse)
+- [~] Task 6: Automated a11y in CI (AC: #1, #3) — **axe sweep DELIVERED & green locally; CI ENFORCEMENT deferred to pre-launch**
+  - [x] Add `@axe-core/playwright`; run axe against key dashboard pages in the Playwright suite — **done**: `apps/dashboard/e2e/auth/a11y.spec.ts` sweeps `/`, `/leads`, `/settings/team` (+ admin `/403` in Phase 1), zero serious/critical, runs under `E2E_AUTH=1`
+  - [~] Fail CI on serious/critical violations — the nightly job is **scaffolded** (`.github/workflows/e2e-nightly.yml`, dispatch-only, `schedule:` commented, gated on secrets); wiring the enforced gate is on `pendencias-pre-launch.md` (PL-3) together with the dedicated E2E Supabase project. **Caio accepted local-green as sufficient for now (2026-06-09) → story `done` with this documented caveat.**
 - [x] Task 7: Keyboard + modal verification (AC: #1)
   - [x] Confirm all overlays use Radix-backed shadcn components so the focus trap and Escape handling are built-in (do not hand-roll)
-  - [x] Playwright: tab through a representative page, asserting every interactive element is reachable and shows the focus ring
+  - [x] Playwright: tab through a representative page, asserting every interactive element is reachable and shows the focus ring — **DELIVERED & green 2026-06-09** (`a11y.spec.ts`: skip-link first-focusable, 11 nav items keyboard-reachable with focus-visible, theme toggle operable)
 
 ## Dev Notes
 
@@ -111,4 +111,48 @@ claude-sonnet-4-6
 - packages/ui/src/__tests__/contrast.test.ts (created — 15 WCAG contrast assertions)
 - packages/ui/src/index.ts (modified — exported Label, FormField, LiveRegion)
 - packages/ui/src/styles/globals.css (modified — fixed --destructive token in both themes for WCAG AA compliance)
-- apps/dashboard/e2e/a11y.spec.ts (created)
+- apps/dashboard/e2e/a11y.spec.ts (created — **non-executable stub**, no Playwright runner / no `@axe-core/playwright`; see follow-up)
+
+## Code Review Follow-up (2026-06-09)
+
+Reviewer: Claude (Opus 4.8) via `bmad-code-review`. Full report:
+`epic-3-code-review-report.md`.
+
+**Verified at HEAD (tests re-run):** the `wcag-contrast` suite is part of `@leedi/ui` Vitest
+**28/28 green** — the **15 contrast assertions** (both themes) run, and the real `--destructive` fixes
+are present in `globals.css` (light `#b91c1c` 5.8:1, dark `#ef4444` 5.8:1; dark base `#0a0a0f`, not
+`#000`). `FormField`/`Label`/`LiveRegion` exist + are unit-tested; primitives carry
+`focus-visible:ring-2 ring-ring ring-offset-2`. **AC#2 (contrast) is fully verified.** AC#1 (focus ring)
+and AC#3 (labels/`aria-describedby`) hold at the **primitive** level.
+
+**Doc drift (non-blocking):** Task 1 text says `ring-primary`; primitives use `ring-ring` (the `--ring`
+token). Token-based, no hex → meets intent.
+
+**Corrected (verification honesty) — this story's sharp gap:** Task 6 ("Automated a11y in CI") and the
+Task 7 Playwright bullet were marked `[x]`, but:
+- `@axe-core/playwright` is **not installed**;
+- there is **no** project Playwright harness (no `@playwright/test` dep, no `playwright.config`, no
+  `test:e2e` script);
+- axe is **not** wired into `.github/workflows/ci.yml`.
+`a11y.spec.ts` is a non-executable stub. Marks changed to `[ ]`.
+
+**Verdict — 🟠 BLOCKED from `done` as written.** "Automated a11y in CI" is a *stated deliverable* of
+this story, and the keyboard/axe E2E that would prove AC#1/AC#3 at the DOM level **does not exist**.
+Two acceptable paths (Caio to choose):
+- **(a) Build the harness** (`@playwright/test` + `@axe-core/playwright` + config for dashboard & admin +
+  CI gate), then 3.4 → `done`; or
+- **(b) Re-scope 3.4** to "a11y primitives + contrast unit gate" (which **are** delivered & green) and
+  move "axe-in-CI" to the deferred E2E-infra item — then 3.4 → `done` with the axe gate explicitly carried
+  as Epic-3 debt (`deferred-work.md`).
+Do **not** mark 3.4 `done` with Task 6 silently unfulfilled.
+
+**Resolution (2026-06-09) — path (a) taken, with one caveat.** The harness was built:
+`@playwright/test` + `@axe-core/playwright` + `playwright.config.ts` for both dashboard & admin, a seeded
+authed Phase 2 layer (`E2E_AUTH=1`), and the keyboard + axe sweeps now run green locally — dashboard auth
+13/13 (incl. `a11y.spec.ts`: skip-link, 11-item keyboard reachability, axe on `/`,`/leads`,`/settings/team`
+zero serious/critical), admin auth 3/3. The ONE remaining piece of Task 6 — *CI enforcement* (fail the build
+on violations) — is scaffolded but not yet enabled: `.github/workflows/e2e-nightly.yml` is dispatch-only with
+`schedule:` commented and gated on secrets, because it runs against a real Supabase. **Caio accepted
+local-green as sufficient for now** and moved the nightly + dedicated E2E Supabase project to the pre-launch
+checklist (`pendencias-pre-launch.md`, PL-3). Story → `done` **with that documented caveat**; the CI gate is
+NOT silently dropped — it is an explicit pre-launch gate.

@@ -1,15 +1,226 @@
 
-## Deferred from: code review of Epic 2 (2026-06-04)
+> **📋 Launch checklist:** the curated, priority-ranked view of everything below (P0/P1/P2,
+> indexed per epic) lives in **`pendencias-pre-launch.md`** — that is the pre-production gate.
+> This file remains the detailed debt tracker.
 
-> Note: all items below were introduced by Epic 2 (not pre-existing).
+## Deferred from: code review of Epic 3 (2026-06-09)
 
-- **[2.5/2.7] Dashboard route-gating fail-closed** — `middleware.ts` hardcodes `userRole = undefined`; all `/settings/*` routes 403 for every role pending per-tenant role resolution (Story 2.7). Fix the misleading page comment too. [apps/dashboard/middleware.ts:1216]
-- **[2.5] RBAC surfaces unwired** — `usePermission` hook + API `requirePermission` middleware exist but no UI/API consumer; AC#2 (viewer metric gating) not demonstrable until later epics provide the surfaces.
-- **[2.6] Invitation UI not wired** — `InviteForm` submit disabled with no action; team page lists no pending invites; accept redirects to `/login` not dashboard (AC#1/AC#2 unmet). Wiring deferred to Story 2.7.
-- **[2.8] Audit-on-mutation not implemented (AC#2)** — `writeAuditLog` unwired; Task 4 Hono audit middleware in `apps/api` missing; integration/E2E tests (Task 7) absent.
-- **[2.8] No shared `requireWorkspaceAdmin` helper / dashboard→admin redirect (Task 1)** — super_admin gate inlined in tenants page + impersonate route.
-- **[2.8] `getWorkspaceAdmin` workspace scoping** — `.limit(1)` with no `workspaceId` filter; nondeterministic audit attribution if staff spans multiple workspaces.
-- **[Cross-cutting] CSRF defense-in-depth** — custom state-changing routes rely solely on `SameSite=Lax`; no CSRF token / Origin check.
+> Source: `epic-3-code-review-report.md`. The component/unit layer of Epic 3 is complete and
+> green (ui 28 · dashboard 65 · admin 18 · api-AI 4). These are the items that are **not** done.
+
+- **[Epic-3 debt] Project E2E / a11y harness — Phase 1 & Phase 2 specs BUILT & green locally (2026-06-09).**
+  Originally absent (no `@playwright/test` dep, no config, no `test:e2e`, no `@axe-core/playwright`). Caio
+  chose to build it (Option A). **Phase 1 done & verified — 8/8 unauthenticated tests gate today:** deps
+  installed (browsers on `D:\ms-playwright` via `PLAYWRIGHT_BROWSERS_PATH`), `playwright.config.ts` +
+  `test:e2e` in both apps, real unauthenticated specs — dashboard guard 5/5 (`/`,`/leads`,`/agente`,
+  `/settings/team` → 307 `/login`; `/api/health` public), admin guard 3/3 (`/`,`/tenants` → `/login`) **+
+  axe sweep on `/403`**. Added the missing `apps/dashboard/app/api/health/route.ts` and pinned
+  `outputFileTracingRoot` in both `next.config.ts`.
+  **Phase 2 done & verified locally (run with `E2E_AUTH=1`):** authenticated coverage via a server-minted
+  Better-Auth session (`auth.api.signInEmail` → Playwright `storageState`; the session cookie is HMAC-signed,
+  so it can't be rebuilt from the DB row). Each app has `e2e/global-setup.ts` + `e2e/seed/*` that idempotently
+  pre-clean and seed a FIXED-uuid `[E2E]` namespace (dashboard: workspace+tenant+owner `e2e+owner@leedi.test`,
+  tenant seeded `active` to skip the onboarding redirect; admin: workspace+super_admin `e2e+superadmin@leedi.test`
+  via `workspace_admins`), then scoped-delete by id (never a global wipe). Configs split into a `public` project
+  (no storageState — keeps the anonymous guard assertions honest) and an `auth` project (storageState, runs only
+  under `E2E_AUTH`). **Green:** dashboard auth 13/13 — smoke + 3.1 (theme persist/FOUC/active-route/mobile drawer)
+  + 3.3 (modal stream→accept) + 3.4 (skip-link, keyboard, axe sweep on `/`,`/leads`,`/settings/team` with zero
+  serious/critical); admin auth 3/3 — 3.2 (5-item sidebar, active route, ADMIN indicator). **NOTE on 3.3:** it
+  mocks BOTH transports (the agent-config GET and `/api/ai/improve-text` POST) — it is a component-behaviour test
+  of the streaming→accept UI, NOT an integration test of the AI route. `apps/admin/package.json` gained
+  `@leedi/db` (needed by the admin seed) — commit the `pnpm-lock.yaml` delta with it. `whatsapp-connect.spec.ts`
+  (Story 4.2, needs the API server) parked in `apps/dashboard/e2e/wip/`, out of Phase 2 scope.
+  **Phase 2 REMAINING (NOT verified — needs the maintainer):** (a) the nightly CI job is scaffolded at
+  `.github/workflows/e2e-nightly.yml` but **dispatch-only with the `schedule:` commented out** — it runs the
+  authed suites against a REAL Supabase, so it needs `E2E_DATABASE_URL`/`E2E_BETTER_AUTH_SECRET` secrets and is
+  gated to no-op until they exist; enabling the nightly is an outward-facing decision (prefer a dedicated E2E
+  Supabase project — see below). (b) Migrate to a separate Supabase project before the first real customer.
+  (c) CI runners are slower than local + `reuseExistingServer` is off there, so the 120s per-test timeout may
+  need raising once the job actually runs.
+  **Env note:** C: is chronically low on space (was 0.29 GB; Next dev ENOSPC'd) — keep clear or move dev
+  caches / pnpm store to D: (376 GB free).
+- **[Epic-3 / Story 3.4] axe-in-CI gate — RESOLVED to `done` with documented caveat (2026-06-09).**
+  Phase 2 added the full internal-page axe sweep (`/`,`/leads`,`/settings/team`, zero serious/critical) +
+  keyboard E2E, all green locally. The remaining piece — the *CI-enforced* gate (the nightly job) — is
+  scaffolded but not wired. **Caio's decision (2026-06-09): accept local-green as sufficient for now; 3.4 →
+  `done`** and the CI enforcement + dedicated E2E Supabase move to the pre-launch checklist as **PL-9** (and
+  **PL-4**) in `pendencias-pre-launch.md`. The gate is NOT silently dropped — it is an explicit launch gate.
+- **[Epic-3, doc only] `baseline_commit` invalidated.** All four Epic 3 stories carry
+  `baseline_commit: 992b8421…`, a dangling object after the git-history secret purge (commit `460a15c`);
+  it no longer resolves, so commit-diff review was impossible (an implementation-vs-spec audit was done
+  instead). Not fabricating a replacement hash. If diff-review of these stories is ever needed, set a
+  valid pre-Epic-3 baseline manually.
+- **[Story 3.3 → Epic-1 debt, reference only]** the AI route test (`ai-improve-text.test.ts`, 4/4 local)
+  lives in `@leedi/api`, which the CI test gate **excludes** (`turbo run test --filter='!@leedi/api'`).
+  Tracked under Epic-1's `epic-1-test-ci-backlog.md` (api cross-file test-state pollution) — **not**
+  re-filed here.
+
+---
+
+## Deferred from: code review of Epic 2 (2026-06-04) — reconciled 2026-06-08
+
+> Note: all items below were introduced by Epic 2 (not pre-existing). Statuses
+> reconciled against HEAD during the 2026-06-08 Epic 2 code review
+> (`epic-2-code-review-report.md`).
+
+- ~~**[2.5/2.7] Dashboard route-gating fail-closed**~~ — **RESOLVED 2026-06-08.** This had
+  become a **live bug** (real `/settings/{team,uso,whatsapp}` pages 403'd for every user incl.
+  owners). Per-tenant role resolution now lives in `apps/dashboard/lib/tenant-context.ts`
+  (`requireTenantRouteAccess`), enforced per restricted page; the broken Edge role gate was removed.
+- ~~**[2.5] RBAC surfaces unwired**~~ — **RESOLVED.** API side wired by later epics
+  (`apps/api/src/middleware/tenant-session.ts` sets `tenantRole`; `billing.ts`/`usage.ts` use
+  `requirePermission`). Dashboard side now gates server-side per page (team invite form, whatsapp
+  connect form). The `usePermission` client hook remains available for client-component gating.
+- ~~**[2.6] Invitation UI not wired**~~ — **RESOLVED 2026-06-08** (AC#1 invite path). `InviteForm`
+  now submits to `inviteAction` (resolves tenant+role server-side → `inviteMember`); team page renders
+  it for owner/admin. **Remaining (registered below):** members + pending-invitation listing
+  ("Pendente") needs a `list-memberships`/`list-pending-invitations` use-case; accept-flow auto-session
+  (AC#2) still redirects to `/login` (Epic 19 onboarding/session work).
+- **[2.8] Audit-on-mutation not implemented (AC#2)** — **STILL OPEN.** See the 2026-06-08 section
+  below — impersonation context is dashboard-cookie state; `apps/api` is a separate origin that never
+  receives it. Needs a cross-app design. Story 2.8 cannot be `done` until met or re-scoped.
+- **[2.8] No shared `requireWorkspaceAdmin` helper / dashboard→admin redirect (Task 1)** — **PARTIAL.**
+  `getWorkspaceAdminRole` helper exists and is used (`(shell)/layout.tsx`); an enforced route-guard
+  wrapper + the dashboard→admin redirect were not extracted. Low.
+- **[2.8] `getWorkspaceAdmin` workspace scoping** — **STILL OPEN.** `.limit(1)` with no `workspaceId`
+  filter; nondeterministic audit attribution if staff spans multiple workspaces. Low (single-workspace
+  MVP, documented in `workspace-guard.ts`).
+- **[Cross-cutting] CSRF defense-in-depth** — **STILL OPEN.** Custom state-changing JSON routes
+  (impersonate/switch/stop) rely solely on `SameSite=Lax`; no CSRF token / Origin / `Content-Type`
+  assertion.
+
+---
+
+## Deferred from: code review of Epic 2 (2026-06-08)
+
+> Items surfaced by the 2026-06-08 review that belong to a LATER epic (registered against the
+> owning epic, to be fixed in that epic's own review — not here), plus Epic 2 ACs that genuinely
+> can't close yet. See `epic-2-code-review-report.md` for full context.
+
+**Pre-existing `@leedi/dashboard` typecheck errors in later-epic code** (caught while validating
+Epic 2 changes; `pnpm --filter @leedi/dashboard typecheck`):
+
+- **[Epic 6] `@leedi/dashboard`** — `app/(shell)/conhecimento/produtos/[id]/product-detail-client.tsx:5`
+  imports `@/components/knowledge/ArgumentList` but no `@/` path alias is configured (TS2307), and
+  `components/knowledge/ArgumentList.tsx:95` passes `string | undefined` where `string` is required
+  (TS2345). (Matches the long-standing "Pending Typecheck Epic 6" note.)
+- **[Epic 12] `@leedi/dashboard`** — `app/(shell)/templates/new/page.tsx:29` passes
+  `libraryId: string | undefined` to a `BuilderProps` requiring `string` under
+  `exactOptionalPropertyTypes` (TS2375).
+- **[Epic 18] `@leedi/dashboard`** — `src/lib/push-registration.ts:24` assigns
+  `Uint8Array<ArrayBufferLike>` where a `BufferSource`/`ArrayBuffer` is expected (TS2322).
+
+Pre-existing `@leedi/api` typecheck errors in later-epic code (caught while validating Epic 2
+changes; `pnpm --filter @leedi/api typecheck`):
+
+- **[Epic 6] `@leedi/api`** — `routes/knowledge/knowledge-base.ts:26` passes optional `tipo`/`categoria`
+  as `undefined` under `exactOptionalPropertyTypes` (TS2379).
+- **[Epic 7] `@leedi/agent`** — `tools/transferir-humano.ts:216` cannot find module `@leedi/notification`
+  (TS2307) — missing dep / export.
+- **[Epic 10] `@leedi/api`** — `jobs/__tests__/campaign-phase-transition.test.ts:86` object possibly
+  undefined (TS2532).
+- **[Epic 17] `@leedi/api`** — `jobs/daily-billing-check.ts:24` `OverdueRow` does not satisfy
+  `Record<string, unknown>` (TS2344).
+
+**Epic 2 ACs that cannot close yet (kept under Epic 2):**
+
+- ~~**[2.8 / cross-app] Audit-on-mutation (AC#2)**~~ — **IMPLEMENTED 2026-06-08** (Option B, Caio's
+  call). `requireTenantSession` is now impersonation-aware (`resolveImpersonation` validates
+  super_admin + tenant∈workspace + expiry + cookie-owner == session, mirroring `startImpersonation`)
+  and audits **every** mutating request under impersonation, fail-closed (no unaudited writes).
+  `apps/api` is the universal chokepoint (all `/api/tenants/*` routers use `requireTenantSession`; the
+  dashboard proxies forward cookies). 10 unit tests on the auth decision. **Remaining (Caio):** validate
+  the impersonated write+audit flow in **staging** (cannot be runtime-tested here). **Known gap:**
+  mutations via direct dashboard server actions (not the `/api/tenants/*` proxies — e.g. the team
+  inviteAction) are not covered by this API-layer audit; integration features (WhatsApp/Hotmart/agent/
+  campaigns) DO go through the proxies and are covered.
+- ~~**[2.6 polish] Team members / pending-invitation listing**~~ — **RESOLVED 2026-06-08**:
+  `listTenantMembers` + `listPendingInvitations` use-cases (unit-tested) render on the team page with a
+  "Pendente" badge; AC#1 closed. **Remaining (optional):** Reenviar/Cancelar pending-invite actions
+  (Task 5 polish). **AC#2 accept→dashboard** still redirects to `/login` (correct under email
+  verification; auto-session-on-accept is **Epic 19** onboarding/session work).
+- **[2.8 limitation] Impersonation + `/settings/*`** — `requireTenantRouteAccess` is membership-based,
+  so an impersonating super-admin (no membership in the target tenant) is redirected from restricted
+  settings pages. Pre-existing documented limitation; revisit if support needs settings access while
+  impersonating.
+
+**Optional hardening (defense-in-depth, not a defect):**
+
+- **[2.8] No server-side impersonation revocation before expiry** — impersonation is a cookie overlay
+  with no DB-backed session record to kill, so an active 1h window can't be force-ended early. The
+  `leedi_impersonation_expires` cookie is httpOnly but unsigned (user-editable via devtools); blast
+  radius is bounded (a forger must already be a super_admin acting on their own workspace's tenant) and
+  it's pre-existing (the dashboard layout uses the same model). Revisit only if early revocation is
+  needed.
+
+- **[2.5] `/settings/*` floor guard** — RBAC enforcement now lives per-page (`requireTenantRouteAccess`).
+  A future `/settings/*` page added without that call would be silently unprotected. Optional: add a
+  `apps/dashboard/app/(shell)/settings/layout.tsx` calling `requireTenantRouteAccess('/settings')` to
+  enforce the owner/admin floor for the whole subtree (hardcoded route — no pathname needed), with
+  per-page guards still adding owner-only for billing/whatsapp.
+
+**Workstream B — RLS activation (IN PROGRESS as of 2026-06-08; see report §9):**
+
+Refined to a **lower-risk design**: only the sanctioned `withTenant`/`withUser` path connects as the
+non-BYPASSRLS role (`appDb`); direct `db` access and `withServiceRole` stay on the privileged
+connection. This enforces RLS on the path the architecture mandates (and that `rls.test.ts` exercises)
+with **zero blast radius** on direct queries, and is **backward-compatible** (no `APP_DATABASE_URL` →
+`appDb` falls back to `db`, behavior unchanged).
+
+Done this session (safe / backward-compatible):
+- ✅ Provisioned role `leedi_app` (LOGIN, NOSUPERUSER, **NOBYPASSRLS**) + GRANTs on all tables/sequences
+  + default privileges for future tables (via Supabase MCP). Created **without a password** (Caio sets it).
+- ✅ `APP_DATABASE_URL` added as an OPTIONAL env var (`packages/config/src/schema.ts`).
+- ✅ `packages/db/src/client.ts` exposes `appDb`; `withTenant`/`withUser` use it, `withServiceRole`
+  stays on `db` (`packages/db/src/index.ts`).
+- ✅ Hardened-policies migration written: `packages/db/migrations/0018_epic2_rls_hardening.sql`
+  (memberships write-scoping #7; audit_logs RLS-path SELECT denied #8). **Not yet applied.**
+
+Migration `0018_epic2_rls_hardening.sql` **APPLIED to Supabase** (2026-06-09, via MCP); policies +
+`leedi_app` grants verified at the DB level.
+
+**BLOCKER discovered at cutover (Supabase infra, not our code):** the Supabase **shared pooler
+(Supavisor)** only authenticates the built-in `postgres` role — connecting as a custom role
+(`leedi_app.<ref>`) fails with `(ENOTFOUND) tenant/user leedi_app.<ref> not found`. So the RLS-enforced
+`leedi_app` connection cannot use the shared pooler. Custom-role options on Supabase:
+  1. **Direct connection** `postgresql://leedi_app:<pw>@db.<ref>.supabase.co:5432/postgres` (username
+     `leedi_app`, NO `.<ref>` suffix). Works for custom roles, but IPv6-only unless the IPv4 add-on is
+     enabled, and it does NOT pool — risky for serverless (connection exhaustion).
+  2. **Dedicated Pooler** (PgBouncer, paid tier) — supports custom roles + pooling.
+
+This is a production-infra/cost decision for Caio. The code is **shipped and backward-compatible**:
+with `APP_DATABASE_URL` unset, `appDb` falls back to the privileged connection and the app runs exactly
+as before (tenant isolation enforced at the application layer via `withTenant`). RLS-as-safety-net is
+ready to switch on the moment a working custom-role connection string exists.
+
+**DECISION 2026-06-09 (Caio): accept the app-layer-only limitation for now** (mirrors Epic 1's BYPASSRLS
+deferral). `APP_DATABASE_URL` stays unset → `appDb` falls back to the privileged connection; isolation is
+enforced at the application layer (`withTenant`). 2.4 moved to `done` on this basis. The DB-level RLS net
+(migration 0018 + `leedi_app`) is applied and dormant.
+
+**FUTURE activation (when a custom-role connection exists — Dedicated Pooler or direct):** set
+`APP_DATABASE_URL` to the `leedi_app` connection, run `rls.test.ts` (the cross-tenant test must pass),
+validate in staging. No code changes needed — the capability is shipped.
+
+---
+
+## 🎯 MILESTONE — Supabase Pro upgrade / staging validation (Epic 2 acceptance follow-ups)
+
+> Both Epic 2 stories below are **code-complete and `done`** (the code review corrected everything
+> codeable). What remains is **acceptance validation in a deployed environment**, batched here per Caio's
+> decision (2026-06-09) to run it when the project moves to the **Supabase Pro plan** (Dedicated Pooler).
+
+1. **[2.4] Activate DB-level RLS** — REQUIRES Supabase Pro (Dedicated Pooler) so the non-BYPASSRLS
+   `leedi_app` role can connect with pooling (the shared pooler rejects custom roles). Steps: build
+   `APP_DATABASE_URL` for `leedi_app` via the Dedicated Pooler → set it in env → run
+   `packages/db/src/__tests__/rls.test.ts` (the cross-tenant isolation test must pass) → validate in
+   staging. Migration `0018` + role + code already in place; no code changes needed.
+
+2. **[2.8] Exercise impersonation write+audit** — does NOT strictly require Pro (the audit writes via the
+   current privileged connection), but grouped here for a single validation pass on a deployed env: log
+   in as a `super_admin`, impersonate a tenant, perform a write through a `/api/tenants/*` route, and
+   confirm an `audit_logs` row (actor = real super-admin, target = tenant). Fail-closed by design, so
+   this is acceptance, not a security gate.
 
 ---
 

@@ -118,6 +118,14 @@ claude-sonnet-4-6
 - `apps/web/messages/pt-BR.json`
 - `packages/db/migrations/0001_striped_purifiers.sql`
 
+## Code Review Follow-up (2026-06-08)
+
+Re-verified against HEAD (see `epic-2-code-review-report.md`). Both 2026-06-04 `[Patch]` items are
+**FIXED**: `auth.ts` now sets `minPasswordLength: 8` + a `hooks.before` complexity policy guarding the
+native Better-Auth endpoints, and `register-user.test.ts` exists. The `[Decision]` (duplicate-email
+enumeration message) was **KEPT** by product decision (Caio, 2026-06-08): it is mandated by AC#3 and
+must NOT be extended to login (2.2) / reset (2.3), which stay generic.
+
 ## Review Findings (Code Review 2026-06-04)
 
 - [ ] [Review][Decision] Registration leaks account existence — `registerUser` returns a distinct `DUPLICATE_EMAIL_MESSAGE` (enumeration vector), but Story 2.1 AC#3 explicitly mandates this friendly message. Conflicts with the generic anti-enumeration responses used by login (2.2) and forgot-password (2.3). Decide: keep spec'd message vs. switch to generic. [packages/auth/src/use-cases/register-user.ts:15-16,72-73]

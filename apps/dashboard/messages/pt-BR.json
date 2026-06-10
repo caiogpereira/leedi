@@ -54,6 +54,10 @@
       "admin": "Administrador",
       "operator": "Operador",
       "viewer": "Visualizador"
-    }
+    },
+    "inviteSent": "Convite enviado com sucesso.",
+    "pendingHeading": "Convites pendentes",
+    "emptyPending": "Nenhum convite pendente.",
+    "statusPending": "Pendente"
   }
 }

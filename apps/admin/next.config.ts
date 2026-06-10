@@ -1,9 +1,12 @@
+import { fileURLToPath } from 'node:url';
 import createNextIntlPlugin from 'next-intl/plugin';
 import type { NextConfig } from 'next';
 
 const withNextIntl = createNextIntlPlugin('./i18n.ts');
 
 const nextConfig: NextConfig = {
+  // Pin the file-tracing root to the monorepo root (see dashboard next.config).
+  outputFileTracingRoot: fileURLToPath(new URL('../../', import.meta.url)),
   transpilePackages: ['@leedi/ui', '@leedi/auth', '@leedi/config', '@leedi/db', '@leedi/notification', '@leedi/tenancy', '@leedi/observability'],
   webpack(config) {
     config.resolve = {

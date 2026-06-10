@@ -8,6 +8,10 @@ export type {
 } from './use-cases/accept-invitation.js';
 export { listUserTenants } from './use-cases/list-user-tenants.js';
 export type { UserTenant } from './use-cases/list-user-tenants.js';
+export { listTenantMembers } from './use-cases/list-tenant-members.js';
+export type { TenantMember } from './use-cases/list-tenant-members.js';
+export { listPendingInvitations } from './use-cases/list-pending-invitations.js';
+export type { PendingInvitation } from './use-cases/list-pending-invitations.js';
 export { switchTenant } from './use-cases/switch-tenant.js';
 export type { SwitchTenantResult } from './use-cases/switch-tenant.js';
 export { listAllTenants } from './use-cases/list-all-tenants.js';

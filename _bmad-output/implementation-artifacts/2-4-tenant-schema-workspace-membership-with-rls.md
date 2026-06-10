@@ -111,6 +111,46 @@ claude-sonnet-4-6
 - `packages/db/migrations/0000_opposite_mephisto.sql`
 - `packages/db/src/__tests__/rls.test.ts`
 
+## Code Review Follow-up (2026-06-08)
+
+Re-verified against HEAD (see `epic-2-code-review-report.md`). All three 2026-06-04 findings are
+**STILL OPEN** and reframed as one coupled **"RLS activation" workstream (Workstream B)**, **deferred**
+by decision (Caio, 2026-06-08), mirroring Epic 1's BYPASSRLS deferral:
+
+- `[Decision]` AC#2 is unenforced at runtime — `DATABASE_URL` uses the BYPASSRLS `postgres` role, so
+  `withTenant`/`withServiceRole` are no-ops and `rls.test.ts`'s cross-tenant test fails. Tenant
+  isolation is currently enforced **only at the application layer** (every use-case goes through
+  `withTenant`).
+- `[Patch]` `memberships`/`tenants` policies lack `WITH CHECK` (write via the `user_id` escape hatch)
+  and `audit_logs` is world-readable (`USING (true)`). These are **runtime-inert** under the current
+  role and must be hardened **together with** the role flip (a `WITH CHECK (tenant_id = app.tenant_id)`
+  only becomes meaningful — and only risks breaking writes — once a non-BYPASSRLS role is used).
+  Verified safe for current write paths (owner membership is created by `acceptInvitation` under
+  `withTenant`). Tracked in `deferred-work.md` (Workstream B).
+
+**Update 2026-06-08 (Workstream B started — Caio: "do it now"):** refined to a lower-risk design —
+only the `withTenant`/`withUser` path connects as the non-BYPASSRLS role (`appDb`); direct `db` and
+`withServiceRole` stay privileged (zero blast radius; backward-compatible). **Done this session:** role
+`leedi_app` provisioned (NOBYPASSRLS + GRANTs, no password); `APP_DATABASE_URL` optional env var;
+`appDb` in the db client with `withTenant`/`withUser` using it; hardening migration
+`0018_epic2_rls_hardening.sql` written (not applied). **Remaining cutover (Caio):** set the role
+password + `APP_DATABASE_URL` (pooler), apply 0018, run `rls.test.ts` under `leedi_app` (the cross-tenant
+test must pass), validate in staging. **Story stays in `review`** until that validation. Steps in
+`epic-2-code-review-report.md §9` + `deferred-work.md`.
+
+**Closure 2026-06-09 (Caio's decision — accept app-layer limitation):** migration
+`0018_epic2_rls_hardening.sql` was **applied to Supabase** and the policies + `leedi_app` grants verified
+at the DB level. Cutover hit a **Supabase infra blocker**: the shared pooler (Supavisor) only
+authenticates the built-in `postgres` role, so the custom `leedi_app` role can't connect through it
+(`ENOTFOUND tenant/user leedi_app.<ref>`). Activating RLS-as-safety-net therefore needs a Dedicated
+Pooler (paid) or a direct connection (IPv6/IPv4-add-on, no pooling) — a production infra/cost decision.
+Caio chose to **accept the app-layer-only limitation for now** (identical posture to Epic 1's BYPASSRLS
+deferral): `APP_DATABASE_URL` stays unset, `appDb` falls back to the privileged connection, and tenant
+isolation is enforced by the application layer (`withTenant` in every use-case — the architecture's
+"first line"). The DB-level RLS net is **built, applied, and dormant**, ready to switch on once a
+custom-role connection exists. AC#1 ✅. AC#2 ✅ at the app layer (DB-level enforcement documented as
+deferred). Story moved `review → done` on this accepted-limitation basis.
+
 ## Review Findings (Code Review 2026-06-04)
 
 - [ ] [Review][Decision] AC#2 (tenant isolation) is UNENFORCED at runtime — the app `DATABASE_URL` connects as Supabase `postgres` (`rolbypassrls = true`), so `withTenant`/`withServiceRole` are no-ops and the cross-tenant negative test is left actively failing. Violates the story's explicit pitfall ("app role must NOT have BYPASSRLS"). Decide: gate Epic-2 acceptance on provisioning a dedicated non-BYPASSRLS app role, or accept stories 2.4/2.7/2.8 with a documented runtime limitation. [packages/db/src/__tests__/rls.test.ts; packages/db/src/index.ts]

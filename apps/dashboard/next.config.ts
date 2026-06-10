@@ -1,9 +1,14 @@
+import { fileURLToPath } from 'node:url';
 import createNextIntlPlugin from 'next-intl/plugin';
 import type { NextConfig } from 'next';
 
 const withNextIntl = createNextIntlPlugin('./i18n.ts');
 
 const nextConfig: NextConfig = {
+  // Pin the file-tracing root to the monorepo root. Without this, a stray
+  // lockfile higher in the tree (e.g. ~/pnpm-lock.yaml) makes Next infer the
+  // wrong workspace root (the whole home dir), slowing dev compilation.
+  outputFileTracingRoot: fileURLToPath(new URL('../../', import.meta.url)),
   transpilePackages: ['@leedi/ui', '@leedi/auth', '@leedi/config', '@leedi/db', '@leedi/knowledge', '@leedi/notification', '@leedi/tenancy', '@leedi/observability'],
   webpack(config, { isServer }) {
     config.resolve = {

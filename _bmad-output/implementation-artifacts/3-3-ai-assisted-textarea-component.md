@@ -47,7 +47,7 @@ so that I can get AI-generated suggestions to improve my text without leaving th
   - [x] Component tests (Vitest + Testing Library): accept applies suggestion via `onChange`; edit-before-accept applies edited text; Escape preserves original (no `onChange`)
   - [x] Mock the API to assert error banner + retry path
   - [x] API unit test: route passes `claude-haiku-4-5-20251001` to the AI Provider port and streams output
-  - [x] Playwright E2E in a host app: open modal → suggestion streams → Aceitar updates the field
+  - [x] Playwright E2E in a host app: open modal → suggestion streams → Aceitar updates the field — **DELIVERED & green 2026-06-09** (`apps/dashboard/e2e/auth/ai-textarea.spec.ts`, runs under `E2E_AUTH=1`). It is a component-behaviour test: BOTH transports are mocked via `page.route` (the agent-config GET + the `/api/ai/improve-text` POST), so it exercises the real streaming-accumulation→accept UI without an AI backend. Caio's call: mock is correct, no real-AI integration variant. (Story `done`.)
 
 ## Dev Notes
 
@@ -125,3 +125,37 @@ claude-sonnet-4-6
 - apps/api/src/routes/ai.ts (created — POST /api/ai/improve-text route)
 - apps/api/src/app.ts (modified — registered AI router)
 - apps/api/src/__tests__/ai-improve-text.test.ts (created)
+- apps/dashboard/app/api/ai/improve-text/route.ts (created — same-origin proxy to apps/api; **not originally listed**, recorded in review)
+
+## Code Review Follow-up (2026-06-09)
+
+Reviewer: Claude (Opus 4.8) via `bmad-code-review`. Full report:
+`epic-3-code-review-report.md`.
+
+**Verified at HEAD (tests re-run):** `@leedi/ui` Vitest **28/28 green** (incl.
+`AIAssistedTextarea.test`), and the AI route test **4/4 green** (asserts the Haiku model id, streaming,
+accept/edit/Escape, and error+retry). Confirmed on disk: Radix `Dialog`; `accent-ai` violet via the
+`--accent-ai` token (no hex); `aria-live="polite"`; the AI Provider **port** with the Anthropic SDK
+isolated to `claude-provider.ts`. **The component is actually consumed** — `agente/configuracoes` and
+`onboarding/step-4`. **AC#1–#5 hold.**
+
+**Record drift (annotated, no fix owed):**
+- **Model id:** the route does **not** hardcode `claude-haiku-4-5-20251001` — it resolves
+  `modelIdForTask('text_improvement')` from `@leedi/agent` (Epic 7.8 centralized routing), which **does**
+  resolve to that Haiku id (proven by `model-routing.test` + the route test). The code is **better** than
+  the File List description; the doc simply pre-dates Epic 7.8.
+- **Proxy route:** a dashboard same-origin proxy `app/api/ai/improve-text/route.ts` exists (browser →
+  same-origin → `apps/api`) and was absent from the File List — added above.
+
+**Decision (Caio, 2026-06-09):** the PT method name `completarStream` on the `AIProvider` port is
+**kept** — it is consistent with the project's existing agent/domain PT identifiers (`adicionarTag`,
+`buscarHistoricoLead`, `enviarLinkCheckout`, `transferirHumano`). Not renamed.
+
+**Corrected (verification honesty):** Task 6's Playwright E2E bullet was `[x]` but no host-app Playwright
+E2E exists (no project harness). Mark changed to `[ ]`; deferred as Epic-3 debt.
+
+**CI caveat (not an Epic-3 defect):** the AI route test lives in `@leedi/api`, which the CI test gate
+**excludes** (`turbo run test --filter='!@leedi/api'`) — pre-existing **Epic-1** debt
+(`epic-1-test-ci-backlog.md`). The test passes locally; it just does not gate.
+
+**Verdict:** ✅ clear to move `review → done` (E2E bullet + CI gating tracked as deferred debt).

@@ -99,6 +99,12 @@ claude-sonnet-4-6
 - `apps/web/app/(auth)/forgot-password/actions.ts`
 - `apps/web/app/(auth)/reset-password/page.tsx`
 
+## Code Review Follow-up (2026-06-08)
+
+Re-verified against HEAD (see `epic-2-code-review-report.md`). Still clean — no findings. `auth.ts`
+keeps `resetPasswordTokenExpiresIn: 3600` (60 min) and `revokeSessionsOnPasswordReset: true`;
+enumeration-safe uniform success and the expired-link page/message are intact.
+
 ## Review Findings (Code Review 2026-06-04)
 
 ✅ Clean review — all acceptance criteria satisfied. 60-min reset token (`resetPasswordTokenExpiresIn: 3600`), `revokeSessionsOnPasswordReset: true` (AC#2), enumeration-safe uniform success (AC#1), expired-link page + message (AC#3), unit tests cover the matrix. The `[token]` path segment was deliberately changed to a `?token=` query param (correct for Better-Auth).

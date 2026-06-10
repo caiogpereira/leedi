@@ -1,9 +1,7 @@
-import { headers } from 'next/headers';
-import { getSession } from '@leedi/auth';
-import { listUserTenants } from '@leedi/tenancy';
 import { withTenant, schema, eq } from '@leedi/db';
 import { ConnectForm } from './connect-form';
 import { HealthPanel } from './health-panel';
+import { requireTenantRouteAccess } from '../../../../lib/tenant-context';
 
 async function getExistingConnection(tenantId: string) {
   const rows = await withTenant(tenantId, async (tx) =>
@@ -25,30 +23,11 @@ async function getExistingConnection(tenantId: string) {
 }
 
 export default async function WhatsAppSettingsPage() {
-  const requestHeaders = await headers();
-  const session = await getSession(requestHeaders);
-
-  if (!session) {
-    return (
-      <div className="mx-auto max-w-2xl p-8">
-        <p className="text-muted-foreground">Sessão expirada.</p>
-      </div>
-    );
-  }
-
-  // Resolve current tenant + role
-  const tenants = await listUserTenants(session.user.id);
-  const headerTenantId = requestHeaders.get('x-leedi-tenant-id');
-  const currentTenant =
-    tenants.find((t) => t.tenantId === headerTenantId) ?? tenants[0];
-
-  if (!currentTenant) {
-    return (
-      <div className="mx-auto max-w-2xl p-8">
-        <p className="text-muted-foreground">Nenhum workspace encontrado.</p>
-      </div>
-    );
-  }
+  // RBAC enforcement (Story 2.5/2.7): /settings/whatsapp is owner-only. A
+  // non-owner is redirected to /403 before any content renders; the route role
+  // is resolved from membership data here (the Edge middleware can't).
+  const ctx = await requireTenantRouteAccess('/settings/whatsapp');
+  const currentTenant = ctx.tenant;
 
   const isOwner = currentTenant.role === 'owner';
   const existing = isOwner ? await getExistingConnection(currentTenant.tenantId) : null;

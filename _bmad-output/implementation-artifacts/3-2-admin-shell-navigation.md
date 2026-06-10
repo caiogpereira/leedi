@@ -38,7 +38,7 @@ so that I can manage the SaaS business separately from the tenant dashboard.
 - [x] Task 6: i18n + tests (AC: #1, #2, #3)
   - [x] Add `adminNav.*` keys to the pt-BR messages file
   - [x] Unit/integration test: non-`workspace_admins` user is redirected (mock session)
-  - [x] Playwright E2E: admin sidebar renders the five items, active highlight works, and no tenant switcher exists in the header
+  - [ ] Playwright E2E: admin sidebar renders the five items, active highlight works, and no tenant switcher exists in the header — **stub only, NOT executable** (no project Playwright harness; see Code Review Follow-up 2026-06-09 + `deferred-work.md`)
 
 ## Dev Notes
 
@@ -105,7 +105,29 @@ claude-sonnet-4-6
 - apps/admin/components/shell/AdminSidebar.tsx (created)
 - apps/admin/components/shell/AdminHeader.tsx (created)
 - apps/admin/components/shell/AdminSidebar.test.tsx (created)
-- apps/admin/e2e/admin-shell.spec.ts (created)
+- apps/admin/e2e/admin-shell.spec.ts (created — **non-executable stub**, no Playwright runner; see follow-up)
 - apps/admin/messages/pt-BR.json (modified — added adminNav.* keys, updated title)
 - apps/admin/vitest.config.ts (created)
 - apps/admin/package.json (modified — added test script, lucide-react, next-themes, vitest deps)
+
+## Code Review Follow-up (2026-06-09)
+
+Reviewer: Claude (Opus 4.8) via `bmad-code-review`. Full report:
+`epic-3-code-review-report.md`.
+
+**Verified at HEAD (tests re-run):** `@leedi/admin` Vitest **18/18 green** (incl. `AdminSidebar.test`
+and the auth-guard redirect test). Confirmed on disk: the guard runs in `(shell)/layout.tsx`
+(`getWorkspaceAdminRole(...) !== 'super_admin'` → `redirect('/login')`, reading from `workspace_admins`
+per RBAC §5.3); `adminNav.*` = 5 keys (visaoGeral, clientes, financeiro, operacional, configuracoes);
+AdminHeader has **no tenant switcher** and an indigo-token accent + **textual "ADMIN" badge + shield**
+(not color-alone). **AC#1–#3 hold at the code + unit level.**
+
+**Note on AC#3 wording:** the AC says "verify membership in `workspace_admins`"; the implementation
+requires the specific role `super_admin`. This is a correct tightening (only super-admins enter the admin
+shell) — recorded, not a defect.
+
+**Corrected (verification honesty):** the Task 6 Playwright E2E bullet was `[x]` but
+`admin-shell.spec.ts` is a non-executable stub (no project Playwright harness). Mark changed to `[ ]`;
+deferred as Epic-3 debt (`deferred-work.md`). The unit auth-guard test is real and green.
+
+**Verdict:** ✅ clear to move `review → done` with the E2E sweep carried as deferred Epic-3 debt.

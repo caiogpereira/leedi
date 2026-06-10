@@ -3,6 +3,7 @@
   "include": [
     "app",
     "components",
+    "lib",
     "middleware.ts",
     "src",
     "next.config.ts",
