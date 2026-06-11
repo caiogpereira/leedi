@@ -225,6 +225,17 @@ describe('PATCH /api/tenants/:tenantId/usage/settings', () => {
     expect(res.status).toBe(200);
   });
 
+  it('accepts notificar_overage_a_cada: 0 to disable overage alerts and returns 200', async () => {
+    dbRows = [[{ role: 'owner' }]]; // membership row
+    const app = buildApp();
+    const res = await app.request(`/api/tenants/${TENANT_ID}/usage/settings`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notificar_overage_a_cada: 0 }),
+    });
+    expect(res.status).toBe(200);
+  });
+
   it('returns 400 when patch body has no valid keys', async () => {
     dbRows = [[{ role: 'owner' }]];
     const app = buildApp();

@@ -49,7 +49,7 @@ export function UsageHistoryClient({ tenantId }: { tenantId: string }) {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">Histórico de Uso</h1>
         <Link
-          href="/settings/uso"
+          href="/configuracoes/uso"
           className="text-sm text-muted-foreground underline-offset-2 hover:underline"
         >
           Configurar alertas →

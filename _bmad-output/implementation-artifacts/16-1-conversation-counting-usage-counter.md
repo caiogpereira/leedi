@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 16.1: Conversation Counting & Usage Counter
 
-Status: review
+Status: done
 
 ## Story
 
@@ -124,3 +124,4 @@ _none_
 ### Change Log
 
 - 2026-06-03: Story 16.1 implemented — usage_counters schema, @leedi/usage package, incrementUsage with atomic upsert, wired into webhook-meta and internal agent-flush handler
+- 2026-06-11: Code review (epic-16) → done. Fixes: notification dedup race in `incrementUsage` (alert dispatch now gated on the atomic guarded `UPDATE ... RETURNING`, so concurrent increments can never double-fire the same notification); guard against divide-by-zero when overage notifications are disabled (`notificar_overage_a_cada = 0`); removed unused `withServiceRole` import. +1 unit test (overage disabled). **Documented deviation:** AC#1/AC#3 reference `subscriptions.plano` for the limit; implementation reads `tenants.plan` (subscriptions/billing plans are Epic 17 backlog) — `conversas_limite` is cached per counter row and will switch to `subscriptions` when Epic 17 lands.

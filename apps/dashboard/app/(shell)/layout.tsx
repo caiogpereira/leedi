@@ -103,7 +103,7 @@ export default async function ShellLayout({
             Limite de conversas atingido. Reative ou faça upgrade para continuar.
           </span>
           <a
-            href="/settings/billing"
+            href="/configuracoes/cobranca"
             className="ml-4 shrink-0 rounded border border-white/40 px-3 py-1 text-xs font-medium hover:bg-white/10"
           >
             Fazer upgrade

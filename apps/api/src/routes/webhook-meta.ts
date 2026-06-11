@@ -4,7 +4,7 @@ import { Redis } from '@upstash/redis';
 import { Client } from '@upstash/qstash';
 import { env } from '@leedi/config';
 import { withServiceRole, schema, eq } from '@leedi/db';
-import { resolveConversationWindow, saveMessage } from '@leedi/messaging';
+import { resolveConversationWindow, saveMessage, hasOpenConversationWindow } from '@leedi/messaging';
 import { findOrCreateLeadByPhone } from '@leedi/lead';
 import { captureException } from '@leedi/observability';
 import { webhookLimit } from '../middleware/rate-limit.js';
@@ -273,9 +273,11 @@ async function processMessage(
   // Find or create the lead by phone, then resolve its 24h conversation window.
   const { id: leadId } = await findOrCreateLeadByPhone({ tenantId, telefone: leadPhone });
 
-  // 16.3 AC#2: check if tenant opted in to blocking and has reached the limit.
+  // 16.3 AC#2/AC#7: only block when a NEW conversation window would be created.
+  // A lead with an already-open (<24h) window is mid-conversation and must keep
+  // getting responses even when the tenant is over limit with blocking ON.
   const usageBlock = await checkUsageBlock(tenantId);
-  if (usageBlock.blocked) {
+  if (usageBlock.blocked && !(await hasOpenConversationWindow({ tenantId, leadId }))) {
     console.info('[usage] tenant', tenantId, 'at limit, blocking new conversation');
     return; // lead receives no response — correct per FR107
   }

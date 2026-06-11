@@ -1,4 +1,4 @@
-import { withTenant, withServiceRole, schema, sql, eq, and } from '@leedi/db';
+import { withTenant, schema, sql, eq, and } from '@leedi/db';
 import { PLAN_LIMITS, OVERAGE_PRICE_BRL, USAGE_ALERT_THRESHOLDS } from '../constants.js';
 
 export interface IncrementUsageInput {
@@ -161,62 +161,62 @@ export async function incrementUsage(
   const sent = (updated.alertasEnviados ?? []) as string[];
   const pct = Math.floor((updated.conversasUsadas / conversasLimite) * 100);
 
+  // Candidate alerts as {key, alert}. The `alertas_enviados` jsonb is the source
+  // of truth for dedup: an alert is only dispatched when its key is *atomically*
+  // inserted by THIS call (guarded UPDATE ... RETURNING), so two concurrent
+  // increments can never both fire the same notification.
+  const candidates: { key: string; alert: AlertDue }[] = [];
+
   // Threshold alerts (16.2 AC#4,#5,#6)
-  const newThresholds: number[] = [];
   for (const threshold of USAGE_ALERT_THRESHOLDS) {
-    const key = String(threshold);
-    if (pct >= threshold && !sent.includes(key)) {
-      newThresholds.push(threshold);
-      alertsDue.push({
-        tipo: 'alerta_uso',
-        titulo: `Uso em ${threshold}%`,
-        corpo: `Você usou ${threshold}% das suas conversas do mês.`,
+    if (pct >= threshold) {
+      candidates.push({
+        key: String(threshold),
+        alert: {
+          tipo: 'alerta_uso',
+          titulo: `Uso em ${threshold}%`,
+          corpo: `Você usou ${threshold}% das suas conversas do mês.`,
+        },
       });
     }
   }
 
-  // Overage milestone alerts (16.3 AC#4)
+  // Overage milestone alerts (16.3 AC#4). notificarA100 <= 0 means the tenant
+  // disabled overage notifications — skip (also avoids a divide-by-zero).
   const newOverageValor = parseFloat(String(updated.overageValor ?? '0'));
-  const prevOverageValor = newOverageValor - OVERAGE_PRICE_BRL;
-  const newMilestone = Math.floor(newOverageValor / notificarA100) * notificarA100;
-  const prevMilestone = Math.floor(prevOverageValor / notificarA100) * notificarA100;
-
-  if (newOverageValor > 0 && newMilestone > prevMilestone && newMilestone > 0) {
-    const overageKey = `overage_brl_${newMilestone}`;
-    if (!sent.includes(overageKey)) {
-      newThresholds.push(-1); // marker for the update below
-      alertsDue.push({
-        tipo: 'alerta_overage',
-        titulo: `Overage: R$ ${newMilestone},00 extras`,
-        corpo: `Você excedeu seu limite em ${updated.overageConversas} conversas excedentes (R$ ${newMilestone},00 adicionais).`,
+  if (notificarA100 > 0 && newOverageValor > 0) {
+    const prevOverageValor = newOverageValor - OVERAGE_PRICE_BRL;
+    const newMilestone = Math.floor(newOverageValor / notificarA100) * notificarA100;
+    const prevMilestone = Math.floor(prevOverageValor / notificarA100) * notificarA100;
+    if (newMilestone > prevMilestone && newMilestone > 0) {
+      candidates.push({
+        key: `overage_brl_${newMilestone}`,
+        alert: {
+          tipo: 'alerta_overage',
+          titulo: `Overage: R$ ${newMilestone},00 extras`,
+          corpo: `Você excedeu seu limite em ${updated.overageConversas} conversas excedentes (R$ ${newMilestone},00 adicionais).`,
+        },
       });
     }
   }
 
-  // Persist newly sent alert keys atomically (prevent double-send on concurrent calls).
-  if (alertsDue.length > 0) {
-    const usageKeys = USAGE_ALERT_THRESHOLDS
-      .filter((t) => newThresholds.includes(t))
-      .map(String);
-    const overageKeys = newThresholds.includes(-1)
-      ? [`overage_brl_${Math.floor(newOverageValor / notificarA100) * notificarA100}`]
-      : [];
-    const keysToAdd = [...usageKeys, ...overageKeys];
-
-    if (keysToAdd.length > 0) {
-      await withTenant(tenantId, async (tx) => {
-        // Use jsonb concatenation; only update if the row doesn't already have this key.
-        for (const key of keysToAdd) {
-          await tx.execute(sql`
-            UPDATE "usage_counters"
-            SET "alertas_enviados" = "alertas_enviados" || ${JSON.stringify([key])}::jsonb,
-                "updated_at" = now()
-            WHERE "tenant_id" = ${tenantId}
-              AND "periodo"   = ${periodo}
-              AND NOT ("alertas_enviados" @> ${JSON.stringify([key])}::jsonb)
-          `);
-        }
-      });
+  // Dispatch only the keys this call newly persisted. The fast path skips keys
+  // already present; the authoritative gate is the guarded UPDATE's RETURNING.
+  for (const { key, alert } of candidates) {
+    if (sent.includes(key)) continue;
+    const inserted = await withTenant(tenantId, async (tx) =>
+      tx.execute(sql`
+        UPDATE "usage_counters"
+        SET "alertas_enviados" = "alertas_enviados" || ${JSON.stringify([key])}::jsonb,
+            "updated_at" = now()
+        WHERE "tenant_id" = ${tenantId}
+          AND "periodo"   = ${periodo}
+          AND NOT ("alertas_enviados" @> ${JSON.stringify([key])}::jsonb)
+        RETURNING "id"
+      `)
+    );
+    if ((inserted as unknown[]).length > 0) {
+      alertsDue.push(alert);
     }
   }
 

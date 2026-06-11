@@ -58,6 +58,7 @@ vi.mock('@leedi/messaging', () => ({
     .fn()
     .mockResolvedValue({ id: 'win-1', startedAt: new Date(), messageCount: 1, billable: true }),
   saveMessage: vi.fn().mockResolvedValue('msg-id-1'),
+  hasOpenConversationWindow: vi.fn().mockResolvedValue(false),
 }));
 
 vi.mock('@leedi/lead', () => ({
@@ -221,5 +222,74 @@ describe('POST /webhook/meta — inbound messages', () => {
       body,
     });
     expect(res.status).toBe(200);
+  });
+});
+
+describe('POST /webhook/meta — usage blocking (Story 16.3 AC#2/AC#7)', () => {
+  afterEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+
+  async function postInbound(): Promise<void> {
+    const { createWebhookMetaRouter } = await import('../routes/webhook-meta.js');
+    const { withServiceRole } = await import('@leedi/db');
+    const { Hono } = await import('hono');
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(withServiceRole).mockImplementation(async (fn: (tx: any) => Promise<unknown>) =>
+      fn({
+        select: () => ({
+          from: () => ({
+            where: () => ({ limit: async () => [{ tenantId: 't1', connectionId: 'conn-1' }] }),
+          }),
+        }),
+      })
+    );
+
+    const app = new Hono();
+    app.route('/webhook/meta', createWebhookMetaRouter(fakeDeps()));
+    const body = buildWebhookPayload('p1', 'msg-usage-block', '+5511', 'Olá');
+    const res = await app.request('/webhook/meta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-hub-signature-256': buildSignature(body) },
+      body,
+    });
+    expect(res.status).toBe(200);
+  }
+
+  it('blocks a NEW conversation when over limit and no open window exists (AC#2)', async () => {
+    const { checkUsageBlock } = await import('@leedi/usage');
+    const { resolveConversationWindow, hasOpenConversationWindow, saveMessage } =
+      await import('@leedi/messaging');
+    vi.mocked(checkUsageBlock).mockResolvedValue({
+      blocked: true,
+      conversasUsadas: 500,
+      conversasLimite: 500,
+    });
+    vi.mocked(hasOpenConversationWindow).mockResolvedValue(false);
+
+    await postInbound();
+
+    // hasOpenConversationWindow is consulted; since none is open, the new window
+    // is never created and the message is never saved (lead gets no response).
+    await vi.waitFor(() => expect(vi.mocked(hasOpenConversationWindow)).toHaveBeenCalled());
+    expect(vi.mocked(resolveConversationWindow)).not.toHaveBeenCalled();
+    expect(vi.mocked(saveMessage)).not.toHaveBeenCalled();
+  });
+
+  it('does NOT block when an open window exists — existing conversation continues (AC#7)', async () => {
+    const { checkUsageBlock } = await import('@leedi/usage');
+    const { resolveConversationWindow, hasOpenConversationWindow } =
+      await import('@leedi/messaging');
+    vi.mocked(checkUsageBlock).mockResolvedValue({
+      blocked: true,
+      conversasUsadas: 500,
+      conversasLimite: 500,
+    });
+    vi.mocked(hasOpenConversationWindow).mockResolvedValue(true);
+
+    await postInbound();
+
+    // Over limit + blocking ON, but the lead is mid-conversation: the window is
+    // still resolved (bumped) so the agent keeps responding.
+    await vi.waitFor(() => expect(vi.mocked(resolveConversationWindow)).toHaveBeenCalled());
   });
 });

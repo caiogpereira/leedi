@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 16.3: Overage Handling & Tenant Configuration
 
-Status: review
+Status: done
 
 ## Story
 
@@ -87,3 +87,8 @@ _none_
 ### Change Log
 
 - 2026-06-03: Story 16.3 implemented — block-at-limit, overage milestones, settings UI, block banner in layout
+- 2026-06-11: Code review (epic-16) → done. Fixes:
+  - **HIGH (AC#2/AC#7):** `checkUsageBlock` in `webhook-meta.ts` ran before `resolveConversationWindow` and blocked ALL inbound messages when over-limit + blocking ON — including leads with an already-open (<24h) window, killing conversations mid-flight. Added read-only `hasOpenConversationWindow` (new `@leedi/messaging` use case, no side effects) and now only block when a NEW window would be created (`blocked && !hasOpenWindow`). +3 unit tests.
+  - **MEDIUM (AC#6):** the "Notificar a cada R$100" toggle could never be turned OFF — the UI sends `notificar_overage_a_cada: 0` but the PATCH route rejected `<= 0`, returning 400 and silently reverting the toggle. PATCH now accepts `>= 0` (0 = disabled); `incrementUsage` guards the milestone math against divide-by-zero. +1 API test.
+  - **MEDIUM (dead link):** block banner "Fazer upgrade" CTA pointed to `/settings/billing` — a route with NO page (genuine 404; billing lives only at `/configuracoes/cobranca`). Corrected.
+  - **Deferred (systemic, out of scope):** the `/configuracoes/*` settings pages (uso, cobranca, notificacoes) have no page-level role guard — any tenant member can open them — unlike the EN `settings/*` pages which use `requireTenantRouteAccess`. The destructive action here (PATCH `/usage/settings`) is already owner-gated server-side (`billing:write`), so this is defense-in-depth only; align the whole `configuracoes` tree's RBAC during the settings-tree migration, not piecemeal.

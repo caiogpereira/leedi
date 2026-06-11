@@ -50,7 +50,8 @@ export function createUsageRouter() {
     if (typeof body.bloquear_ao_atingir_limite === 'boolean') {
       patch['bloquear_ao_atingir_limite'] = body.bloquear_ao_atingir_limite;
     }
-    if (typeof body.notificar_overage_a_cada === 'number' && body.notificar_overage_a_cada > 0) {
+    // >= 0 so the UI toggle can DISABLE overage alerts by sending 0 (16.3 AC#6).
+    if (typeof body.notificar_overage_a_cada === 'number' && body.notificar_overage_a_cada >= 0) {
       patch['notificar_overage_a_cada'] = body.notificar_overage_a_cada;
     }
 

@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 16.2: Usage Dashboard Widget & Threshold Alerts
 
-Status: review
+Status: done
 
 ## Story
 
@@ -90,3 +90,4 @@ _none_
 ### Change Log
 
 - 2026-06-03: Story 16.2 implemented — usage widget, history page, API routes, threshold alert infrastructure
+- 2026-06-11: Code review (epic-16) → done. Fix: history page "Configurar alertas →" pointed to `/settings/uso` — a non-canonical route (the sidebar navigates to the `/configuracoes/*` tree; `/settings/uso` is an orphaned duplicate of `configuracoes/uso` left from the EN→PT settings migration, not reachable via nav). Repointed to the canonical `/configuracoes/uso`. Threshold dedup hardened via the RETURNING-gated dispatch in 16.1. **Deferred (pre-existing, out of scope):** duplicate `settings/uso` page (identical client) should be removed once the EN `settings/*` tree (still hosting team/whatsapp) is fully migrated to `configuracoes/*`.

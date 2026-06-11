@@ -1,5 +1,5 @@
 # generated: 2026-05-29
-# last_updated: 2026-06-11  (epic-13 code review complete — stories 13.1–13.5 → done; 13.4/13.5 deferred MEDIUMs implemented; 13.2 residual → PL-17)
+# last_updated: 2026-06-11  (epic-16 code review complete — stories 16.1–16.3 → done; HIGH block-existing-window fix + overage-toggle-disable + 2 dead links + dedup race hardened)
 # project: leedi
 # project_key: NOKEY
 # tracking_system: file-system
@@ -202,10 +202,10 @@ development_status:
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 16: Usage Metering & Overage
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-16: in-progress
-  16-1-conversation-counting-usage-counter: review
-  16-2-usage-dashboard-widget-threshold-alerts: review
-  16-3-overage-handling-tenant-configuration: review
+  epic-16: done
+  16-1-conversation-counting-usage-counter: done
+  16-2-usage-dashboard-widget-threshold-alerts: done
+  16-3-overage-handling-tenant-configuration: done
   epic-16-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────

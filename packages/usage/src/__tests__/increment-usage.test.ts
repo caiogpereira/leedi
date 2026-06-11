@@ -38,7 +38,10 @@ vi.mock('@leedi/db', () => {
       },
       execute: (sqlTag: unknown) => {
         state.executes.push(String(sqlTag));
-        return Promise.resolve([]);
+        // RETURNING "id" on the guarded alert UPDATE yields a row when the key is
+        // newly inserted; the dedup fast path (sent.includes) covers the "already
+        // sent" case, so returning a row here is the correct default.
+        return Promise.resolve([{ id: 'row-1' }]);
       },
       update: () => ({
         set: () => ({
@@ -201,6 +204,23 @@ describe('incrementUsage', () => {
     const result = await incrementUsage({ tenantId: 't1', billable: true });
 
     expect(result.alertsDue.filter((a) => a.titulo === 'Uso em 80%')).toHaveLength(0);
+  });
+
+  it('does NOT emit overage alert when notificar_overage_a_cada is 0 (disabled)', async () => {
+    state.tenantRow = { plan: 'starter', config: { notificar_overage_a_cada: 0 } };
+    state.counterRow = null;
+    state.updatedRow = {
+      conversasUsadas: 500,
+      conversasLimite: 500,
+      overageConversas: 400,
+      overageValor: '120.00', // would cross the R$100 milestone if enabled
+      alertasEnviados: ['80', '95', '100'],
+    };
+
+    const { incrementUsage } = await import('../use-cases/increment-usage.js');
+    const result = await incrementUsage({ tenantId: 't1', billable: true });
+
+    expect(result.alertsDue.some((a) => a.tipo === 'alerta_overage')).toBe(false);
   });
 
   it('custo_ia_usd included in billable upsert when aiCostUsd provided', async () => {

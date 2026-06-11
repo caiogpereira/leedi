@@ -12,6 +12,9 @@ export type {
   ConversationWindowResult,
 } from './use-cases/resolve-conversation-window.js';
 
+export { hasOpenConversationWindow } from './use-cases/has-open-conversation-window.js';
+export type { HasOpenConversationWindowInput } from './use-cases/has-open-conversation-window.js';
+
 export { saveMessage } from './use-cases/save-message.js';
 export type {
   SaveMessageInput,
