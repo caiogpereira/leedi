@@ -22,7 +22,7 @@
 > - **P2 — V2 / post-launch.** Explicitly descoped from V1. Listed so nothing is forgotten,
 >   not expected before launch.
 >
-> Last updated: 2026-06-10.
+> Last updated: 2026-06-11.
 
 ---
 
@@ -183,6 +183,22 @@
   before the send and only a successful send flips it to `enviado`; a redelivered batch never
   re-sends an already-claimed target (verified in staging by forcing a mid-batch redelivery).
 
+- [ ] **PL-18 · [Epic 14 / Stories 14.1–14.3] Inbox SQL + UI not runtime-verified.** The Epic 14
+  review (2026-06-11) applied 14 patches but two surfaces shipped **typecheck-clean only, never
+  exercised at runtime**: (a) the **inbox list-route SQL** in `apps/api/src/routes/inbox/index.ts`
+  has **no test/integration harness** — the keyset cursor, the `status` filter `statusCondition`
+  (`bot` → `= 'bot' OR IS NULL`; default view → `IS DISTINCT FROM 'resolvido'`), the LEFT-JOIN
+  `COALESCE` status, and the correlated last-message subquery are correct by inspection but **not
+  DB-validated** (the story already carried "inbox list query untested — manual verification
+  required"); (b) the **8s poll-merge** in `conversas-client.tsx` and `conversa-detail-client.tsx`
+  (merge-by-id preserving loaded pages/history + in-flight optimistic message) has **no component
+  test** and was **not verified in a browser** (repo's standing "UI not verified in browser"
+  pattern). Source: `project_epic14_code_review` memory + Epic 14 Review Findings. *Exit:* in
+  staging, exercise the inbox list with each filter combination (status incl. `bot`/default-hides-
+  `resolvido`, temperatura, cursor pagination across a tie on `created_at`) and confirm rows match
+  expectation under the `leedi_app` role; and drive the inbox + detail in a browser confirming the
+  8s poll does not wipe "Carregar mais"/older-history or drop an in-flight reply.
+
 ---
 
 ## C. P2 — V2 / post-launch (descoped from V1 — listed for memory)
@@ -249,7 +265,12 @@
   exclusion, throttle enforcement for all tiers, quality-update unknown-signal + restoration notif,
   recovery dedup status-filter, FK/limit/offset guards, exact-text fixes); 13.4 `agendar_followup`
   contract realigned to `agendado_para`; 13.5 manual `/resume` endpoint + dashboard badge/button shipped.
-- **Epic 14 — Human Inbox:** lint debt (→ PL-7). *Not yet reviewed.*
+- **Epic 14 — Human Inbox:** PL-18 (inbox SQL + poll-merge UI not runtime-verified, P1); lint debt
+  (→ PL-7). Reviewed 2026-06-11; stories 14.1–14.3 + epic-14 `done`. 14 patches + 2 decisions:
+  HIGH takeover-steal guard + poll wiped pagination/history; AC#8 24h-detection was **dead vs the
+  real adapter** (`meta-cloud-provider.ts` discarded the Meta error code → enriched it); AC#7 kept
+  the real Epic-18 notification (dep on Epic 18, still `review`); `22P02`→500 hardening
+  (enum/cursor/limit). 2 defers (UNIQUE `inbox_assignments`, reply cross-tx) in `deferred-work.md`.
 - **Epic 15 — Analytics:** lint debt (→ PL-7). *Not yet reviewed.*
 - **Epic 16 — Usage Metering:** lint debt (→ PL-7). *Not yet reviewed.* **⚠ Billing-adjacent
   (usage counts feed overage/billing) — prioritize its formal review.**

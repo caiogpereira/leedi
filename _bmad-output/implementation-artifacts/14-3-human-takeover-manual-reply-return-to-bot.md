@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 14.3: Human Takeover, Manual Reply & Return to Bot
 
-Status: review
+Status: done
 
 ## Story
 
@@ -136,3 +136,16 @@ claude-sonnet-4-6 (1M context)
 ### Change Log
 
 - 2026-06-03: Implemented human takeover, manual reply, return-to-bot, and resolve flows with full test coverage.
+- 2026-06-11: Code review fixes. AC#7 now wires the REAL `sendNotificationToTenantRole` (Epic 18) via `defaultNotifyOperators` in `transferir-humano.ts` — the original stub decision was superseded once Epic 18's notification fan-out landed. Payload: `roles:['owner','admin','operator']`, `tipo:'lead_pediu_humano'`. Fire-and-forget (`.catch(()=>{})`) so a notification failure never breaks the tool; the unused `createNotificationStub` import was removed from `actions.ts`. (Caio's call: keep real delivery + document; cross-epic dep on Epic 18 which is still in `review`.)
+
+### Review Findings (2026-06-11)
+
+- [x] [Review][Decision] AC#7 — handoff notification calls REAL `sendNotificationToTenantRole` (Epic 18 code, still in `review`), not the documented stub; payload also differs (`roles:['owner','admin','operator']`, `corpo:'Lead aguardando: …'`). `createNotificationStub` is imported in actions.ts but never used. Cross-epic dependency on unreviewed code (fire-and-forget, `.catch(()=>{})`) [transferir-humano.ts:182-224]
+- [x] [Review][Decision] AC#8 — 24h-window error message is non-functional against the real adapter: `MetaCloudProvider.#fetchWithRetry` throws only `"Meta API error: <status>"` (discards Meta error code/body), so `is24hError` (`131026`/`24`/`window`) never matches in production. Proper fix enriches the Epic-4 shared adapter error [meta-cloud-provider.ts:214 + actions.ts:180-194]
+- [x] [Review][Patch] AC#1 — takeover has no status/owner guard: any tenant member can `takeover` a conversation already `em_atendimento` by another operator (or a `resolvido` one) — silent steal; only existence of the row is checked [actions.ts:45-51]
+- [x] [Review][Patch] AC#3 — a failed reply (non-24h) persists a `status:'falhou'` message row that the detail query never selects and the UI renders identically to a sent message after the next poll; AC#3 saves only on successful send [actions.ts:196-213]
+- [x] [Review][Patch] AC#6 — `resolvido` conversations are not excluded from the default (no-filter) inbox view; the list query only filters `isNull(endedAt)` + optional status [apps/api/src/routes/inbox/index.ts:82-92]
+- [x] [Review][Patch] Reply resolves the WhatsApp connection by `tenantId` `limit(1)`, ignoring the window's `connection_id`; multi-number tenants reply from the wrong number (can also trip a 24h window on a number the lead never messaged) [actions.ts:142-151]
+- [x] [Review][Patch] Dead code: `createNotificationStub()` imported and instantiated but never used (`notification` const) [actions.ts:11-13]
+- [x] [Review][Defer] `inbox_assignments` has no DB UNIQUE(`conversation_window_id`); concurrent `transferir_humano`/window creation can insert duplicate assignment rows the inbox can't disambiguate — proper fix is a migration (same class as PL-17) [transferir-humano.ts:111-143] — deferred, needs DB migration
+- [x] [Review][Defer] Reply validates assignee/status then sends then persists across separate `withTenant` transactions; assignee can change (return_to_bot/resolve/steal) during the Meta round-trip, persisting a `humano` outbound on a no-longer-`em_atendimento` conversation [actions.ts:103-209] — deferred, low-likelihood cross-tx race

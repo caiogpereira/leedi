@@ -8,9 +8,15 @@ import {
   resumeThreadByWindowId,
   closeThreadByWindowId,
 } from '@leedi/agent-memory';
-import { createNotificationStub } from '@leedi/notification';
 
-const notification = createNotificationStub();
+// Meta re-engagement / 24h-window error codes. The adapter surfaces the Meta error code in
+// the thrown message (e.g. "Meta API error: 400 (131047)"); match on the code, not loose
+// substrings like "24"/"window" which misclassify unrelated failures.
+//  - 131047: Re-engagement message (more than 24h since the user's last message)
+//  - 131026: Message undeliverable (commonly the closed 24h window)
+function is24hWindowError(message: string): boolean {
+  return /\b131047\b/.test(message) || /\b131026\b/.test(message);
+}
 
 export function createInboxActionsRouter() {
   const router = new Hono();
@@ -33,7 +39,11 @@ export function createInboxActionsRouter() {
 
     const updated = await withTenant(tenantId, async (tx) => {
       const [assignment] = await tx
-        .select({ id: schema.inboxAssignments.id, status: schema.inboxAssignments.status })
+        .select({
+          id: schema.inboxAssignments.id,
+          status: schema.inboxAssignments.status,
+          assignedTo: schema.inboxAssignments.assignedTo,
+        })
         .from(schema.inboxAssignments)
         .where(eq(schema.inboxAssignments.conversationWindowId, windowId))
         .limit(1);
@@ -43,6 +53,18 @@ export function createInboxActionsRouter() {
       }
 
       if (action === 'takeover') {
+        // Guard against stealing an active conversation or reopening a resolved one.
+        // (Residual select-then-update race is closed by the deferred UNIQUE constraint.)
+        if (assignment.status === 'resolvido') {
+          return { error: 'Conversa já foi resolvida.' as const };
+        }
+        if (
+          assignment.status === 'em_atendimento' &&
+          assignment.assignedTo &&
+          assignment.assignedTo !== userId
+        ) {
+          return { error: 'Conversa já está em atendimento por outro operador.' as const };
+        }
         await tx
           .update(schema.inboxAssignments)
           .set({ status: 'em_atendimento', assignedTo: userId, updatedAt: new Date() })
@@ -68,6 +90,9 @@ export function createInboxActionsRouter() {
 
     if (!updated) {
       return c.json({ error: 'Conversa não encontrada.' }, 404);
+    }
+    if ('error' in updated) {
+      return c.json({ error: updated.error }, 409);
     }
 
     // Manage agent thread lifecycle (no-op if thread doesn't exist yet)
@@ -121,7 +146,10 @@ export function createInboxActionsRouter() {
       }
 
       const [window] = await tx
-        .select({ leadId: schema.conversationWindows.leadId })
+        .select({
+          leadId: schema.conversationWindows.leadId,
+          connectionId: schema.conversationWindows.connectionId,
+        })
         .from(schema.conversationWindows)
         .where(
           and(
@@ -139,6 +167,9 @@ export function createInboxActionsRouter() {
         .where(and(eq(schema.leads.id, window.leadId), eq(schema.leads.tenantId, tenantId)))
         .limit(1);
 
+      // Reply from the SAME WhatsApp number the conversation runs on (window.connectionId),
+      // not an arbitrary tenant connection — multi-number tenants would otherwise reply from
+      // the wrong number and can trip a 24h window on a number the lead never messaged.
       const [connection] = await tx
         .select({
           phoneNumberId: schema.whatsappConnections.phoneNumberId,
@@ -147,7 +178,12 @@ export function createInboxActionsRouter() {
           accessTokenIv: schema.whatsappConnections.accessTokenIv,
         })
         .from(schema.whatsappConnections)
-        .where(eq(schema.whatsappConnections.tenantId, tenantId))
+        .where(
+          and(
+            eq(schema.whatsappConnections.id, window.connectionId),
+            eq(schema.whatsappConnections.tenantId, tenantId)
+          )
+        )
         .limit(1);
 
       return { leadId: window.leadId, leadPhone: lead?.telefone ?? null, connection: connection ?? null };
@@ -163,26 +199,16 @@ export function createInboxActionsRouter() {
       return c.json({ error: 'Configuração de WhatsApp não encontrada.' }, 422);
     }
 
-    // Send via Meta Cloud API
-    let metaMessageId: string | null = null;
-    let status: 'enviado' | 'falhou' = 'enviado';
-    let sendError: string | null = null;
-
+    // Send via Meta Cloud API. A failed send is NOT persisted — AC#3 saves a message only
+    // when it is actually delivered, and the client reverts its optimistic bubble on error.
+    let metaMessageId: string;
     try {
       const sender = new MetaCloudProvider(ctx.connection);
       const res = await sender.sendText(ctx.leadPhone, content);
       metaMessageId = res.messageId;
     } catch (err) {
-      status = 'falhou';
-      sendError = err instanceof Error ? err.message : 'Erro ao enviar mensagem.';
-
-      // 24h window error detection
-      const is24hError =
-        sendError.includes('131026') ||
-        sendError.toLowerCase().includes('24') ||
-        sendError.toLowerCase().includes('window');
-
-      if (is24hError) {
+      const sendError = err instanceof Error ? err.message : 'Erro ao enviar mensagem.';
+      if (is24hWindowError(sendError)) {
         return c.json(
           {
             error:
@@ -191,9 +217,10 @@ export function createInboxActionsRouter() {
           422
         );
       }
+      return c.json({ error: sendError }, 502);
     }
 
-    // Persist to messages table
+    // Persist to messages table only after a successful send.
     await withTenant(tenantId, async (tx) => {
       await tx.insert(schema.messages).values({
         tenantId,
@@ -204,13 +231,9 @@ export function createInboxActionsRouter() {
         tipo: 'texto',
         content,
         metaMessageId,
-        status,
+        status: 'enviado',
       });
     });
-
-    if (status === 'falhou') {
-      return c.json({ error: sendError ?? 'Falha ao enviar mensagem.' }, 502);
-    }
 
     return c.json({ ok: true, metaMessageId });
   });

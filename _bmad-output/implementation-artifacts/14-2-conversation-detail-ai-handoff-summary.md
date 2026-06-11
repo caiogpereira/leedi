@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 14.2: Conversation Detail & AI Handoff Summary
 
-Status: review
+Status: done
 
 ## Story
 
@@ -106,3 +106,11 @@ claude-sonnet-4-6 (1M context)
 ### Change Log
 
 - 2026-06-03: Implemented conversation detail API, dashboard detail page with message feed, handoff summary panel, and HandoffSummary type.
+
+### Review Findings (2026-06-11)
+
+- [x] [Review][Patch] Detail messages `orderBy` is `desc(createdAt)` only while the cursor predicate uses `(createdAt, id)` — missing `id` tiebreaker ⇒ rows skipped/duplicated at page boundaries when timestamps tie [apps/api/src/routes/inbox/index.ts:229]
+- [x] [Review][Patch] Detail message cursor not shape-validated (same `::uuid`/`::timestamptz` 500 class as list cursor) [apps/api/src/routes/inbox/index.ts:153-164]
+- [x] [Review][Patch] `summary.objecoes` assumed to be an array; a string value passes the `.length` guard and `.map` crashes the whole handoff panel (`resumo_handoff` is unvalidated Haiku JSON) [handoff-summary-panel.tsx:68]
+- [x] [Review][Patch] AC#5/#7: 8s poll replaces `data` (`setData(detail)` + `setOlderCursor(detail.nextCursor)`), discarding history loaded via "Carregar mensagens anteriores" every tick [conversa-detail-client.tsx:86-87]
+- [x] [Review][Patch] Background poll unconditionally runs `setOptimisticMsgs([])`; an 8s tick mid-send removes the optimistic bubble before the persisted message returns [conversa-detail-client.tsx:88]

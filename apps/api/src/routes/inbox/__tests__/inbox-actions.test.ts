@@ -59,10 +59,6 @@ vi.mock('@leedi/agent-memory', () => ({
   closeThreadByWindowId: vi.fn(async () => undefined),
 }));
 
-vi.mock('@leedi/notification', () => ({
-  createNotificationStub: () => ({ send: vi.fn(async () => undefined) }),
-}));
-
 const { mockSendText } = vi.hoisted(() => ({
   mockSendText: vi.fn(async () => ({ messageId: 'meta-msg-1' })),
 }));
@@ -135,9 +131,11 @@ vi.mock('@leedi/db', () => ({
       id: 'cw.id',
       tenantId: 'cw.tenant_id',
       leadId: 'cw.lead_id',
+      connectionId: 'cw.connection_id',
     },
     leads: { id: 'l.id', tenantId: 'l.tenant_id', telefone: 'l.telefone' },
     whatsappConnections: {
+      id: 'wc.id',
       tenantId: 'wc.tenant_id',
       phoneNumberId: 'wc.phone_number_id',
       wabaId: 'wc.waba_id',
@@ -203,6 +201,58 @@ describe('inbox actions — PATCH /:windowId/assign', () => {
     expect(body.status).toBe('em_atendimento');
     expect(updateSets[0]).toMatchObject({ status: 'em_atendimento', assignedTo: USER });
     expect(pauseThreadByWindowId).toHaveBeenCalledWith(TENANT, WINDOW);
+  });
+
+  it('takeover: returns 409 when already em_atendimento by another operator', async () => {
+    dbRows = [
+      [{ role: 'member' }],
+      [{ id: 'assign-1', status: 'em_atendimento', assignedTo: 'user-other' }],
+    ];
+    const app = buildApp();
+
+    const res = await app.request(`${REQ_BASE}/${WINDOW}/assign`, {
+      method: 'PATCH',
+      body: JSON.stringify({ action: 'takeover' }),
+      headers: { 'content-type': 'application/json' },
+    });
+
+    expect(res.status).toBe(409);
+    expect(updateSets.length).toBe(0);
+    expect(pauseThreadByWindowId).not.toHaveBeenCalled();
+  });
+
+  it('takeover: returns 409 when conversation already resolved', async () => {
+    dbRows = [
+      [{ role: 'member' }],
+      [{ id: 'assign-1', status: 'resolvido', assignedTo: null }],
+    ];
+    const app = buildApp();
+
+    const res = await app.request(`${REQ_BASE}/${WINDOW}/assign`, {
+      method: 'PATCH',
+      body: JSON.stringify({ action: 'takeover' }),
+      headers: { 'content-type': 'application/json' },
+    });
+
+    expect(res.status).toBe(409);
+    expect(updateSets.length).toBe(0);
+  });
+
+  it('takeover: allowed when em_atendimento is already assigned to the same operator', async () => {
+    dbRows = [
+      [{ role: 'member' }],
+      [{ id: 'assign-1', status: 'em_atendimento', assignedTo: USER }],
+    ];
+    const app = buildApp();
+
+    const res = await app.request(`${REQ_BASE}/${WINDOW}/assign`, {
+      method: 'PATCH',
+      body: JSON.stringify({ action: 'takeover' }),
+      headers: { 'content-type': 'application/json' },
+    });
+
+    expect(res.status).toBe(200);
+    expect(updateSets[0]).toMatchObject({ status: 'em_atendimento', assignedTo: USER });
   });
 
   it('return_to_bot: sets status to bot and resumes thread', async () => {
@@ -282,7 +332,7 @@ describe('inbox actions — POST /:windowId/reply', () => {
     dbRows = [
       [{ role: 'member' }],
       [{ status: 'em_atendimento', assignedTo: USER }],
-      [{ leadId: 'lead-1' }],
+      [{ leadId: 'lead-1', connectionId: 'conn-1' }],
       [{ telefone: '+5511999999999' }],
       [{ phoneNumberId: 'pnid', wabaId: 'waba', accessTokenEncrypted: 'enc', accessTokenIv: 'iv' }],
     ];
@@ -321,7 +371,7 @@ describe('inbox actions — POST /:windowId/reply', () => {
     dbRows = [
       [{ role: 'member' }],
       [{ status: 'em_atendimento', assignedTo: USER }],
-      [{ leadId: 'lead-1' }],
+      [{ leadId: 'lead-1', connectionId: 'conn-1' }],
       [{ telefone: '+5511999999999' }],
       [{ phoneNumberId: 'pnid', wabaId: 'waba', accessTokenEncrypted: 'enc', accessTokenIv: 'iv' }],
     ];
@@ -337,6 +387,29 @@ describe('inbox actions — POST /:windowId/reply', () => {
     expect(res.status).toBe(422);
     const body = await res.json() as { error: string };
     expect(body.error).toContain('janela de 24h');
+    // A failed send must NOT be persisted (AC#3 saves only delivered messages).
+    expect(insertedRows.length).toBe(0);
+  });
+
+  it('returns 502 and does NOT persist on a non-24h send failure', async () => {
+    dbRows = [
+      [{ role: 'member' }],
+      [{ status: 'em_atendimento', assignedTo: USER }],
+      [{ leadId: 'lead-1', connectionId: 'conn-1' }],
+      [{ telefone: '+5511999999999' }],
+      [{ phoneNumberId: 'pnid', wabaId: 'waba', accessTokenEncrypted: 'enc', accessTokenIv: 'iv' }],
+    ];
+    mockSendText.mockRejectedValue(new Error('Meta API error: 400'));
+    const app = buildApp();
+
+    const res = await app.request(`${REQ_BASE}/${WINDOW}/reply`, {
+      method: 'POST',
+      body: JSON.stringify({ content: 'Olá!' }),
+      headers: { 'content-type': 'application/json' },
+    });
+
+    expect(res.status).toBe(502);
+    expect(insertedRows.length).toBe(0);
   });
 
   it('returns 400 when content is empty', async () => {

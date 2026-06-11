@@ -211,7 +211,17 @@ export class MetaCloudProvider implements WhatsAppProvider {
 
       const shouldRetry = res.status === 429 || res.status >= 500;
       if (!shouldRetry || attempt === MAX_ATTEMPTS - 1) {
-        throw new Error(`Meta API error: ${res.status}`);
+        // Surface the Meta error code (e.g. 131047 re-engagement / 24h window) so callers
+        // can distinguish window-closed failures. Keep the `Meta API error: <status>` prefix
+        // for backward compatibility when the response carries no JSON body.
+        let errInfo = '';
+        try {
+          const errBody = (await res.json()) as { error?: { code?: number } };
+          if (errBody?.error?.code) errInfo = ` (${errBody.error.code})`;
+        } catch {
+          // response had no JSON body — fall back to status-only message
+        }
+        throw new Error(`Meta API error: ${res.status}${errInfo}`);
       }
 
       const retryAfterHeader = res.headers.get('retry-after');

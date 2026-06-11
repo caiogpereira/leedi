@@ -65,7 +65,7 @@ export function HandoffSummaryPanel({ resumoHandoff, motivoHandoff }: HandoffSum
               <p className="mt-0.5">{summary.o_que_quer}</p>
             </div>
           )}
-          {summary.objecoes && summary.objecoes.length > 0 && (
+          {Array.isArray(summary.objecoes) && summary.objecoes.length > 0 && (
             <div>
               <span className="font-medium text-xs text-muted-foreground uppercase tracking-wide">Objeções</span>
               <ul className="mt-0.5 list-disc list-inside space-y-0.5">

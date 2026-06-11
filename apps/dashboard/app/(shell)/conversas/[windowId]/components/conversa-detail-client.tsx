@@ -73,30 +73,52 @@ export function ConversaDetailClient({ tenantId, windowId, currentUserId }: Prop
     }
   }
 
-  const fetchDetail = useCallback(async () => {
-    const res = await fetch(`/api/tenants/${tenantId}/inbox/${windowId}`, {
-      credentials: 'include',
-    });
-    if (res.status === 404) {
-      setNotFound(true);
-      return;
-    }
-    if (!res.ok) return;
-    const detail = (await res.json()) as ConversaDetailData;
-    setData(detail);
-    setOlderCursor(detail.nextCursor);
-    setOptimisticMsgs([]); // clear optimistic on refresh
-  }, [tenantId, windowId]);
+  const fetchDetail = useCallback(
+    async (mode: 'replace' | 'merge' = 'replace') => {
+      const res = await fetch(`/api/tenants/${tenantId}/inbox/${windowId}`, {
+        credentials: 'include',
+      });
+      if (res.status === 404) {
+        setNotFound(true);
+        return;
+      }
+      if (!res.ok) return;
+      const detail = (await res.json()) as ConversaDetailData;
+
+      if (mode === 'replace') {
+        setData(detail);
+        setOlderCursor(detail.nextCursor);
+        setOptimisticMsgs([]); // clear optimistic on the initial load only
+        return;
+      }
+
+      // Merge (poll): union latest page with already-loaded history by id, keep chronological
+      // order. Preserve olderCursor and optimistic messages — a background tick must not wipe
+      // history loaded via "Carregar mensagens anteriores" or an in-flight optimistic reply.
+      setData((prev) => {
+        if (!prev) return detail;
+        const byId = new Map<string, ConversaMessage>();
+        for (const m of prev.messages) byId.set(m.id, m);
+        for (const m of detail.messages) byId.set(m.id, m);
+        const messages = Array.from(byId.values()).sort(
+          (a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id)
+        );
+        // Pick up assignment/lead changes from the poll, but keep merged message history.
+        return { ...prev, assignment: detail.assignment, lead: detail.lead, messages };
+      });
+    },
+    [tenantId, windowId]
+  );
 
   useEffect(() => {
     setLoading(true);
     fetchDetail().finally(() => setLoading(false));
   }, [fetchDetail]);
 
-  // Polling
+  // Polling — merge so loaded history + in-flight optimistic messages survive each tick
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchDetail().catch(() => undefined);
+      fetchDetail('merge').catch(() => undefined);
     }, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [fetchDetail]);
@@ -202,8 +224,9 @@ export function ConversaDetailClient({ tenantId, windowId, currentUserId }: Prop
         setOptimisticMsgs((prev) => prev.filter((m) => m.id !== optimistic.id));
         setReplyText(sentText);
       } else {
-        // Refresh to get persisted message
-        fetchDetail().catch(() => undefined);
+        // Merge in the persisted message, then drop the optimistic placeholder.
+        await fetchDetail('merge');
+        setOptimisticMsgs((prev) => prev.filter((m) => m.id !== optimistic.id));
       }
     } finally {
       setSending(false);

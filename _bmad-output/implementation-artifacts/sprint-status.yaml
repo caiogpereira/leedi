@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-29
-last_updated: 2026-06-10  # epic-12 → done — code review applied 8 patches (HIGH /library route shadow, DELETE swallowed returns, ?status= enum 500, AC#2 approval notification, AC#7 edit page); stories 12.1/12.2 review→done. See 12-1/12-2 Review Findings.
+last_updated: 2026-06-11  # epic-14 → done — code review applied 14 patches + 2 decisions; stories 14.1–14.3 review→done. See Epic 14 Review Findings + deferred-work.md.
 project: leedi
 project_key: NOKEY
 tracking_system: file-system
@@ -184,10 +184,10 @@ development_status:
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 14: Human Inbox & Handoff
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-14: in-progress
-  14-1-real-time-conversation-list-filters: review
-  14-2-conversation-detail-ai-handoff-summary: review
-  14-3-human-takeover-manual-reply-return-to-bot: review
+  epic-14: done  # code review 2026-06-11 (Opus); 14 patches + 2 decisions applied. HIGH: takeover sem guard (roubo) + poll wipava paginação/histórico; AC#8 24h-detection morta vs adapter real (corrigido meta-cloud-provider p/ expor código de erro Meta) + AC#7 notificação real Epic 18 (mantida + doc). enum/cursor/limit 22P02→500 hardening; 2 defers (UNIQUE inbox_assignments, reply cross-tx). connection 29/29, inbox-actions 15/15. Ver Review Findings nas stories + deferred-work.md.
+  14-1-real-time-conversation-list-filters: done
+  14-2-conversation-detail-ai-handoff-summary: done
+  14-3-human-takeover-manual-reply-return-to-bot: done
   epic-14-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────

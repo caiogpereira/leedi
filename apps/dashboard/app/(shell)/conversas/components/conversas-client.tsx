@@ -58,7 +58,7 @@ export function ConversasClient({ tenantId }: { tenantId: string }) {
   const notifiedIds = useRef(new Set<string>());
 
   const fetchInbox = useCallback(
-    async (cursor?: string, append = false) => {
+    async (cursor?: string, mode: 'replace' | 'append' | 'merge' = 'replace') => {
       const params = new URLSearchParams();
       if (statusFilter) params.set('status', statusFilter);
       if (tempFilter) params.set('temperatura', tempFilter);
@@ -72,11 +72,30 @@ export function ConversasClient({ tenantId }: { tenantId: string }) {
 
       const data = (await res.json()) as InboxResponse;
 
-      setItems((prev) => (append ? [...prev, ...data.items] : data.items));
-      setNextCursor(data.nextCursor);
+      setItems((prev) => {
+        if (mode === 'append') return [...prev, ...data.items];
+        if (mode === 'merge') {
+          // Poll refresh: fresh first page is authoritative; keep already-loaded older
+          // pages ("Carregar mais") that aren't in the first page so polling doesn't wipe them.
+          const freshIds = new Set(data.items.map((i) => i.conversationWindowId));
+          const tail = prev.filter((i) => !freshIds.has(i.conversationWindowId));
+          return [...data.items, ...tail];
+        }
+        return data.items;
+      });
+      // Don't overwrite the pagination cursor on a poll merge — keep the user's "load more"
+      // position. Only initial/filter loads and explicit "load more" advance it.
+      if (mode !== 'merge') setNextCursor(data.nextCursor);
 
-      // Browser notification for new aguardando_humano conversations
-      if (!append && 'Notification' in window && Notification.permission === 'granted') {
+      // Browser notification sound for new aguardando_humano conversations (AC#6).
+      // Gate the ENTIRE block (including the dedup mark) on tab visibility — marking a
+      // windowId notified while hidden would suppress the sound forever for that conversation.
+      if (
+        mode !== 'append' &&
+        'Notification' in window &&
+        Notification.permission === 'granted' &&
+        document.visibilityState === 'visible'
+      ) {
         for (const item of data.items) {
           if (
             item.status === 'aguardando_humano' &&
@@ -105,10 +124,10 @@ export function ConversasClient({ tenantId }: { tenantId: string }) {
     }
   }, [fetchInbox]);
 
-  // 8s polling
+  // 8s polling — merge so loaded "Carregar mais" pages survive each tick
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchInbox().catch(() => undefined);
+      fetchInbox(undefined, 'merge').catch(() => undefined);
     }, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [fetchInbox]);
@@ -126,7 +145,7 @@ export function ConversasClient({ tenantId }: { tenantId: string }) {
   async function loadMore() {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
-    await fetchInbox(nextCursor, true).finally(() => setLoadingMore(false));
+    await fetchInbox(nextCursor, 'append').finally(() => setLoadingMore(false));
   }
 
   return (

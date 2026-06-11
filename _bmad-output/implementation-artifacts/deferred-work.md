@@ -360,3 +360,8 @@ validate in staging. No code changes needed — the capability is shipped.
 - ~~Story 13.4 — `agendar_followup` accepts `emHoras` instead of spec's `agendado_para`~~ ✅ RESOLVED 2026-06-11: contract aligned to `agendado_para` ISO + exact AC#2 error.
 - Story 13.4 — `cancelado` note "Lead convertido antes do envio" not persisted (AC#6); `followups` has no note column.
 - ~~Story 13.5 — "Retomar" button + badge + manual-resume endpoint missing (AC#5)~~ ✅ RESOLVED 2026-06-11: `/resume` endpoint + use-case + dashboard badge/button shipped (UI visual validation flagged for e2e harness).
+
+## Deferred from: code review of Epic 14 (2026-06-11)
+
+- Story 14.3 — `inbox_assignments` has no DB `UNIQUE(conversation_window_id)`; concurrent `transferir_humano` / window-creation can insert duplicate assignment rows the inbox detail/actions routes (`limit(1)`) can't disambiguate. App-level select-then-insert can't fully close it — proper fix is a migration adding the unique constraint (same class as PL-17). Also closes the residual takeover compare-and-set race.
+- Story 14.3 — manual reply validates assignee/status, sends via Meta, and persists across three separate `withTenant` transactions; the assignee/status can change (return_to_bot / resolve / takeover-steal) during the Meta network round-trip, persisting a `humano` outbound on a conversation no longer `em_atendimento`. Low likelihood; proper fix folds validate+send+persist into one guarded path or re-checks status in the persisting tx.

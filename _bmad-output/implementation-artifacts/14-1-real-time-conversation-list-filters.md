@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 14.1: Real-Time Conversation List & Filters
 
-Status: review
+Status: done
 
 ## Story
 
@@ -123,3 +123,12 @@ claude-sonnet-4-6 (1M context)
 ### Change Log
 
 - 2026-06-03: Implemented inbox list API route, dashboard page, and auto-creation of inbox_assignments on window creation.
+
+### Review Findings (2026-06-11)
+
+- [x] [Review][Patch] Unvalidated `status`/`temperatura` filter cast against PG enum → 22P02 → 500 (recurring class fixed in epics 4/12) [apps/api/src/routes/inbox/index.ts:52-53]
+- [x] [Review][Patch] Tampered/garbage cursor → `::uuid`/`::timestamptz` cast → 500; `decodeCursor` only guards `JSON.parse`, not shape [apps/api/src/routes/inbox/index.ts:32-41]
+- [x] [Review][Patch] `limit` query NaN/zero/negative not clamped → `.limit(NaN)` / `LIMIT -5` → malformed query [apps/api/src/routes/inbox/index.ts:55]
+- [x] [Review][Patch] LEFT JOIN COALESCE asymmetry: filter `status=bot` excludes null-assignment rows the unfiltered list shows as Bot [apps/api/src/routes/inbox/index.ts:85]
+- [x] [Review][Patch] AC#6: notification sound missing `document.visibilityState === 'visible'` gate (sound can fire while tab backgrounded); gate must wrap the whole dedup block [conversas-client.tsx:79]
+- [x] [Review][Patch] 8s poll replaces list (`setItems(data.items)`), wiping rows loaded via "Carregar mais" every tick [conversas-client.tsx:75]
