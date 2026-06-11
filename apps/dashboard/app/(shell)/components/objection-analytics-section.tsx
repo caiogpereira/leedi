@@ -21,7 +21,8 @@ interface ObjectionAnalyticsSectionProps {
   error: boolean;
 }
 
-const MIN_ITEMS_THRESHOLD = 3;
+// AC#2: empty state when fewer than 3 objection *events* (not distinct labels) exist.
+const MIN_EVENTS_THRESHOLD = 3;
 
 export function ObjectionAnalyticsSection({
   items,
@@ -31,6 +32,7 @@ export function ObjectionAnalyticsSection({
   const [selected, setSelected] = useState<ObjectionItem | null>(null);
 
   const maxCount = items.length > 0 ? Math.max(...items.map((i) => i.count)) : 1;
+  const totalEvents = items.reduce((sum, i) => sum + i.count, 0);
 
   return (
     <section>
@@ -50,14 +52,14 @@ export function ObjectionAnalyticsSection({
         </p>
       )}
 
-      {!loading && !error && items.length < MIN_ITEMS_THRESHOLD && (
+      {!loading && !error && totalEvents < MIN_EVENTS_THRESHOLD && (
         <p className="text-sm text-muted-foreground">
           Poucas objeções registradas neste período. Os dados aparecem à medida que o agente
           identifica objeções nas conversas.
         </p>
       )}
 
-      {!loading && !error && items.length >= MIN_ITEMS_THRESHOLD && (
+      {!loading && !error && totalEvents >= MIN_EVENTS_THRESHOLD && (
         <ol className="space-y-2">
           {items.map((item) => (
             <li key={item.label}>

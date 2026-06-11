@@ -87,7 +87,7 @@ export async function getTenantSalesMetrics(
     const [eventsRow] = await tx
       .select({
         conversoes: sql<number>`cast(count(*) as int)`,
-        valor_total: sql<number>`coalesce(sum(cast(nullif((payload_normalizado->>'value'), '') as numeric)), 0)`,
+        valor_total: sql<number>`coalesce(sum(case when (payload_normalizado->>'value') ~ '^-?[0-9]+(\\.[0-9]+)?$' then (payload_normalizado->>'value')::numeric end), 0)`,
       })
       .from(schema.gatewayEvents)
       .where(

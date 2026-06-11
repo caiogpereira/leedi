@@ -365,3 +365,13 @@ validate in staging. No code changes needed — the capability is shipped.
 
 - Story 14.3 — `inbox_assignments` has no DB `UNIQUE(conversation_window_id)`; concurrent `transferir_humano` / window-creation can insert duplicate assignment rows the inbox detail/actions routes (`limit(1)`) can't disambiguate. App-level select-then-insert can't fully close it — proper fix is a migration adding the unique constraint (same class as PL-17). Also closes the residual takeover compare-and-set race.
 - Story 14.3 — manual reply validates assignee/status, sends via Meta, and persists across three separate `withTenant` transactions; the assignee/status can change (return_to_bot / resolve / takeover-steal) during the Meta network round-trip, persisting a `humano` outbound on a conversation no longer `em_atendimento`. Low likelihood; proper fix folds validate+send+persist into one guarded path or re-checks status in the persisting tx.
+
+## Deferred from: code review of Epic 15 (2026-06-11)
+
+- Story 15.1 — `taxa_resposta` EXISTS subqueries on the partitioned `messages` table have no `created_at` bound, so they can't prune partitions and scan all of history (perf; story Dev Notes already defer materialization until query latency > 500ms).
+- Story 15.1 — The 4 new analytics BFF proxy routes use `BETTER_AUTH_URL.replace(':3000', ':${API_PORT}')`, a no-op when the URL has no literal `:3000` (production). Same systemic defect deferred project-wide in Epic 11.
+- Story 15.1 — Dashboard `dashboard-client.tsx` polling/date-change fetches have no AbortController/staleness guard; a stale in-flight response could overwrite newer data (low-risk race at the 60s cadence).
+- Story 15.1/15.2/15.3 — Analytics queries (raw SQL and Drizzle) carry no explicit `tenant_id` predicate; tenant isolation relies entirely on `withTenant` → RLS, which is only enforced when `APP_DATABASE_URL` targets a non-BYPASSRLS role (otherwise `appDb === db`, BYPASSRLS). Systemic RLS hardening (pre-launch).
+- Story 15.3 — `active-campaign` "most recently activated" is approximated by `ORDER BY updated_at DESC` (no `activated_at` column); a later campaign edit can reorder which active campaign is shown. Needs a schema column for a clean fix.
+- Story 15.1/15.2/15.3 — Live UI not verified in a browser (component logic + API verified via unit tests/code review only); same precedent as Epic 8 — flagged for the e2e/a11y harness.
+- Story 15.3 — AC#4 active-campaign widget shows the campaign's main product, not the phase-specific product (`downsell` offers `config.downsell.produto_id`). Deferred: cosmetic display that doesn't affect operation; fix when the product is in active use with real customers.

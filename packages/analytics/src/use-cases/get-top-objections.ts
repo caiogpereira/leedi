@@ -59,7 +59,7 @@ export async function getTopObjections(
           json_agg(
             json_build_object(
               'leadName', lead_name,
-              'date', to_char(event_date, 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+              'date', to_char(event_date AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
               'windowId', window_id::text
             )
             ORDER BY event_date DESC

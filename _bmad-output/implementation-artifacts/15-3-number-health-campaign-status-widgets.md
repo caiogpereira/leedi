@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 15.3: Number Health & Campaign Status Widgets
 
-Status: review
+Status: done
 
 ## Story
 
@@ -56,6 +56,12 @@ so that I can spot operational issues without navigating to separate settings pa
   - [x] Unit: active-campaign route returns most recent when multiple exist
   - [x] Unit: days remaining computed correctly (edge: today, tomorrow, past)
   - [x] Unit: both routes return graceful null (not 500) when tables are empty
+
+## Review Findings (Code Review 2026-06-11)
+
+- [x] [Review][Defer] AC#4 "the product being offered **in that phase**": the `active-campaign` query joins only the campaign's main product (`campaigns.produtoId`). In the `downsell` phase the offered product differs (`config.downsell.produto_id`), so the widget shows the wrong product for downsell campaigns [apps/api/src/routes/analytics.ts:74] — deferred: cosmetic display that doesn't affect operation; fix when the product is in active use with real customers
+- [ ] [Review][Patch] `daysRemaining` returns `NaN` for a malformed `dataFim` (renders "NaN dias restantes"); also "1 dias restantes" is not singular-correct PT-BR. Add an `isNaN` guard and singular pluralization [apps/dashboard/app/(shell)/components/active-campaign-widget.tsx:37]
+- [x] [Review][Defer] AC#7 "most recently activated" is approximated by `ORDER BY updated_at DESC` (no dedicated `activated_at` column); a later edit to a campaign can reorder which active campaign is shown. The "(+N outras ativas)" footnote count is correct [apps/api/src/routes/analytics.ts:95] — deferred, acceptable proxy, needs a schema column for a clean fix
 
 ## Dev Notes
 
@@ -122,3 +128,4 @@ _none_
 ### Change Log
 
 - 2026-06-03: Implemented Story 15.3 — Number Health & Campaign Status Widgets. Added 2 API endpoints, 2 dashboard widgets with all 8 AC states, and 6 unit tests.
+- 2026-06-11: Code review (review→done). Patch: `daysRemaining` now guards `NaN` (malformed `dataFim`) and uses singular "1 dia restante". Decision (AC#4 downsell phase-product) deferred as cosmetic. 1 defer (AC#7 updatedAt proxy). Also removed redundant single-arg `and(eq(...))` wrapper in active-campaign query. See Review Findings + deferred-work.md.

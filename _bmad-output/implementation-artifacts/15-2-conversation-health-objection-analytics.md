@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 15.2: Conversation Health & Objection Analytics
 
-Status: review
+Status: done
 
 ## Story
 
@@ -44,6 +44,12 @@ so that I can improve the knowledge base based on real data.
   - [x] Unit: returns empty array (not error) when no objection events in period
   - [x] Unit: enforces limit = 10 by default
   - [x] Unit: returns correct top 5 recent conversation window IDs per objection
+
+## Review Findings (Code Review 2026-06-11)
+
+- [ ] [Review][Patch] AC#2 empty-state threshold gates on the number of distinct objection *labels* (`items.length < 3`), but AC#2 says "fewer than 3 objection *events*"; two objections at 50× each (2 labels) wrongly hide the whole ranked list. Gate on total event count instead [apps/dashboard/app/(shell)/components/objection-analytics-section.tsx:53]
+- [ ] [Review][Patch] Objection timestamps: `to_char(event_date, '...\"Z\"')` renders `timestamptz` in the DB session timezone but hardcodes the `Z` (UTC) suffix; if session TZ ≠ UTC the frontend `new Date(iso)` misreads every objection time. Use `event_date AT TIME ZONE 'UTC'` [packages/analytics/src/use-cases/get-top-objections.ts:62]
+- [ ] [Review][Patch] "enforces limit = 10" unit test asserts the mock returned 3 rows, not that the limit is threaded into the query; assert the `limit` value is passed into the SQL template [packages/analytics/src/__tests__/get-top-objections.test.ts:72]
 
 ## Dev Notes
 
@@ -110,3 +116,4 @@ _none_
 ### Change Log
 
 - 2026-06-03: Implemented Story 15.2 — Conversation Health & Objection Analytics. Added getTopObjections use case, API route extension, and objection analytics section with drawer.
+- 2026-06-11: Code review (review→done). Patches: AC#2 empty-state now counts objection events (not distinct labels); `to_char` renders timestamps in explicit UTC (`AT TIME ZONE 'UTC'`); rewrote "limit" test to assert the limit is threaded into the SQL (analytics package 14/14). See Review Findings.

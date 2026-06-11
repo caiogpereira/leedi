@@ -3,21 +3,30 @@ import { requireTenantSession } from '../middleware/tenant-session.js';
 import { rateLimitTenant } from '../middleware/rate-limit.js';
 import { getTenantSalesMetrics } from '@leedi/analytics';
 import { getTopObjections } from '@leedi/analytics';
-import { withTenant, schema, eq, and, desc, sql } from '@leedi/db';
+import { withTenant, schema, eq, desc, sql } from '@leedi/db';
 
 const MAX_DATE_RANGE_DAYS = 366;
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-function parseDateRange(
+export function parseDateRange(
   fromStr: string | undefined,
   toStr: string | undefined
 ): { from: Date; to: Date } | null {
   const now = new Date();
   const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const from = fromStr ? new Date(fromStr) : firstOfMonth;
-  const to = toStr ? new Date(toStr) : now;
+  // A date-only `to` (e.g. "2026-05-31") parses to UTC midnight, which would
+  // exclude the entire final day under `lte(createdAt, to)`. Push it to the end
+  // of that day so the selected end date is fully included.
+  const to = toStr
+    ? DATE_ONLY_RE.test(toStr)
+      ? new Date(`${toStr}T23:59:59.999Z`)
+      : new Date(toStr)
+    : now;
 
   if (isNaN(from.getTime()) || isNaN(to.getTime())) return null;
+  if (from.getTime() > to.getTime()) return null;
   if ((to.getTime() - from.getTime()) / MS_PER_DAY > MAX_DATE_RANGE_DAYS) return null;
 
   return { from, to };
@@ -87,11 +96,7 @@ export function createAnalyticsRouter() {
         })
         .from(schema.campaigns)
         .leftJoin(schema.products, eq(schema.campaigns.produtoId, schema.products.id))
-        .where(
-          and(
-            eq(schema.campaigns.status, 'ativa')
-          )
-        )
+        .where(eq(schema.campaigns.status, 'ativa'))
         .orderBy(desc(schema.campaigns.updatedAt))
         .limit(1)
     );

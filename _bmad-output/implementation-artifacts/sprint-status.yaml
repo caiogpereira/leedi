@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-29
-last_updated: 2026-06-11  # epic-14 → done — code review applied 14 patches + 2 decisions; stories 14.1–14.3 review→done. See Epic 14 Review Findings + deferred-work.md.
+last_updated: 2026-06-11  # epic-15 → done — code review applied 7 patches + 1 decision (deferred); stories 15.1–15.3 review→done. See Epic 15 Review Findings + deferred-work.md.
 project: leedi
 project_key: NOKEY
 tracking_system: file-system
@@ -193,10 +193,10 @@ development_status:
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 15: Tenant Analytics Dashboard
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-15: in-progress
-  15-1-core-sales-metrics-dashboard: review
-  15-2-conversation-health-objection-analytics: review
-  15-3-number-health-campaign-status-widgets: review
+  epic-15: done
+  15-1-core-sales-metrics-dashboard: done
+  15-2-conversation-health-objection-analytics: done
+  15-3-number-health-campaign-status-widgets: done
   epic-15-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────

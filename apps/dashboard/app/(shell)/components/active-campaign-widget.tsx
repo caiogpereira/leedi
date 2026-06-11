@@ -36,7 +36,9 @@ const FASE_BADGE: Record<CampaignFase, string> = {
 
 export function daysRemaining(dataFim: string | null, now = Date.now()): number | null {
   if (!dataFim) return null;
-  const diff = new Date(dataFim).getTime() - now;
+  const ts = new Date(dataFim).getTime();
+  if (isNaN(ts)) return null;
+  const diff = ts - now;
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
@@ -114,7 +116,11 @@ export function ActiveCampaignWidget({
         </span>
         {days !== null && (
           <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
-            {days === 0 ? 'Encerra hoje' : `${days} dias restantes`}
+            {days === 0
+              ? 'Encerra hoje'
+              : days === 1
+              ? '1 dia restante'
+              : `${days} dias restantes`}
           </span>
         )}
         {days === null && (

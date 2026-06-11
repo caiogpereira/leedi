@@ -69,17 +69,25 @@ describe('getTopObjections', () => {
     expect(result.total).toBe(0);
   });
 
-  it('enforces limit = 10 by default (SQL LIMIT passed to query)', async () => {
-    // Mock returns 3 results — real DB would limit to 10 via SQL LIMIT
-    mockExecute.mockResolvedValue([
-      { label: 'Objeção 1', count: 10, recent_instances: [] },
-      { label: 'Objeção 2', count: 8, recent_instances: [] },
-      { label: 'Objeção 3', count: 5, recent_instances: [] },
-    ]);
+  it('threads the default limit (10) into the SQL query', async () => {
+    mockExecute.mockResolvedValue([]);
 
-    const result = await getTopObjections(TENANT_ID, FROM, TO);
-    expect(result.items).toHaveLength(3);
-    expect(result.items[0]!.label).toBe('Objeção 1');
+    await getTopObjections(TENANT_ID, FROM, TO);
+
+    // The mocked `sql` tag returns { strings, values }; the interpolated values
+    // are [from, to, limit], so the default limit must appear in the query args.
+    const queryArg = mockExecute.mock.calls[0]![0] as { values: unknown[] };
+    expect(queryArg.values).toContain(10);
+  });
+
+  it('threads a custom limit into the SQL query', async () => {
+    mockExecute.mockResolvedValue([]);
+
+    await getTopObjections(TENANT_ID, FROM, TO, 25);
+
+    const queryArg = mockExecute.mock.calls[0]![0] as { values: unknown[] };
+    expect(queryArg.values).toContain(25);
+    expect(queryArg.values).not.toContain(10);
   });
 
   it('returns correct top 5 recent instances (capped by SQL subquery)', async () => {

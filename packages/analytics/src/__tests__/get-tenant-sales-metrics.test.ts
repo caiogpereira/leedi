@@ -84,21 +84,8 @@ describe('computeSalesMetrics', () => {
     expect(result.ticket_medio).toBe(0);
   });
 
-  it('date range validation: returns valid range', () => {
-    const MAX_DAYS = 366;
-    const from = new Date('2026-01-01');
-    const to = new Date('2026-12-31');
-    const diffDays = (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24);
-    expect(diffDays).toBeLessThanOrEqual(MAX_DAYS);
-  });
-
-  it('date range validation: rejects range > 366 days', () => {
-    const MAX_DAYS = 366;
-    const from = new Date('2025-01-01');
-    const to = new Date('2026-12-31');
-    const diffDays = (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24);
-    expect(diffDays).toBeGreaterThan(MAX_DAYS);
-  });
+  // Note: date-range validation lives in the API route (`parseDateRange` in
+  // apps/api/src/routes/analytics.ts) and is covered by analytics.test.ts there.
 
   it('all zeros returns valid empty state', () => {
     const result = computeSalesMetrics({

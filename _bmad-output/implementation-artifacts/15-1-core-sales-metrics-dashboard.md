@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 15.1: Core Sales Metrics Dashboard
 
-Status: review
+Status: done
 
 ## Story
 
@@ -54,6 +54,18 @@ so that I know at a glance how the agent is performing commercially.
   - [x] Unit: `taxa_resposta` correctly identifies windows with lead reply after outbound
   - [x] Unit: `valor_total` SUM is null-safe (gateway events with no valor are excluded from sum, not from count)
   - [x] Unit: date range validation rejects ranges > 366 days
+
+## Review Findings (Code Review 2026-06-11)
+
+- [ ] [Review][Patch] `parseDateRange`: inverted range (`from > to`) returns all-zero metrics instead of HTTP 400; and a date-only `to` (e.g. `2026-05-31`) parses to UTC midnight, so `lte(createdAt, to)` silently drops the entire final day (bites the default dashboard view for UTC-3 users) [apps/api/src/routes/analytics.ts:11]
+- [ ] [Review][Patch] `valor_total` SUM: `cast(nullif(payload_normalizado->>'value','') as numeric)` raises Postgres 22P02 → 500 on any non-numeric value; guard with a regex CASE (defensive — Hotmart normalizer currently writes clean numerics) [packages/analytics/src/use-cases/get-tenant-sales-metrics.ts:90]
+- [ ] [Review][Patch] Vacuous "date range validation" unit tests recompute arithmetic inline and exercise no production code; export `parseDateRange` and add real tests (valid / >366d / inverted / date-only end-of-day) [packages/analytics/src/__tests__/get-tenant-sales-metrics.test.ts:87]
+- [x] [Review][Defer] `taxa_resposta` EXISTS subqueries scan all `messages` partitions (no `created_at` bound) [packages/analytics/src/use-cases/get-tenant-sales-metrics.ts:65] — deferred, performance (story Dev Notes already defer materialization until latency > 500ms)
+- [x] [Review][Defer] BFF `BETTER_AUTH_URL.replace(':3000', ...)` host-rewrite is a no-op when the URL has no literal `:3000` (production); replicated in the 4 new analytics proxy routes [apps/dashboard/app/api/tenants/[tenantId]/analytics/*/route.ts] — deferred, pre-existing project-wide (Epic 11)
+- [x] [Review][Defer] Dashboard polling has no abort/staleness guard; a date-range change with an in-flight request could let a stale response overwrite newer data [apps/dashboard/app/(shell)/components/dashboard-client.tsx:109] — deferred, low-risk race at 60s cadence
+- [x] [Review][Defer] Analytics queries carry no explicit `tenant_id` predicate; isolation relies on `withTenant`→RLS, which only enforces when `APP_DATABASE_URL` targets a non-BYPASSRLS role (else `appDb === db`, BYPASSRLS) [packages/analytics + apps/api/src/routes/analytics.ts] — deferred, systemic RLS hardening (pre-launch)
+
+**Dismissed (noise / false positive):** `taxa_resposta` autor-vs-direction columns (schema confirms `messages` has both); contradictory empty-state (`conversoes`/`valor_total` come from the same `gateway_events` aggregate, can't diverge).
 
 ## Dev Notes
 
@@ -126,3 +138,4 @@ _none_
 ### Change Log
 
 - 2026-06-03: Implemented Story 15.1 — Core Sales Metrics Dashboard. Created @leedi/analytics package, API route, dashboard page with 6 metric cards, date range picker, and 60s polling.
+- 2026-06-11: Code review (review→done). Patches: `parseDateRange` inverted-range guard + date-only `to` end-of-day fix; `valor_total` regex-guarded numeric cast (22P02→safe); removed vacuous date tests and added real `parseDateRange` tests (analytics package 14/14, analytics route 12/12). 4 defers logged (partition perf, BFF :3000, polling staleness, tenant RLS). See Review Findings + deferred-work.md.

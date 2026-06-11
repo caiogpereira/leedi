@@ -117,7 +117,7 @@ vi.mock('@leedi/db', () => ({
 // ─── Imports (after mocks) ─────────────────────────────────────────────────────
 
 import { getSession } from '@leedi/auth';
-import { createAnalyticsRouter } from '../analytics.js';
+import { createAnalyticsRouter, parseDateRange } from '../analytics.js';
 
 const mockGetSession = vi.mocked(getSession);
 
@@ -160,6 +160,38 @@ describe('GET /api/tenants/:tenantId/analytics/sales', () => {
       `/api/tenants/${TENANT_ID}/analytics/sales?from=2024-01-01&to=2026-12-31`
     );
     expect(res.status).toBe(400);
+  });
+
+  it('returns 400 for an inverted date range (from > to)', async () => {
+    dbRows = [[{ role: 'owner' }]];
+    const app = buildApp();
+    const res = await app.request(
+      `/api/tenants/${TENANT_ID}/analytics/sales?from=2026-05-31&to=2026-05-01`
+    );
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('parseDateRange', () => {
+  it('accepts a valid range', () => {
+    expect(parseDateRange('2026-05-01', '2026-05-31')).not.toBeNull();
+  });
+
+  it('rejects a range longer than 366 days', () => {
+    expect(parseDateRange('2024-01-01', '2026-12-31')).toBeNull();
+  });
+
+  it('rejects an inverted range (from > to)', () => {
+    expect(parseDateRange('2026-05-31', '2026-05-01')).toBeNull();
+  });
+
+  it('rejects a malformed date', () => {
+    expect(parseDateRange('not-a-date', '2026-05-01')).toBeNull();
+  });
+
+  it('includes the full final day for a date-only `to`', () => {
+    const range = parseDateRange('2026-05-01', '2026-05-31');
+    expect(range?.to.toISOString()).toBe('2026-05-31T23:59:59.999Z');
   });
 });
 
