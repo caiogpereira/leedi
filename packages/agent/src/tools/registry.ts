@@ -112,13 +112,14 @@ const TOOL_DEFINITIONS: Record<ToolName, ToolDefinition> = {
   agendar_followup: {
     name: 'agendar_followup',
     description:
-      'Agenda um follow-up automático com o lead para um momento futuro (ex.: lembrar de retomar a conversa).',
+      'Agenda um follow-up automático com o lead para um horário futuro dentro da janela de 24h (ex.: lembrar de retomar a conversa).',
     input_schema: {
       type: 'object',
       properties: {
-        emHoras: {
-          type: 'number',
-          description: 'Em quantas horas o follow-up deve ocorrer (máximo 23, dentro da janela de 24h).',
+        agendado_para: {
+          type: 'string',
+          description:
+            'Horário do follow-up em ISO 8601 (ex.: 2026-06-11T15:00:00Z). Deve estar no futuro e dentro da janela de 24h ativa.',
         },
         motivo: {
           type: 'string',
@@ -129,7 +130,7 @@ const TOOL_DEFINITIONS: Record<ToolName, ToolDefinition> = {
           description: 'Opcional: texto sugerido para a mensagem de follow-up.',
         },
       },
-      required: ['emHoras'],
+      required: ['agendado_para', 'motivo'],
     },
   },
   transferir_humano: {
@@ -236,7 +237,7 @@ const SANDBOX_STUBS: Record<string, (input: Record<string, unknown>) => unknown>
   agendar_followup: (input) => ({
     scheduled: true,
     sandboxed: true,
-    emHoras: input.emHoras ?? null,
+    agendado_para: input.agendado_para ?? null,
   }),
   solicitar_reengajamento: () => ({
     requested: true,
@@ -332,7 +333,7 @@ export async function routeToolCall(
     case 'agendar_followup':
       return agendarFollowup(
         {
-          emHoras: Number(input.emHoras ?? 0),
+          agendado_para: String(input.agendado_para ?? ''),
           motivo: String(input.motivo ?? ''),
           ...(input.conteudoSugerido === undefined
             ? {}

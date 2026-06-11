@@ -94,13 +94,25 @@ export async function runDispatchJob(
     return { skipped: true, reason: 'quality_red' };
   }
 
-  // Mark processing.
-  await withTenant(tenantId, async (tx) => {
-    await tx
+  // Mark processing with a compare-and-set: the status check above is a separate
+  // read, so under QStash at-least-once delivery two concurrent runs could both
+  // pass it and double-materialise the target list. Gate the transition on
+  // status='agendado' and abort if another delivery already claimed the job.
+  const claimed = await withTenant(tenantId, async (tx) =>
+    tx
       .update(schema.dispatchJobs)
       .set({ status: 'processando' })
-      .where(eq(schema.dispatchJobs.id, dispatchJobId));
-  });
+      .where(
+        and(
+          eq(schema.dispatchJobs.id, dispatchJobId),
+          eq(schema.dispatchJobs.status, 'agendado')
+        )
+      )
+      .returning({ id: schema.dispatchJobs.id })
+  );
+  if (claimed.length === 0) {
+    return { skipped: true, reason: 'already_claimed' };
+  }
 
   // Resolve all candidate leads from the segment, then read their exclusion fields.
   const leadIds = await resolveSegmentLeadIds(tenantId, ctx.filtros);
@@ -145,6 +157,8 @@ export async function runDispatchJob(
       let motivo: string | null = null;
       if (lead.status === 'optout') {
         motivo = 'optout';
+      } else if (lead.status === 'bloqueado') {
+        motivo = 'bloqueado';
       } else if (
         ctx.campaignProdutoId &&
         lead.produtoCompradoId &&

@@ -37,7 +37,7 @@ export async function solicitarReengajamento(
 
   const rule = rules[0];
   if (!rule) {
-    return 'Não há nenhuma regra de reengajamento ativa configurada para este workspace.';
+    return 'Nenhuma regra de reengajamento ativa configurada. Configure um template e uma regra em Disparos → Regras automáticas.';
   }
 
   const qstash = new Client({ token: env.QSTASH_TOKEN });

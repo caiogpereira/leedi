@@ -300,3 +300,63 @@ validate in staging. No code changes needed — the capability is shipped.
   **Proper root-cause fix** (makes the per-suite mocks unnecessary going forward): lazy-init the push
   provider in `packages/notification/src/adapters/push-provider.ts` so `setVapidDetails` is not called at
   import time (or a shared test env-stub). That belongs to **Epic 18's review**.
+  _(Epic 11 review applied the same per-suite `vi.mock('@leedi/notification')` workaround to
+  `handle-purchase-approved.test.ts`.)_
+
+## Deferred from: code review of Epic 11 (2026-06-10)
+
+> Source: Epic 11 (Hotmart Gateway) code review. Stories 11.1–11.3 → done; all patch findings fixed.
+> gateway pkg 19/19 + api gateway/hotmart 15/15 green. Remaining items are pre-existing / out of Epic 11 scope.
+
+- **[Epic-11 debt] `apiBaseUrl()` derives the internal callback base via `BETTER_AUTH_URL.replace(':3000', ':${API_PORT}')`** —
+  a no-op when the URL has no `:3000` (e.g. production HTTPS without an explicit port), which would point QStash
+  callbacks at the wrong host. **Project-wide pre-existing pattern (12+ sites):** `webhooks/hotmart.ts`,
+  `webhooks/asaas.ts`, `use-cases/gateway/{create-gateway-integration,handle-recovery-event}.ts`,
+  `jobs/{campaign-phase-transition,process-dispatch-batch,run-dispatch-job,send-followup}.ts`,
+  `use-cases/dispatch/create-dispatch-job.ts`, `routes/{onboarding,webhook-meta}.ts`. Fix once globally
+  (single `resolveApiBaseUrl()` helper or a dedicated `API_BASE_URL` env). **Pre-launch checklist candidate.**
+- **[Epic-11 debt] Hotmart webhook idempotency is app-layer (SELECT-then-INSERT, no unique index)** —
+  two concurrent identical webhooks can both pass `isDuplicate()` and double-insert into `gateway_events`
+  [`apps/api/src/routes/webhooks/hotmart.ts:100`]. Accepted V1 limitation per story 11.1 Dev Notes; low
+  likelihood. Revisit with a unique/computed-column index on the dedup key if duplicates surface in production.
+- **[Epic-11 debt — out of scope] Pre-existing typecheck error in Epic 17:** `apps/api/src/jobs/daily-billing-check.ts:24`
+  — `OverdueRow` does not satisfy `Record<string, unknown>` index-signature constraint. Not gateway-related;
+  belongs to **Epic 17's review**.
+- **[Epic-11 debt — out of scope] Full-suite test pollution in other epics:** `process-dispatch-batch.test.ts` (3, Epic 13),
+  `handle-quality-update.test.ts` (1, Epic 13), `health.test.ts` (Epic 1/7) fail only in the full `@leedi/api`
+  run (5–6s timeouts) — same unmocked-side-effect-at-import root cause documented above. Pass in isolation.
+  Belong to their respective epic reviews.
+
+## Deferred from: code review of Epic 12 (stories 12.1 & 12.2) (2026-06-10)
+
+- **[12.1] Concurrent submit TOCTOU:** `submitTemplate` checks `status==='rascunho'` and performs the
+  final UPDATE in separate transactions with the Meta network call between them, with no `status='rascunho'`
+  predicate on the UPDATE — two simultaneous `POST /:id/submit` both POST to Meta. Low-likelihood under V1
+  single-admin; atomic-claim fix trades off against AC#5 (transient `pendente` window before Meta confirms).
+- **[12.1] Server-side variable coverage validation:** no check that body `{{N}}` placeholders match
+  `variaveis` indices or are sequential from 1; `{{0}}` is accepted then rejected with a misleading
+  `variaveis` error. UI enforces coverage today; hardening for direct-API callers and duplicate drift.
+- **[12.1 — systemic] RLS `WITH CHECK` missing:** `templates` (and every other tenant-isolation policy in
+  `packages/db/migrations/`) defines `USING` only, so INSERT/UPDATE post-images aren't constrained at the DB
+  write boundary. Repo-wide pattern; app-layer `withTenant` mitigates. Candidate for a cross-cutting
+  pre-launch hardening migration (add `WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::uuid)`).
+- **[12.1] Migration seed dead `variaveis` key:** `componentes_sugeridos` in the 0012 SQL seed embeds a
+  `variaveis` array that the `TemplateComponentes` type and the builder ignore (builder re-derives from body);
+  the TS seed source omits it. No functional impact; migration already applied.
+- **[12.2 — pre-existing Epic 4] Webhook `JSON.parse` unwrapped:** a signed-but-malformed body throws in the
+  POST handler → 500 → Meta retries the poisoned payload. In `webhook-meta.ts:145` (Epic 4 infra).
+- **[12.2 — pre-existing Epic 4] Webhook `webhook:unknown` rate-limit bucket:** `message_template_status_update`
+  payloads carry no `metadata.phone_number_id`, so all template-status callbacks across tenants collapse into
+  the single `webhook:unknown` 1000/min bucket; a cross-tenant approval burst can 429-drop legit updates.
+  Consider keying non-message fields on `waba_id`.
+
+## Deferred from: code review of Epic 13 (2026-06-10)
+
+- Story 13.1 — Tag filter UI is free-text comma list, not multi-select from tenant's existing tags (AC#1).
+- Story 13.2 — Dispatch detail page shows raw status counts, not percentage breakdowns (AC#8).
+- Story 13.2 — Residual at-least-once send window in process-dispatch-batch (send-then-mark); needs an atomic claim state (no `enviando` enum value today).
+- Story 13.2 — `apiBaseUrl()` `:3000` string replace fragile in prod (already deferred project-wide in Epic 11 review).
+- Story 13.3 — `list-dispatch-targets.ts` documented as the single LGPD opt-out enforcement seam but never imported (dead code); decide wire-or-delete after the inline `bloqueado` fix.
+- ~~Story 13.4 — `agendar_followup` accepts `emHoras` instead of spec's `agendado_para`~~ ✅ RESOLVED 2026-06-11: contract aligned to `agendado_para` ISO + exact AC#2 error.
+- Story 13.4 — `cancelado` note "Lead convertido antes do envio" not persisted (AC#6); `followups` has no note column.
+- ~~Story 13.5 — "Retomar" button + badge + manual-resume endpoint missing (AC#5)~~ ✅ RESOLVED 2026-06-11: `/resume` endpoint + use-case + dashboard badge/button shipped (UI visual validation flagged for e2e harness).

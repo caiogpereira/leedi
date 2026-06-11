@@ -168,6 +168,21 @@
   same-role turns per claude-api guidance, but confirm against the live model — and that
   lead_com_objecao's first agent turn engages the "preço" objection (AC#2).
 
+- [ ] **PL-17 · [Epic 13 / Story 13.2] Residual at-least-once duplicate-send window in the dispatch
+  batch worker.** `process-dispatch-batch` selects `pendente` targets, sends each template, then
+  marks `enviado` in a *separate* transaction. The Epic 13 review reduced the duplication surface
+  (added a `deduplicationId` on the chained QStash publish, an atomic compare-and-set claim in
+  `run-dispatch-job`, and per-iteration pause/quality re-checks), but a narrow window remains: if the
+  process dies (or the status update fails) *after* a successful `sendTemplate` but *before* the row
+  flips to `enviado`, a QStash redelivery re-selects that still-`pendente` row and **re-sends the
+  template** — a real WhatsApp message cost + quality-rating risk. Fully closing it needs an atomic
+  *claim* state, but `dispatch_target_status` has no `enviando` value, so the fix requires a pgEnum
+  migration (`ALTER TYPE ... ADD VALUE`, which can't run in a transaction) plus worker + counts/UI
+  handling of the new state. **Best bundled with the messages-partition / enum maintenance work**
+  (see [[project_partition_maintenance]]). *Exit:* a target can be claimed (`pendente → enviando`)
+  before the send and only a successful send flips it to `enviado`; a redelivered batch never
+  re-sends an already-claimed target (verified in staging by forcing a mid-batch redelivery).
+
 ---
 
 ## C. P2 — V2 / post-launch (descoped from V1 — listed for memory)
@@ -228,7 +243,12 @@
 - **Epic 11 — Hotmart Gateway:** lint debt only so far (→ PL-7). *Not yet reviewed.* **⚠ Money path
   — prioritize its formal review** (webhook → purchase → lead status; idempotency, signature verification).
 - **Epic 12 — Meta Templates:** PL-6 (typecheck), PL-7 (⚠ `no-use-before-define`). *Not yet reviewed.*
-- **Epic 13 — Smart Dispatch:** lint debt (→ PL-7). *Not yet reviewed.*
+- **Epic 13 — Smart Dispatch:** PL-17 (residual duplicate-send window, P1, needs enum migration);
+  lint debt (→ PL-7). Reviewed 2026-06-11; stories 13.1–13.5 `done` (13.2 done **with documented
+  caveat** = PL-17). 5 HIGH + multiple MEDIUM/LOW patches applied (dup-send guards, `bloqueado`
+  exclusion, throttle enforcement for all tiers, quality-update unknown-signal + restoration notif,
+  recovery dedup status-filter, FK/limit/offset guards, exact-text fixes); 13.4 `agendar_followup`
+  contract realigned to `agendado_para`; 13.5 manual `/resume` endpoint + dashboard badge/button shipped.
 - **Epic 14 — Human Inbox:** lint debt (→ PL-7). *Not yet reviewed.*
 - **Epic 15 — Analytics:** lint debt (→ PL-7). *Not yet reviewed.*
 - **Epic 16 — Usage Metering:** lint debt (→ PL-7). *Not yet reviewed.* **⚠ Billing-adjacent

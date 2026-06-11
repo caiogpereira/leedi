@@ -1,10 +1,10 @@
 ---
-baseline_commit: dac69f85aadc0b72f07d4d7c0b6cf51b0eec6db8
+baseline_commit: 992b842
 ---
 
 # Story 11.3: Recovery Flow Triggers (Abandoned Cart, Boleto, Pix)
 
-Status: review
+Status: done
 
 ## Story
 
@@ -79,6 +79,20 @@ so that leads who showed purchase intent but didn't complete are re-engaged auto
 - [Source: _bmad-output/implementation-artifacts/11-1-hotmart-webhook-receiver-canonical-event-normalization.md]
 - [Source: _bmad-output/implementation-artifacts/11-2-purchase-approved-lead-status-update.md]
 - [Source: _bmad-output/implementation-artifacts/5-1-lead-database-schema-list-view.md]
+
+## Review Findings (2026-06-10, code-review)
+
+Reviewed against ACs #1–#7. `handle-recovery-event` (carrinho_abandonado/boleto_gerado/pix_gerado),
+`handle-cancellation` (compra_cancelada/compra_reembolsada/chargeback → `comprou=false`,
+`produto_comprado_id=null`), and `handle-journey-event-only` (compra_recusada/assinatura_*) are all wired
+correctly in `process-gateway-event.ts`. `dispatch_rule_trigger` enum (migration 0013) does include
+`carrinho_abandonado`, `boleto_gerado`, `pix_gerado`, so the recovery-trigger query is valid against the
+current schema. AC#7 (skip-if-purchased) is correctly out of scope here (enforced at dispatch time in 13.2).
+Tests green after fixes.
+
+- [x] [Review][Patch] **Latent silent-rollback**: the `dispatch_rules` lookup + QStash publish ran *inside* the `withTenant` transaction, *after* the journey-event insert and `processado=true` update. A DB error from that query (missing table before 13.3 landed, or an enum mismatch on `trigger`) aborts the Postgres transaction; the `catch {}` swallowed the JS error but the COMMIT silently became a ROLLBACK → journey event + `processado` lost, causing duplicate processing on retry. The unit tests mock `tx.execute` so they never exercised this [apps/api/src/use-cases/gateway/handle-recovery-event.ts:128] — FIXED: lead/journey/processado writes now commit in their own transaction; the dispatch-rule lookup + publish run *after* commit, isolated so they can never roll back the critical writes.
+- [x] [Review][Patch] Over-broad `catch {}` swallowed genuine QStash/dispatch failures silently (dispatch lost with no trace) [apps/api/src/use-cases/gateway/handle-recovery-event.ts:150] — FIXED: now logs via `captureException`; a missing table still degrades gracefully but real failures are observable.
+- [x] [Review][Patch] `handle-journey-event-only` dropped the journey event on an `onConflictDoNothing` race — when the lead was created concurrently it returned no row and left `leadId` null with no re-select (unlike its sibling handlers) [apps/api/src/use-cases/gateway/handle-journey-event-only.ts:72] — FIXED: added the re-select fallback to recover the existing `leadId`.
 
 ## Dev Agent Record
 

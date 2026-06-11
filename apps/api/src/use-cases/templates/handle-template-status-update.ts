@@ -78,12 +78,26 @@ async function notifyTemplateStatusChange(
   status: DbTemplateStatus,
   reason?: string
 ): Promise<void> {
-  if (status !== 'rejeitado') return;
-  await sendNotificationToTenantRole({
-    tenantId,
-    roles: ['owner', 'admin', 'operator'],
-    tipo: 'template_rejeitado',
-    titulo: `Template "${templateNome}" foi rejeitado`,
-    corpo: `Motivo: ${reason ?? 'não informado'}`,
-  });
+  // AC#2 — approval notification
+  if (status === 'aprovado') {
+    await sendNotificationToTenantRole({
+      tenantId,
+      roles: ['owner', 'admin', 'operator'],
+      tipo: 'template_aprovado',
+      titulo: `Template "${templateNome}" foi aprovado!`,
+      corpo: 'Agora você pode usá-lo em disparos.',
+    });
+    return;
+  }
+
+  // AC#3 — rejection notification (copy per spec)
+  if (status === 'rejeitado') {
+    await sendNotificationToTenantRole({
+      tenantId,
+      roles: ['owner', 'admin', 'operator'],
+      tipo: 'template_rejeitado',
+      titulo: `Template "${templateNome}" foi rejeitado pela Meta`,
+      corpo: `Motivo: ${reason ?? 'não informado'}`,
+    });
+  }
 }

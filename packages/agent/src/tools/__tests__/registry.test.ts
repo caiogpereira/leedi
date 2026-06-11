@@ -84,7 +84,7 @@ describe('routeToolCall', () => {
     // intercepted before any DB/QStash side effect.
     const followup = (await routeToolCall(
       'agendar_followup',
-      { emHoras: 2, motivo: 'x' },
+      { agendado_para: new Date(Date.now() + 2 * 3600 * 1000).toISOString(), motivo: 'x' },
       { ...ctx, sandboxMode: true }
     )) as { scheduled: boolean; sandboxed: boolean };
     expect(followup.scheduled).toBe(true);

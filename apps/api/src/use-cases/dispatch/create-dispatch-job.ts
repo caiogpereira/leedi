@@ -92,7 +92,7 @@ export async function createDispatchJob(
   // Quality gate: a RED number cannot start new mass dispatches.
   if (connection?.qualityRating === 'vermelho') {
     throw new DispatchValidationError(
-      'A qualidade do número está VERMELHA. Disparos em massa estão bloqueados até a recuperação da qualidade.'
+      'Não é possível agendar disparos: seu número está com qualidade RED. Resolva o problema na Meta Business Suite antes de criar novos disparos.'
     );
   }
 

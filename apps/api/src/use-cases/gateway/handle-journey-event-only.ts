@@ -71,6 +71,14 @@ export async function handleJourneyEventOnly(input: {
         .returning({ id: schema.leads.id });
       if (inserted[0]) {
         leadId = inserted[0].id;
+      } else {
+        // Lead created concurrently (onConflictDoNothing returned no row) — re-select
+        const raced = await tx
+          .select({ id: schema.leads.id })
+          .from(schema.leads)
+          .where(and(eq(schema.leads.tenantId, tenantId), eq(schema.leads.telefone, telefone)))
+          .limit(1);
+        leadId = raced[0]?.id ?? null;
       }
     }
 

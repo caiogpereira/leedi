@@ -1,10 +1,10 @@
 ---
-baseline_commit: dac69f85aadc0b72f07d4d7c0b6cf51b0eec6db8
+baseline_commit: 992b842
 ---
 
 # Story 11.1: Hotmart Webhook Receiver & Canonical Event Normalization
 
-Status: review
+Status: done
 
 ## Story
 
@@ -103,6 +103,17 @@ so that the rest of the system only handles well-defined events regardless of Ho
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 11.1]
 - [Source: _bmad-output/implementation-artifacts/4-4-inbound-webhook-message-reception-routing.md] (webhook validation + idempotency pattern)
 - [Source: _bmad-output/implementation-artifacts/10-1-campaign-crud-phase-schema.md] (migration + RLS pattern)
+
+## Review Findings (2026-06-10, code-review)
+
+Reviewed against ACs #1–#6. Migration `0011_gateway_schema.sql`, `gateway.ts` schema, and
+`HotmartNormalizer` all match Architecture §6.11. RLS enabled + forced + tenant isolation on both
+tables. Normalizer maps all 13 Hotmart event types → 11 canonical types. Webhook validates `hottok`,
+responds 200 immediately, fires async via QStash, and stores unknown events with `evento_canonico: null`.
+Tests green: 19 gateway unit + webhook route tests passing.
+
+- [x] [Review][Defer] Webhook idempotency is an app-layer SELECT-then-INSERT with no unique index — two concurrent identical webhooks can both pass `isDuplicate` and double-insert [apps/api/src/routes/webhooks/hotmart.ts:100] — deferred, accepted V1 limitation (story Dev Notes), low likelihood; revisit with a unique/computed-column index if duplicates appear in production.
+- [x] [Review][Defer] `apiBaseUrl()` derives the API base by `BETTER_AUTH_URL.replace(':3000', …)` — breaks if the URL has no `:3000` (e.g. prod HTTPS without a port) [apps/api/src/routes/webhooks/hotmart.ts:12] — deferred, **project-wide pre-existing pattern** (12+ call sites across epics 11/13/17 + onboarding/webhook-meta), not an Epic 11 defect; should be fixed once globally (pre-launch checklist candidate).
 
 ## Dev Agent Record
 

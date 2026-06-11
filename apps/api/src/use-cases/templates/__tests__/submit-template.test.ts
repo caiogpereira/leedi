@@ -79,7 +79,9 @@ vi.mock('@leedi/db', () => {
         select: () => ({
           from: () => ({
             where: () => ({
-              limit: () => Promise.resolve([CONNECTION_ROW]),
+              orderBy: () => ({
+                limit: () => Promise.resolve([CONNECTION_ROW]),
+              }),
             }),
           }),
         }),
@@ -87,7 +89,7 @@ vi.mock('@leedi/db', () => {
     ),
     schema: {
       templates: { tenantId: {}, id: {} },
-      whatsappConnections: { tenantId: {}, id: {} },
+      whatsappConnections: { tenantId: {}, id: {}, createdAt: {} },
     },
     eq: vi.fn(),
     and: vi.fn(),

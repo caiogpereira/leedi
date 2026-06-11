@@ -83,7 +83,7 @@ describe('createDispatchJob', () => {
     const { createDispatchJob } = await import('../create-dispatch-job.js');
     await expect(
       createDispatchJob(TENANT_ID, { templateId: TEMPLATE_ID, segmentId: SEGMENT_ID, agendadoPara: FUTURE })
-    ).rejects.toThrow(/VERMELHA/);
+    ).rejects.toThrow(/qualidade RED/);
   });
 
   it('rejects a schedule time in the past', async () => {

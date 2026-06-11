@@ -65,7 +65,14 @@ vi.mock('@leedi/db', () => ({
       update: () => ({
         set: (v: unknown) => {
           updateSet(v);
-          return { where: () => Promise.resolve([]) };
+          // .where() is awaited directly (status updates) AND chained with
+          // .returning() (the compare-and-set claim) — support both.
+          return {
+            where: () => ({
+              returning: () => Promise.resolve([{ id: JOB_ID }]),
+              then: (resolve: (v: unknown) => void) => resolve([]),
+            }),
+          };
         },
       }),
     })
@@ -122,8 +129,8 @@ describe('runDispatchJob', () => {
     );
   });
 
-  it('excludes optout and ja_comprou leads', async () => {
-    segmentLeadIds = ['lead-optout', 'lead-bought', 'lead-ok'];
+  it('excludes optout, bloqueado and ja_comprou leads', async () => {
+    segmentLeadIds = ['lead-optout', 'lead-blocked', 'lead-bought', 'lead-ok'];
     selectResults = [
       [{ id: JOB_ID, status: 'agendado', segmentId: 's1', campaignId: 'camp-1', configThrottle: { tier_interval_ms: 1000 } }], // job
       [{ qualityRating: 'verde' }], // connection
@@ -132,6 +139,7 @@ describe('runDispatchJob', () => {
       // leads
       [
         { id: 'lead-optout', status: 'optout', produtoCompradoId: null },
+        { id: 'lead-blocked', status: 'bloqueado', produtoCompradoId: null },
         { id: 'lead-bought', status: 'ativo', produtoCompradoId: 'prod-1' },
         { id: 'lead-ok', status: 'ativo', produtoCompradoId: null },
       ],
@@ -143,10 +151,13 @@ describe('runDispatchJob', () => {
 
     const inserted = insertedTargets.flat() as Array<{ leadId: string; status: string; motivoExclusao: string | null }>;
     const optout = inserted.find((t) => t.leadId === 'lead-optout');
+    const blocked = inserted.find((t) => t.leadId === 'lead-blocked');
     const bought = inserted.find((t) => t.leadId === 'lead-bought');
     const ok = inserted.find((t) => t.leadId === 'lead-ok');
     expect(optout?.status).toBe('excluido');
     expect(optout?.motivoExclusao).toBe('optout');
+    expect(blocked?.status).toBe('excluido');
+    expect(blocked?.motivoExclusao).toBe('bloqueado');
     expect(bought?.motivoExclusao).toBe('ja_comprou');
     expect(ok?.status).toBe('pendente');
   });

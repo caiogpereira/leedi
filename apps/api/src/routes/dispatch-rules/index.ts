@@ -12,6 +12,14 @@ const VALID_TRIGGERS = [
 ] as const;
 type Trigger = (typeof VALID_TRIGGERS)[number];
 
+/** A janelaTempo is valid when delay_minutes is absent or a finite, non-negative number. */
+function isValidJanela(janela: { delay_minutes?: number } | undefined): boolean {
+  if (janela === undefined) return true;
+  const d = janela.delay_minutes;
+  if (d === undefined) return true;
+  return typeof d === 'number' && Number.isFinite(d) && d >= 0;
+}
+
 /** Returns true if the template exists for the tenant AND is aprovado. */
 async function templateIsApproved(tenantId: string, templateId: string): Promise<boolean> {
   const [tpl] = await withTenant(tenantId, async (tx) =>
@@ -57,6 +65,9 @@ export function createDispatchRulesRouter() {
     }
     if (!VALID_TRIGGERS.includes(body.trigger as Trigger)) {
       return c.json({ error: 'Trigger inválido.' }, 422);
+    }
+    if (!isValidJanela(body.janelaTempo)) {
+      return c.json({ error: 'Janela de tempo inválida: delay_minutes deve ser um número não negativo.' }, 422);
     }
     if (body.ativo === true && !(await templateIsApproved(tenantId, body.templateId))) {
       return c.json(
@@ -108,6 +119,9 @@ export function createDispatchRulesRouter() {
       ativo?: boolean;
     } | null;
     if (!body) return c.json({ error: 'Corpo inválido.' }, 422);
+    if (!isValidJanela(body.janelaTempo)) {
+      return c.json({ error: 'Janela de tempo inválida: delay_minutes deve ser um número não negativo.' }, 422);
+    }
 
     // Resolve the effective templateId for the approval check when activating.
     if (body.ativo === true) {
@@ -155,15 +169,34 @@ export function createDispatchRulesRouter() {
     return c.json(updated);
   });
 
-  // DELETE /:id
+  // DELETE /:id — reject if recovery targets reference this rule (the FK has no
+  // ON DELETE, so a bare delete would raise an unhandled FK violation → 500).
   router.delete('/:id', requireTenantSession(), async (c) => {
     const tenantId = c.get('resolvedTenantId');
     const id = c.req.param('id') ?? '';
-    await withTenant(tenantId, async (tx) =>
-      tx
+    const conflict = await withTenant(tenantId, async (tx) => {
+      const [dep] = await tx
+        .select({ id: schema.dispatchTargets.id })
+        .from(schema.dispatchTargets)
+        .where(
+          and(
+            eq(schema.dispatchTargets.tenantId, tenantId),
+            eq(schema.dispatchTargets.dispatchRuleId, id)
+          )
+        )
+        .limit(1);
+      if (dep) return true;
+      await tx
         .delete(schema.dispatchRules)
-        .where(and(eq(schema.dispatchRules.tenantId, tenantId), eq(schema.dispatchRules.id, id)))
-    );
+        .where(and(eq(schema.dispatchRules.tenantId, tenantId), eq(schema.dispatchRules.id, id)));
+      return false;
+    });
+    if (conflict) {
+      return c.json(
+        { error: 'Esta regra possui disparos associados e não pode ser excluída.' },
+        409
+      );
+    }
     return c.body(null, 204);
   });
 

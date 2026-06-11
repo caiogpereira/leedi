@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Plus, Send, AlertTriangle, Users, ListChecks } from 'lucide-react';
+import { Plus, Send, AlertTriangle, Users, ListChecks, Play } from 'lucide-react';
 import { Button } from '@leedi/ui';
 
 interface ThrottleConfig {
@@ -48,16 +48,43 @@ function formatDate(value: string): string {
 export function DispatchListClient({ tenantId }: { tenantId: string }) {
   const [jobs, setJobs] = useState<DispatchJob[]>([]);
   const [loading, setLoading] = useState(true);
+  const [quality, setQuality] = useState<string | null>(null);
+  const [resumingId, setResumingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/tenants/${tenantId}/dispatch-jobs`);
-    if (res.ok) setJobs(await res.json());
+    const [jobsRes, whatsappRes] = await Promise.all([
+      fetch(`/api/tenants/${tenantId}/dispatch-jobs`),
+      fetch(`/api/tenants/${tenantId}/whatsapp`),
+    ]);
+    if (jobsRes.ok) setJobs(await jobsRes.json());
+    if (whatsappRes.ok) {
+      const data = await whatsappRes.json();
+      setQuality(data.connection?.qualityRating ?? null);
+    }
     setLoading(false);
   }, [tenantId]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Resume is only allowed once quality has recovered to GREEN/YELLOW (AC#5).
+  const canResume = quality === 'verde' || quality === 'amarelo';
+
+  const handleResume = useCallback(
+    async (id: string) => {
+      setResumingId(id);
+      try {
+        const res = await fetch(`/api/tenants/${tenantId}/dispatch-jobs/${id}/resume`, {
+          method: 'POST',
+        });
+        if (res.ok) await load();
+      } finally {
+        setResumingId(null);
+      }
+    },
+    [tenantId, load]
+  );
 
   const qualityPaused = jobs.some((j) => j.configThrottle?.paused_reason === 'quality_red');
 
@@ -130,15 +157,39 @@ export function DispatchListClient({ tenantId }: { tenantId: string }) {
                     >
                       {STATUS_LABEL[job.status]}
                     </span>
+                    {job.status === 'pausado' &&
+                      job.configThrottle?.paused_reason === 'quality_red' && (
+                        <span className="ml-2 inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                          Pausado — qualidade RED
+                        </span>
+                      )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {job.enviados}/{job.totalAlvos} enviados
                     {job.falhas > 0 ? ` · ${job.falhas} falhas` : ''}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link href={`/disparos/${job.id}`} className="text-sm text-primary underline">
-                      Detalhes
-                    </Link>
+                    <div className="flex items-center justify-end gap-3">
+                      {job.status === 'pausado' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={!canResume || resumingId === job.id}
+                          title={
+                            canResume
+                              ? 'Retomar o disparo pausado'
+                              : 'Disponível apenas quando a qualidade do número estiver GREEN ou YELLOW'
+                          }
+                          onClick={() => void handleResume(job.id)}
+                        >
+                          <Play className="mr-1 h-3.5 w-3.5" />
+                          {resumingId === job.id ? 'Retomando…' : 'Retomar'}
+                        </Button>
+                      )}
+                      <Link href={`/disparos/${job.id}`} className="text-sm text-primary underline">
+                        Detalhes
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

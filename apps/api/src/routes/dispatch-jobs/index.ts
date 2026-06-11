@@ -1,14 +1,40 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { requireTenantSession } from '../../middleware/tenant-session.js';
 import { rateLimitTenant } from '../../middleware/rate-limit.js';
-import { withTenant, schema, eq, and, sql, desc } from '@leedi/db';
+import { withTenant, schema, eq, and, sql, desc, inArray } from '@leedi/db';
 import {
   createDispatchJob,
   DispatchValidationError,
 } from '../../use-cases/dispatch/create-dispatch-job.js';
+import { resumeDispatchJob } from '../../use-cases/dispatch/resume-dispatch-job.js';
 
 const DISPATCH_STATUSES = ['agendado', 'processando', 'concluido', 'pausado', 'erro'] as const;
 type DispatchStatus = (typeof DISPATCH_STATUSES)[number];
+
+/**
+ * A guarded status transition matched zero rows: the job either doesn't exist
+ * (404) or is in a terminal state that can't make this transition (409).
+ */
+async function resolveTransitionConflict(
+  c: Context,
+  tenantId: string,
+  id: string,
+  action: 'pausado' | 'cancelado'
+): Promise<Response> {
+  const [exists] = await withTenant(tenantId, async (tx) =>
+    tx
+      .select({ status: schema.dispatchJobs.status })
+      .from(schema.dispatchJobs)
+      .where(and(eq(schema.dispatchJobs.tenantId, tenantId), eq(schema.dispatchJobs.id, id)))
+      .limit(1)
+  );
+  if (!exists) return c.json({ error: 'Disparo não encontrado.' }, 404);
+  const verb = action === 'pausado' ? 'pausado' : 'cancelado';
+  return c.json(
+    { error: `Disparo não pode ser ${verb} no status atual (${exists.status}).` },
+    409
+  );
+}
 
 export function createDispatchJobsRouter() {
   const router = new Hono();
@@ -60,8 +86,12 @@ export function createDispatchJobsRouter() {
     if (rawStatus && !status) {
       return c.json({ error: 'Status inválido.' }, 422);
     }
-    const limit = Math.min(Number(c.req.query('limit') ?? 50), 100);
-    const offset = Number(c.req.query('offset') ?? 0);
+    // Validate pagination — a non-numeric/negative ?limit or ?offset must not
+    // reach .limit()/.offset() (NaN/negative → SQL error → 500).
+    const rawLimit = Number(c.req.query('limit') ?? 50);
+    const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(Math.trunc(rawLimit), 1), 100) : 50;
+    const rawOffset = Number(c.req.query('offset') ?? 0);
+    const offset = Number.isFinite(rawOffset) && rawOffset > 0 ? Math.trunc(rawOffset) : 0;
 
     const rows = await withTenant(tenantId, async (tx) => {
       const where = status
@@ -118,7 +148,7 @@ export function createDispatchJobsRouter() {
     return c.json(data);
   });
 
-  // POST /:id/pause
+  // POST /:id/pause — only a live job (agendado/processando) can be paused.
   router.post('/:id/pause', requireTenantSession(), async (c) => {
     const tenantId = c.get('resolvedTenantId');
     const id = c.req.param('id') ?? '';
@@ -126,14 +156,21 @@ export function createDispatchJobsRouter() {
       tx
         .update(schema.dispatchJobs)
         .set({ status: 'pausado' })
-        .where(and(eq(schema.dispatchJobs.tenantId, tenantId), eq(schema.dispatchJobs.id, id)))
+        .where(
+          and(
+            eq(schema.dispatchJobs.tenantId, tenantId),
+            eq(schema.dispatchJobs.id, id),
+            inArray(schema.dispatchJobs.status, ['agendado', 'processando'])
+          )
+        )
         .returning({ id: schema.dispatchJobs.id, status: schema.dispatchJobs.status })
     );
-    if (!updated) return c.json({ error: 'Disparo não encontrado.' }, 404);
-    return c.json(updated);
+    if (updated) return c.json(updated);
+    return resolveTransitionConflict(c, tenantId, id, 'pausado');
   });
 
-  // POST /:id/cancel — terminal stop (sets erro so chained batches abort)
+  // POST /:id/cancel — terminal stop (sets erro so chained batches abort);
+  // a job already in a terminal state cannot be resurrected.
   router.post('/:id/cancel', requireTenantSession(), async (c) => {
     const tenantId = c.get('resolvedTenantId');
     const id = c.req.param('id') ?? '';
@@ -141,11 +178,33 @@ export function createDispatchJobsRouter() {
       tx
         .update(schema.dispatchJobs)
         .set({ status: 'erro' })
-        .where(and(eq(schema.dispatchJobs.tenantId, tenantId), eq(schema.dispatchJobs.id, id)))
+        .where(
+          and(
+            eq(schema.dispatchJobs.tenantId, tenantId),
+            eq(schema.dispatchJobs.id, id),
+            inArray(schema.dispatchJobs.status, ['agendado', 'processando', 'pausado'])
+          )
+        )
         .returning({ id: schema.dispatchJobs.id, status: schema.dispatchJobs.status })
     );
-    if (!updated) return c.json({ error: 'Disparo não encontrado.' }, 404);
-    return c.json(updated);
+    if (updated) return c.json(updated);
+    return resolveTransitionConflict(c, tenantId, id, 'cancelado');
+  });
+
+  // POST /:id/resume — manual resume of a paused job (Story 13.5 AC#5).
+  // Blocked while quality is RED; re-enqueues a batch to continue sending.
+  router.post('/:id/resume', requireTenantSession(), async (c) => {
+    const tenantId = c.get('resolvedTenantId');
+    const id = c.req.param('id') ?? '';
+    try {
+      const result = await resumeDispatchJob(tenantId, id);
+      return c.json(result);
+    } catch (err) {
+      if (err instanceof DispatchValidationError) {
+        return c.json({ error: err.message }, err.status as 404 | 409 | 422);
+      }
+      throw err;
+    }
   });
 
   return router;

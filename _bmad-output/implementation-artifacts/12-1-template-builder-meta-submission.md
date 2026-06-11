@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 12.1: Template Builder & Meta Submission
 
-Status: review
+Status: done
 
 ## Story
 
@@ -148,3 +148,17 @@ claude-sonnet-4-6
 ### Change Log
 
 - feat(templates): Epic 12 — template schema, Meta submission adapter, templates API + builder UI (2026-06-02)
+
+### Review Findings
+
+_Code review (Opus, 2026-06-10) — 3-layer adversarial (Blind / Edge Case / Acceptance Auditor). All 5 patches applied & verified: templates use-case 14/14 + new route test `templates-routes.test.ts` 4/4 (DELETE guard + `?status=` 400); full api suite 183 pass (4 fail = pre-existing Epic 13 flaky, unrelated); typecheck clean for Epic 12 files. The `/library` registration-order fix verified empirically against Hono 4.12.23. Dashboard edit-page changes verified by typecheck + reasoning only (not exercised in a browser — consistent with project close-out convention)._
+
+- [x] [Review][Patch] AC#7 edit-approved UX unimplemented + dead template link — `template-list-client.tsx` links every template name to `/templates/${id}`, but no `app/(shell)/templates/[id]/page.tsx` route exists (404 on every click). **Decision (Caio, 2026-06-10): implement the full edit page** — build `templates/[id]/page.tsx` (detail + "Editar"), with the AC#7 warning modal ("Editar um template aprovado criará uma nova versão para revisão. A versão atual continuará aprovada até a nova ser avaliada pela Meta.") wiring to the existing `POST /:id/duplicate`. [template-list-client.tsx:161]
+- [x] [Review][Patch] `GET /library` shadowed by `GET /:id` — Hono 4.12.23 matches by registration order (empirically confirmed: `/library` → `/:id` handler with `id="library"`); query `WHERE id='library'` against uuid column → 22P02 → 500. Biblioteca feature (Story 12.2) broken. Fix: register `/library` before `/:id`. [routes/templates/index.ts:50,163]
+- [x] [Review][Patch] `DELETE /:id` guard returns are inside the `withTenant` callback (return value discarded) → handler always falls through to `c.body(null, 204)`: non-existent template → 204 instead of 404; non-`rascunho` template → 204 "success" while row is NOT deleted (client falsely told it succeeded). [routes/templates/index.ts:90-107]
+- [x] [Review][Patch] `GET /templates?status=<garbage>` — raw query cast onto pg enum (`filters.status as ...`) → `invalid input value for enum template_status` (22P02) → uncaught 500. Validate with `z.enum([...])` → 400. Same class as the Epic 8 playground bug. [routes/templates/index.ts:25 + get-templates.ts:26-29]
+- [x] [Review][Patch] `submitTemplate` ignores `template.connectionId` and loads the tenant's first connection via `.limit(1)` with no `orderBy` (non-deterministic; submits to wrong WABA if tenant has >1 connection). Prefer `template.connectionId` when set; add deterministic ordering. (Low impact under V1 single-connection.) [submit-template.ts:84-96]
+- [x] [Review][Defer] Concurrent submit TOCTOU — `status==='rascunho'` check and the final UPDATE run in separate transactions with the Meta network call between them and no `status='rascunho'` predicate on the UPDATE; two simultaneous submits both POST to Meta — deferred, low-likelihood under V1 single-admin; atomic-claim fix has a tradeoff vs AC#5 (transient `pendente` window).
+- [x] [Review][Defer] No server-side validation that body `{{N}}` placeholders match `variaveis` indices / are sequential from 1; `{{0}}` accepted then rejected with a misleading `variaveis` error — deferred, UI enforces coverage; hardening for direct-API / duplicate drift.
+- [x] [Review][Defer] `templates` RLS policy has `USING` but no `WITH CHECK` (INSERT/UPDATE post-image not constrained) — deferred, systemic repo-wide pattern (every tenant-isolation policy in migrations/); app-layer `withTenant` mitigates writes. Candidate for pre-launch hardening.
+- [x] [Review][Defer] Migration seed `componentes_sugeridos` embeds a dead `variaveis` key (type + UI ignore it; the TS seed source disagrees) — deferred, no functional impact; migration 0012 already applied.

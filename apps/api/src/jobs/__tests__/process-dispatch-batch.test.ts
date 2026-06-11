@@ -26,6 +26,10 @@ vi.mock('@leedi/connection', () => ({
 
 vi.mock('@leedi/observability', () => ({ captureException: vi.fn() }));
 
+vi.mock('@leedi/notification', () => ({
+  sendNotificationToTenantRole: vi.fn(() => Promise.resolve()),
+}));
+
 function leaf() {
   return Promise.resolve(selectResults.shift() ?? []);
 }

@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 12.2: Template Status Tracking & Suggested Library
 
-Status: review
+Status: done
 
 ## Story
 
@@ -127,3 +127,15 @@ claude-sonnet-4-6
 ### Change Log
 
 - feat(templates): Epic 12.2 — template status webhook, library API + biblioteca UI (2026-06-02)
+
+### Review Findings
+
+_Code review (Opus, 2026-06-10) — 3-layer adversarial (Blind / Edge Case / Acceptance Auditor)._
+
+> Note: the biblioteca feature is also broken by the `GET /library` route-shadowing bug tracked in Story 12.1's findings (`routes/templates/index.ts`).
+
+- [x] [Review][Patch] AC#2 approval notification never sent — `notifyTemplateStatusChange` does `if (status !== 'rejeitado') return;`, so APPROVED flips status to `aprovado` but the required message ("Template [nome] foi aprovado! Agora você pode usá-lo em disparos.") is never dispatched. Add an `aprovado` branch (`@leedi/notification` service exists). [handle-template-status-update.ts:81]
+- [x] [Review][Patch] AC#3 rejection notification copy deviates from spec — implemented as `titulo: 'Template "X" foi rejeitado'` + `corpo: 'Motivo: ...'`; spec requires "Template [nome] foi rejeitado pela Meta. Motivo: [reason].". (`motivo_rejeicao` storage is correct.) [handle-template-status-update.ts:86-87]
+- [x] [Review][Patch] AC#7 status filter tabs omit Pausado — `STATUS_FILTER_TABS` lists Todos/Rascunho/Pendente/Aprovado/Rejeitado; a `pausado` template renders the correct badge but cannot be filtered to. [template-list-client.tsx]
+- [x] [Review][Defer] Webhook `JSON.parse(rawBody)` not wrapped in try/catch → a signed-but-malformed body throws → 500 → Meta retries the poisoned payload — deferred, pre-existing Epic 4 webhook-meta code (not introduced by Epic 12).
+- [x] [Review][Defer] Template-status webhook events fall into the shared `webhook:unknown` rate-limit bucket (payload has no `metadata.phone_number_id`); a burst of approvals across tenants can 429-drop legit updates — deferred, pre-existing Epic 4 bucketing; Epic 12 only adds a new field type to the existing dispatcher. Consider keying on `waba_id`.

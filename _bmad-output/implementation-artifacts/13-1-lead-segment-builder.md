@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 13.1: Lead Segment Builder
 
-Status: review
+Status: done
 
 ## Story
 
@@ -127,3 +127,9 @@ _none_
 ### Change Log
 
 - 2026-06-02: Implemented Story 13.1 (segment builder API + filter engine + dashboard UI). Status → review.
+
+## Review Findings (Code Review 2026-06-10)
+
+- [x] [Review][Patch] Segment empty-filter validation message does not match AC#5 exact text — returns "O segmento deve conter pelo menos um filtro." instead of "Adicione pelo menos um filtro para criar um segmento." [apps/api/src/routes/segments/index.ts]
+- [x] [Review][Patch] Segment DELETE blocks on completed/errored jobs (AC#6) — dependency check lacks a `status NOT IN ('concluido','erro')` filter, so a segment used only by terminal jobs wrongly returns 409; 409 message also deviates from AC#6 exact text "Este segmento está em uso por um disparo ativo e não pode ser excluído." [apps/api/src/routes/segments/index.ts]
+- [x] [Review][Defer] Tag filter UI is free-text comma list, not multi-select from tenant's existing tags (AC#1) — deferred to pre-launch, cosmetic deviation [apps/dashboard/.../segmentos/new/segment-builder-client.tsx]

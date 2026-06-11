@@ -62,7 +62,7 @@ export async function handlePurchaseApproved(
   const value = normalized.value ?? null;
   const transactionId = normalized.hotmartTransactionId ?? null;
 
-  await withTenant(tenantId, async (tx) => {
+  const didProcess = await withTenant(tenantId, async (tx) => {
     // Resolve or create lead
     const existing = await tx
       .select({ id: schema.leads.id })
@@ -119,7 +119,7 @@ export async function handlePurchaseApproved(
           .update(schema.gatewayEvents)
           .set({ processado: true, leadId })
           .where(eq(schema.gatewayEvents.id, gatewayEventId));
-        return;
+        return false; // idempotent re-run — do not re-notify
       }
     }
 
@@ -168,9 +168,14 @@ export async function handlePurchaseApproved(
       .update(schema.gatewayEvents)
       .set({ processado: true, leadId })
       .where(eq(schema.gatewayEvents.id, gatewayEventId));
+
+    return true;
   });
 
   // Notify operators/admins/owners of the new sale (Story 18.2 AC#3).
+  // Skipped on the idempotent re-run path so a duplicated event never re-notifies.
+  if (!didProcess) return;
+
   sendNotificationToTenantRole({
     tenantId,
     roles: ['owner', 'admin', 'operator'],

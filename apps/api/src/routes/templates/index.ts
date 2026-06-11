@@ -14,6 +14,15 @@ import {
 import { submitTemplate } from '../../use-cases/templates/submit-template.js';
 import { withTenant, withServiceRole, schema, eq, and } from '@leedi/db';
 
+const TEMPLATE_STATUSES = [
+  'rascunho',
+  'pendente',
+  'aprovado',
+  'rejeitado',
+  'pausado',
+] as const;
+type TemplateStatusValue = (typeof TEMPLATE_STATUSES)[number];
+
 export function createTemplatesRouter() {
   const router = new Hono();
 
@@ -23,8 +32,34 @@ export function createTemplatesRouter() {
   router.get('/', requireTenantSession(), async (c) => {
     const tenantId = c.get('resolvedTenantId');
     const status = c.req.query('status');
+    // Validate against the enum before it reaches the pg `template_status` column —
+    // an unchecked value would raise 22P02 (invalid_text_representation) → 500.
+    if (status !== undefined && !TEMPLATE_STATUSES.includes(status as TemplateStatusValue)) {
+      return c.json({ error: 'Status inválido.' }, 400);
+    }
     const templates = await getTemplates(tenantId, status ? { status } : undefined);
     return c.json(templates);
+  });
+
+  // GET /api/tenants/:tenantId/templates/library
+  // MUST be registered BEFORE GET /:id — Hono matches routes by registration order,
+  // so a `/:id` declared first would shadow `/library` (treating "library" as an id).
+  router.get('/library', requireTenantSession(), async (c) => {
+    const categoriaOcasiao = c.req.query('categoria_ocasiao');
+
+    const rows = await withServiceRole(async (tx) => {
+      const query = tx
+        .select()
+        .from(schema.templateLibrary)
+        .where(eq(schema.templateLibrary.isGlobal, true));
+      return query;
+    });
+
+    const filtered = categoriaOcasiao
+      ? rows.filter((r) => r.categoriaOcasiao === categoriaOcasiao)
+      : rows;
+
+    return c.json(filtered);
   });
 
   // POST /api/tenants/:tenantId/templates
@@ -87,22 +122,32 @@ export function createTemplatesRouter() {
     const tenantId = c.get('resolvedTenantId');
     const templateId = c.req.param('id') ?? '';
 
-    await withTenant(tenantId, async (tx) => {
+    // The guards must drive the HTTP response. Returning from inside the
+    // withTenant callback only exits the callback (its value is discarded), so we
+    // surface the outcome and branch on it AFTER the transaction completes.
+    const result = await withTenant(tenantId, async (tx) => {
       const [template] = await tx
         .select({ status: schema.templates.status })
         .from(schema.templates)
         .where(and(eq(schema.templates.tenantId, tenantId), eq(schema.templates.id, templateId)))
         .limit(1);
 
-      if (!template) return c.json({ error: 'Template não encontrado.' }, 404);
-      if (template.status !== 'rascunho') {
-        return c.json({ error: 'Apenas templates em rascunho podem ser excluídos.' }, 400);
-      }
+      if (!template) return { outcome: 'not_found' as const };
+      if (template.status !== 'rascunho') return { outcome: 'not_draft' as const };
 
       await tx
         .delete(schema.templates)
         .where(and(eq(schema.templates.tenantId, tenantId), eq(schema.templates.id, templateId)));
+
+      return { outcome: 'deleted' as const };
     });
+
+    if (result.outcome === 'not_found') {
+      return c.json({ error: 'Template não encontrado.' }, 404);
+    }
+    if (result.outcome === 'not_draft') {
+      return c.json({ error: 'Apenas templates em rascunho podem ser excluídos.' }, 400);
+    }
 
     return c.body(null, 204);
   });
@@ -157,25 +202,6 @@ export function createTemplatesRouter() {
 
     const duplicate = await createTemplate(tenantId, parsedInput.data);
     return c.json(duplicate, 201);
-  });
-
-  // GET /api/tenants/:tenantId/template-library
-  router.get('/library', requireTenantSession(), async (c) => {
-    const categoriaOcasiao = c.req.query('categoria_ocasiao');
-
-    const rows = await withServiceRole(async (tx) => {
-      const query = tx
-        .select()
-        .from(schema.templateLibrary)
-        .where(eq(schema.templateLibrary.isGlobal, true));
-      return query;
-    });
-
-    const filtered = categoriaOcasiao
-      ? rows.filter((r) => r.categoriaOcasiao === categoriaOcasiao)
-      : rows;
-
-    return c.json(filtered);
   });
 
   return router;

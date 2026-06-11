@@ -6,7 +6,7 @@
 // captures the outcome (sent / excluded / failed). Idempotent via a 24h dedup
 // window keyed on (lead, rule).
 
-import { withTenant, schema, eq, and, sql } from '@leedi/db';
+import { withTenant, schema, eq, and, sql, inArray } from '@leedi/db';
 import { MetaCloudProvider } from '@leedi/connection';
 import { captureException } from '@leedi/observability';
 
@@ -22,7 +22,9 @@ export async function dispatchRecoveryTarget(
 ): Promise<{ skipped: boolean; reason?: string; status?: string }> {
   const { leadId, dispatchRuleId, tenantId } = payload;
 
-  // Dedup: a target for this (lead, rule) created in the last 24h → skip.
+  // Dedup: a SUCCESSFUL target for this (lead, rule) in the last 24h → skip.
+  // Only successful sends count: a prior 'falhou'/'excluido' row must not block a
+  // legitimate retry for 24h.
   const recent = await withTenant(tenantId, async (tx) =>
     tx
       .select({ id: schema.dispatchTargets.id })
@@ -32,6 +34,7 @@ export async function dispatchRecoveryTarget(
           eq(schema.dispatchTargets.tenantId, tenantId),
           eq(schema.dispatchTargets.leadId, leadId),
           eq(schema.dispatchTargets.dispatchRuleId, dispatchRuleId),
+          inArray(schema.dispatchTargets.status, ['enviado', 'entregue', 'respondido']),
           sql`${schema.dispatchTargets.createdAt} > now() - interval '24 hours'`
         )
       )
@@ -141,8 +144,10 @@ export async function dispatchRecoveryTarget(
     await recordTarget('enviado', { wamid: messageId });
     return { skipped: false, status: 'enviado' };
   } catch (err) {
+    // Transient send error: re-throw so QStash retries. Recording a 'falhou' row
+    // here would both pollute counters and (with the success-only dedup) is
+    // unnecessary — the retry will re-evaluate from scratch.
     captureException(err as Error);
-    await recordTarget('falhou', { motivoExclusao: 'erro_envio' });
-    return { skipped: false, status: 'falhou', reason: 'erro_envio' };
+    throw err;
   }
 }

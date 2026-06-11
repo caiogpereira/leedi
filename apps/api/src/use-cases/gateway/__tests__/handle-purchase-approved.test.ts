@@ -114,6 +114,12 @@ vi.mock('@leedi/db', () => ({
   ),
 }));
 
+// Notification is fire-and-forget; mock it so the unmocked real implementation
+// cannot hang the test (it performs DB/push I/O) when run in the full suite.
+vi.mock('@leedi/notification', () => ({
+  sendNotificationToTenantRole: vi.fn().mockResolvedValue(undefined),
+}));
+
 beforeEach(() => {
   vi.clearAllMocks();
   withServiceRoleCallCount = 0;

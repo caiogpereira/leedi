@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { requireTenantSession } from '../../middleware/tenant-session.js';
 import { rateLimitTenant } from '../../middleware/rate-limit.js';
-import { withTenant, schema, eq, and } from '@leedi/db';
+import { withTenant, schema, eq, and, sql } from '@leedi/db';
 import {
   evaluateSegment,
   type SegmentFilters,
@@ -58,7 +58,7 @@ export function createSegmentsRouter() {
     }
     if (!hasAtLeastOneFilter(body?.filtros)) {
       return c.json(
-        { error: 'O segmento deve conter pelo menos um filtro.' },
+        { error: 'Adicione pelo menos um filtro para criar um segmento.' },
         422
       );
     }
@@ -133,7 +133,7 @@ export function createSegmentsRouter() {
     }
     if (body?.filtros !== undefined) {
       if (!hasAtLeastOneFilter(body.filtros)) {
-        return c.json({ error: 'O segmento deve conter pelo menos um filtro.' }, 422);
+        return c.json({ error: 'Adicione pelo menos um filtro para criar um segmento.' }, 422);
       }
       updates.filtros = body.filtros as Record<string, unknown>;
     }
@@ -158,13 +158,16 @@ export function createSegmentsRouter() {
     const id = c.req.param('id') ?? '';
 
     const conflict = await withTenant(tenantId, async (tx) => {
+      // "Active" excludes terminal jobs: a segment referenced only by
+      // concluido/erro jobs can still be deleted (AC#6).
       const active = await tx
         .select({ id: schema.dispatchJobs.id })
         .from(schema.dispatchJobs)
         .where(
           and(
             eq(schema.dispatchJobs.tenantId, tenantId),
-            eq(schema.dispatchJobs.segmentId, id)
+            eq(schema.dispatchJobs.segmentId, id),
+            sql`${schema.dispatchJobs.status} NOT IN ('concluido', 'erro')`
           )
         )
         .limit(1);
@@ -179,7 +182,7 @@ export function createSegmentsRouter() {
 
     if (conflict) {
       return c.json(
-        { error: 'Não é possível excluir um segmento usado por disparos.' },
+        { error: 'Este segmento está em uso por um disparo ativo e não pode ser excluído.' },
         409
       );
     }

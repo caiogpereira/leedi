@@ -46,6 +46,7 @@ vi.mock('@leedi/db', () => ({
   },
   eq: vi.fn(() => ({})),
   and: vi.fn((...a: unknown[]) => a),
+  inArray: vi.fn((...a: unknown[]) => a),
   sql: Object.assign((s: TemplateStringsArray, ...v: unknown[]) => ({ raw: s.join('?'), v }), {}),
 }));
 
@@ -128,6 +129,24 @@ describe('dispatchRecoveryTarget', () => {
     expect(result.status).toBe('enviado');
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'enviado', wamid: 'wamid-1' })
+    );
+  });
+
+  it('re-throws a transient send error (so QStash retries) without recording a falhou row', async () => {
+    selectResults = [
+      [],
+      [{ id: RULE_ID, ativo: true, templateId: 't1' }],
+      [{ nome: 'recovery_tpl', status: 'aprovado' }],
+      [{ telefone: '+5511999999999', status: 'ativo', comprou: false }],
+      [{ phoneNumberId: 'p', wabaId: 'w', accessTokenEncrypted: 'e', accessTokenIv: 'iv', qualityRating: 'verde' }],
+    ];
+    sendTemplate.mockRejectedValueOnce(new Error('meta 503'));
+    const { dispatchRecoveryTarget } = await import('../dispatch-recovery-target.js');
+    await expect(
+      dispatchRecoveryTarget({ leadId: LEAD_ID, dispatchRuleId: RULE_ID, tenantId: TENANT_ID })
+    ).rejects.toThrow('meta 503');
+    expect(insertValues).not.toHaveBeenCalledWith(
+      expect.objectContaining({ motivoExclusao: 'erro_envio' })
     );
   });
 });

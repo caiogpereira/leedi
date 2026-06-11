@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 13.5: Quality Gate — Dispatch Pausing on Quality Rating Drop
 
-Status: review
+Status: done
 
 ## Story
 
@@ -154,3 +154,16 @@ _none_
 ### Change Log
 
 - 2026-06-02: Implemented Story 13.5 (quality gate: Meta quality webhook → rating map → auto-pause dispatches; three-point enforcement; dashboard banner). Status → review.
+
+## Review Findings (Code Review 2026-06-10)
+
+> Reconciliation: the memory note predicting a latent GREEN/TIER→pgEnum bug in `handle-quality-update` was stale — `mapQualitySignal` maps GREEN→verde, YELLOW→amarelo, RED→vermelho correctly. No enum bug. Real issues below.
+
+### Patch
+- [x] [Review][Patch] Unknown Meta signal → `mapQualitySignal` returns `amarelo`, and `handleQualityUpdate` then UNCONDITIONALLY overwrites `qualityRating` (clobbering a real `verde`) and fires a false "qualidade caindo" notification. Fix: leave the rating untouched and send no notification for unmapped/benign signals. [apps/api/src/use-cases/connection/handle-quality-update.ts:22-29,37-61]
+- [x] [Review][Patch] AC#4 restoration notification missing: the only notification fires for `vermelho|amarelo` with `tipo: quality_caindo`. GREEN recovery sends NO notification; YELLOW gets a "caindo" message instead of the AC#4 "✅ Qualidade restaurada" copy. Add the restoration notification on recovery to GREEN/YELLOW; align RED copy with AC#1. [apps/api/src/use-cases/connection/handle-quality-update.ts:49-61]
+- [x] [Review][Patch] create-dispatch-job 422 quality message does not match AC#3 exact text ("Não é possível agendar disparos: seu número está com qualidade RED. Resolva o problema na Meta Business Suite antes de criar novos disparos."). [apps/api/src/use-cases/dispatch/create-dispatch-job.ts]
+
+### Resolved (implemented after triage, 2026-06-11)
+- [x] [Review][Patch] AC#5 manual resume implemented: new `resume-dispatch-job` use-case + `POST /dispatch-jobs/:id/resume` (clears `paused_reason`; 422 while quality RED, 409 if not paused, 404 if missing). **Two resume paths** depending on materialization (caught in review): a job paused mid-send (has `dispatch_targets`) → `processando` + re-enqueue `process-batch`; a job paused before materialization (startup quality-RED pause / operator pausing an `agendado` job → 0 targets) → back to `agendado` + re-enqueue `run-dispatch-job` so it materializes and sends. Re-running `process-batch` on a never-materialized job would have finalized it `concluido` reaching nobody; re-running `run-job` on a materialized one would double-insert targets (no unique constraint). Dashboard list now shows a per-row "Pausado — qualidade RED" badge and a "Retomar" button enabled only when quality is GREEN/YELLOW (reads current quality via a new `/whatsapp` BFF proxy). Unit tests added (resume use-case 5/5, both paths). [apps/api/src/use-cases/dispatch/resume-dispatch-job.ts, apps/api/src/routes/dispatch-jobs/index.ts, apps/dashboard/app/(shell)/disparos/dispatch-list-client.tsx]
+  > Note: the React UI (badge + button + BFF proxies) is unit/type-checked but its visual behavior is best validated by the e2e/a11y harness — flagged in pendencias-pre-launch.md.

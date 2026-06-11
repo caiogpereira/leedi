@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 13.2: Manual Template Dispatch
 
-Status: review
+Status: done
 
 ## Story
 
@@ -17,7 +17,7 @@ so that I can reach my leads at scale without violating Meta's rate limits.
 1. **Given** the DB migration runs, **When** applied, **Then** tables `dispatch_jobs` and `dispatch_targets` exist with columns from Architecture §6.10: `dispatch_jobs` (`id`, `tenant_id`, `campaign_id` FK nullable, `template_id` FK nullable, `segment_id` FK nullable, `tipo` enum `template_massa|reengajamento|followup_24h`, `status` enum `agendado|processando|concluido|pausado|erro`, `agendado_para` timestamptz, `total_alvos` int, `enviados` int, `falhas` int, `config_throttle` jsonb, `created_at`, `updated_at`); `dispatch_targets` (`id`, `dispatch_job_id` FK, `lead_id` FK, `tenant_id`, `status` enum `pendente|enviado|entregue|respondido|falhou|excluido`, `motivo_exclusao` text nullable, `enviado_em` timestamptz nullable, `created_at`). RLS on both tables.
 2. **Given** a tenant admin creates a dispatch job with: approved template, segment, scheduled time, **When** `POST /dispatch-jobs` is called, **Then** a `dispatch_jobs` record is created with `status: agendado` and `tipo: template_massa`.
 3. **Given** the dispatch job fires at scheduled time via BullMQ, **When** the worker processes it, **Then**: (a) leads matching the segment are loaded via `evaluate-segment`; (b) exclusions are applied: leads with `comprou = true` for the associated product (if `campaign_id` is set), `optout = true`, or an active `conversation_window` (last message < 24h ago) are excluded; (c) for each included lead, a `dispatch_targets` record is created with `status: pendente`; (d) messages are sent in batches with throttling respecting `config_throttle.tier_interval_ms` between messages.
-4. **Given** the tenant's WhatsApp messaging tier is 1k/day, **When** the dispatch worker runs, **Then** messages are sent with at least `tier_interval_ms` delay between each send; the tenant's messaging tier is read from `whatsapp_connections.quality_tier` and maps to the correct interval (1k tier → ~86ms/msg, 10k → ~8.6ms/msg, 100k → ~0.86ms/msg, unlimited → no enforced delay).
+4. **Given** the tenant's WhatsApp messaging tier is 1k/day, **When** the dispatch worker runs, **Then** messages are sent with at least `tier_interval_ms` delay between each send; the tenant's messaging tier is read from `whatsapp_connections.quality_tier` and maps to the correct interval. <!-- Code review 2026-06-10 (D1, option 1): the earlier "~86ms/8.6ms/0.86ms" figures were a unit error; the canonical interval table is the Dev Notes one below. --> Interval table: 1k tier → 1000ms/msg, 10k → 500ms/msg, 100k → 100ms/msg, unlimited → no enforced delay.
 5. **Given** the dispatch job completes (all targets processed), **When** the final target is done, **Then** `dispatch_jobs.status` updates to `concluido` and final counts (`total_alvos`, `enviados`, `falhas`) are accurate.
 6. **Given** a lead is in the segment but `comprou = true` for the dispatched product, **When** targets are built, **Then** a `dispatch_targets` record is created with `status: excluido` and `motivo_exclusao: "ja_comprou"` — the message is NOT sent.
 7. **Given** a dispatch job is in `processando` status and the admin clicks "Pausar", **When** confirmed, **Then** `dispatch_jobs.status` changes to `pausado`; the BullMQ worker checks the status before each send and stops processing when `pausado` is detected.
@@ -164,3 +164,23 @@ _none_
 ### Change Log
 
 - 2026-06-02: Implemented Story 13.2 (manual template dispatch: schema migration 0013, throttled QStash chain, quality gate, dashboard). Status → review.
+
+## Review Findings (Code Review 2026-06-10)
+
+### Decision needed
+- [x] [Review][Decision] RESOLVED (option 1, 2026-06-10): Throttle tier-interval values — the AC#4 "~86ms" figures were a unit error; kept the implementation/Dev-Notes table (1k→1000ms, 10k→500ms, 100k→100ms, unlimited→no delay) and corrected the AC#4 text. The enforcement patch makes the inter-batch delay proportional for all throttled tiers.
+
+### Patch
+- [x] [Review][Patch] run-dispatch-job: non-atomic status guard → duplicate target materialization / double mass-send under QStash at-least-once delivery. Add compare-and-set (`UPDATE ... WHERE status='agendado' RETURNING`, abort if 0 rows). [apps/api/src/jobs/run-dispatch-job.ts:81,98-103]
+- [x] [Review][Patch] process-dispatch-batch: chained `publishJSON` has no `deduplicationId` → a redelivered chain message double-schedules the next batch. Add a deterministic dedup id. (Residual: a redelivered current invocation can still re-read `pendente` rows and re-send — see deferred item.) [apps/api/src/jobs/process-dispatch-batch.ts:188-192]
+- [x] [Review][Patch] `bloqueado` leads are not excluded on the mass-dispatch path (only optout/ja_comprou/conversa_ativa) → blocked leads get messaged. Add a `bloqueado` exclusion branch. [apps/api/src/jobs/run-dispatch-job.ts:144-156]
+- [x] [Review][Patch] Throttle not enforced for 10k/100k/unlimited — `tierDelaySeconds` returns 0 for any sub-second interval, so faster tiers send batches back-to-back. Make the inter-batch delay proportional for all throttled tiers; unlimited → 0. [apps/api/src/use-cases/dispatch/throttle.ts:29-34]
+- [x] [Review][Patch] Pause / quality-RED honored only once per batch (BATCH_SIZE=10), not before each send (AC#7) — re-check job status inside the send loop. [apps/api/src/jobs/process-dispatch-batch.ts:140-171]
+- [x] [Review][Patch] dispatch-jobs list: `limit`/`offset` unvalidated → `?limit=abc`/`?offset=-5` produce `LIMIT NaN` / negative offset → 500. Clamp to finite, non-negative bounds. [apps/api/src/routes/dispatch-jobs/index.ts:63-64]
+- [x] [Review][Patch] pause/cancel endpoints set status with no source-state guard → a `concluido`/`erro` job can be flipped back to `pausado`. Add a `status IN (...)` precondition. [apps/api/src/routes/dispatch-jobs/index.ts:122-149]
+- [x] [Review][Patch] process-dispatch-batch: `payload.batchSize ?? BATCH_SIZE` keeps `0` (nullish) → `.limit(0)` finalizes the job with unsent pendings. Guard `batchSize > 0`. [apps/api/src/jobs/process-dispatch-batch.ts:38]
+
+### Defer
+- [x] [Review][Defer] Detail page shows raw status counts, not percentage breakdowns (AC#8) — deferred to pre-launch [apps/dashboard/.../disparos/[id]/dispatch-detail-client.tsx]
+- [x] [Review][Defer] Residual at-least-once send window in process-dispatch-batch (send-then-mark) — fully closing needs an atomic claim state (no `enviando` enum value today) — deferred [apps/api/src/jobs/process-dispatch-batch.ts:152-171]
+- [x] [Review][Defer] `apiBaseUrl()` `:3000` string replace is fragile in prod — already deferred project-wide (Epic 11 review) [multiple files]

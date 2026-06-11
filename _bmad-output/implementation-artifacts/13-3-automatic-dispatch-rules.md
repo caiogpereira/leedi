@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 13.3: Automatic Dispatch Rules
 
-Status: review
+Status: done
 
 ## Story
 
@@ -128,3 +128,13 @@ _none_
 ### Change Log
 
 - 2026-06-02: Implemented Story 13.3 (automatic dispatch rules + recovery-target handler; expanded trigger enum for boleto/PIX). Status → review.
+
+## Review Findings (Code Review 2026-06-10)
+
+### Patch
+- [x] [Review][Patch] dispatch-recovery-target dedup matches ANY status, and the catch records `falhou` + returns 200 (no QStash retry) → a transient failure writes a row that the 24h dedup then treats as "already attempted", permanently suppressing recovery for that lead+rule for 24h. Fix: dedup only on successful statuses (`enviado`/`entregue`/`respondido`); re-throw transient send errors (don't record `falhou`) so QStash retries. [apps/api/src/jobs/dispatch-recovery-target.ts:25-40,143-147]
+- [x] [Review][Patch] dispatch-rules DELETE has no FK-dependency guard → deleting a rule with `dispatch_targets` rows raises a Postgres FK violation surfaced as 500 (FK has no ON DELETE). Mirror the segments DELETE 409 guard. [apps/api/src/routes/dispatch-rules/index.ts:159-168]
+- [x] [Review][Patch] dispatch-rules POST/PATCH do not validate `janelaTempo.delay_minutes` → a negative/non-numeric value persists and yields a negative QStash delay downstream. Validate as a finite, non-negative number. [apps/api/src/routes/dispatch-rules/index.ts:55-66,135-141]
+
+### Defer
+- [x] [Review][Defer] `list-dispatch-targets.ts` is documented as the single LGPD opt-out enforcement seam but is never imported by any dispatch path (dead code). After the inline `bloqueado` fix (Story 13.2), decide wire-or-delete — deferred [packages/lead/src/use-cases/list-dispatch-targets.ts]

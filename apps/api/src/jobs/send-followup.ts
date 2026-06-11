@@ -100,24 +100,32 @@ export async function sendFollowup(
       const provider = new MetaCloudProvider(ctx.connection);
       const body = ctx.followup.conteudoSugerido?.trim() || DEFAULT_FOLLOWUP_MESSAGE;
       const { messageId } = await provider.sendText(ctx.lead.telefone, body);
-      await withTenant(tenantId, async (tx) => {
-        await tx.insert(schema.messages).values({
-          tenantId,
-          conversationWindowId: ctx.followup!.conversationWindowId,
-          leadId: ctx.followup!.leadId,
-          direction: 'outbound',
-          autor: 'agente',
-          tipo: 'texto',
-          content: body,
-          metaMessageId: messageId,
-          status: 'enviado',
-        });
-      });
+      // Mark sent IMMEDIATELY after the send succeeds: the status guard above
+      // short-circuits a redelivery, so a failure in the bookkeeping below must
+      // not re-send the free-text message to the lead.
       await setStatus('enviado');
+      try {
+        await withTenant(tenantId, async (tx) => {
+          await tx.insert(schema.messages).values({
+            tenantId,
+            conversationWindowId: ctx.followup!.conversationWindowId,
+            leadId: ctx.followup!.leadId,
+            direction: 'outbound',
+            autor: 'agente',
+            tipo: 'texto',
+            content: body,
+            metaMessageId: messageId,
+            status: 'enviado',
+          });
+        });
+      } catch (insertErr) {
+        // Best-effort persistence — the message was already delivered.
+        captureException(insertErr as Error);
+      }
       return { skipped: false, status: 'enviado' };
     } catch (err) {
       captureException(err as Error);
-      throw err; // surface as 5xx so QStash retries
+      throw err; // the send itself failed → surface as 5xx so QStash retries
     }
   }
 

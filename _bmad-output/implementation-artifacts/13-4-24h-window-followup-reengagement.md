@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 13.4: 24h Window Follow-Up & Re-Engagement
 
-Status: review
+Status: done
 
 ## Story
 
@@ -135,3 +135,15 @@ _none_
 ### Change Log
 
 - 2026-06-02: Implemented Story 13.4 (follow-up + re-engagement tools, send-followup job, sandbox stubs). Status → review.
+
+## Review Findings (Code Review 2026-06-10)
+
+### Patch
+- [x] [Review][Patch] send-followup double-send: message sent at L102, then `messages` insert (L103-115) runs before `setStatus('enviado')` (L116); if the insert throws, the catch re-throws to force a QStash retry while `followups.status` is still `agendado` → the free-text follow-up is sent twice. Fix: set status `enviado` immediately after a successful send, then persist the message in a best-effort block that does not re-throw. [apps/api/src/jobs/send-followup.ts:98-122]
+- [x] [Review][Patch] `solicitar_reengajamento` "no active rule" message does not match AC#5 exact text — missing the actionable "Configure um template e uma regra em Disparos → Regras automáticas." guidance. [packages/agent/src/tools/solicitar-reengajamento.ts]
+
+### Resolved (implemented after triage, 2026-06-11)
+- [x] [Review][Patch] AC#2 contract aligned: `agendar_followup` now accepts `agendado_para` (ISO 8601), validates it is in the future and inside the active 24h window, and returns the exact AC#2 error "O follow-up deve ser agendado dentro da janela de 24 horas ativa." Tool input_schema/description + sandbox handler + routeToolCall updated; tests rewritten. [packages/agent/src/tools/agendar-followup.ts, packages/agent/src/tools/registry.ts]
+
+### Defer
+- [x] [Review][Defer] AC#6 `cancelado` note "Lead convertido antes do envio" is never persisted — the `followups` table has no note/motivo column. Behavior (no send + cancelado) is correct; persisting the note needs a schema column — deferred [packages/db/src/schema/dispatch.ts]

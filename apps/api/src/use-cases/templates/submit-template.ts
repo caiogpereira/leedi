@@ -80,7 +80,10 @@ export async function submitTemplate(
     );
   }
 
-  // Load the tenant's active WhatsApp connection to get wabaId + credentials
+  // Load the WhatsApp connection for this template's WABA. Prefer the template's
+  // own connectionId so a tenant with multiple numbers submits to the correct WABA;
+  // fall back to the tenant's connection (deterministic order) for V1 single-
+  // connection tenants where connectionId may be null.
   const connections = await withServiceRole(async (tx) =>
     tx
       .select({
@@ -91,7 +94,15 @@ export async function submitTemplate(
         accessTokenIv: schema.whatsappConnections.accessTokenIv,
       })
       .from(schema.whatsappConnections)
-      .where(eq(schema.whatsappConnections.tenantId, tenantId))
+      .where(
+        and(
+          eq(schema.whatsappConnections.tenantId, tenantId),
+          template.connectionId
+            ? eq(schema.whatsappConnections.id, template.connectionId)
+            : undefined
+        )
+      )
+      .orderBy(schema.whatsappConnections.createdAt)
       .limit(1)
   );
 

@@ -43,6 +43,11 @@ vi.mock('@leedi/db', () => {
 
 vi.mock('@leedi/observability', () => ({ captureException: vi.fn() }));
 
+const { sendNotificationToTenantRole } = vi.hoisted(() => ({
+  sendNotificationToTenantRole: vi.fn(),
+}));
+vi.mock('@leedi/notification', () => ({ sendNotificationToTenantRole }));
+
 beforeEach(() => {
   updatedRows = [];
   vi.clearAllMocks();
@@ -64,7 +69,22 @@ describe('handleTemplateStatusUpdate', () => {
     expect(row.motivoRejeicao).toBeNull();
   });
 
-  it('stores motivoRejeicao on rejection', async () => {
+  it('sends an approval notification on APPROVED (AC#2)', async () => {
+    const { handleTemplateStatusUpdate } = await import('../handle-template-status-update.js');
+    await handleTemplateStatusUpdate({
+      metaTemplateId: META_TEMPLATE_ID,
+      newStatus: 'APPROVED',
+      reason: undefined,
+      wabaId: 'waba-123',
+    });
+
+    expect(sendNotificationToTenantRole).toHaveBeenCalledTimes(1);
+    const arg = sendNotificationToTenantRole.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(arg.tipo).toBe('template_aprovado');
+    expect(arg.titulo).toContain('foi aprovado');
+  });
+
+  it('stores motivoRejeicao on rejection and notifies (AC#3)', async () => {
     const { handleTemplateStatusUpdate } = await import('../handle-template-status-update.js');
     await handleTemplateStatusUpdate({
       metaTemplateId: META_TEMPLATE_ID,
@@ -76,6 +96,11 @@ describe('handleTemplateStatusUpdate', () => {
     const row = updatedRows[0] as Record<string, unknown>;
     expect(row.status).toBe('rejeitado');
     expect(row.motivoRejeicao).toBe('TAG_CONTENT_VIOLATION');
+
+    const arg = sendNotificationToTenantRole.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(arg.tipo).toBe('template_rejeitado');
+    expect(arg.titulo).toContain('rejeitado pela Meta');
+    expect(arg.corpo).toContain('TAG_CONTENT_VIOLATION');
   });
 
   it('unknown meta_template_id logs warning and returns without throwing', async () => {

@@ -18,45 +18,75 @@ export interface HandleQualityUpdateInput {
 
 type QualityRating = 'verde' | 'amarelo' | 'vermelho';
 
-/** Maps a Meta quality signal to our qualityRating enum. */
-export function mapQualitySignal(event: string | undefined): QualityRating {
+/**
+ * Maps a Meta quality signal to our qualityRating enum, or `null` for an
+ * unknown/benign signal. Returning null (instead of defaulting to amarelo) lets
+ * the caller leave the stored rating untouched and stay silent — an unmapped
+ * event must not clobber a healthy `verde` nor fire a false alert.
+ */
+export function mapQualitySignal(event: string | undefined): QualityRating | null {
   const v = (event ?? '').toUpperCase();
   if (v === 'FLAGGED' || v === 'LOW' || v === 'RED') return 'vermelho';
   if (v === 'HIGH' || v === 'GREEN') return 'verde';
   if (v === 'MEDIUM' || v === 'YELLOW') return 'amarelo';
-  // Unknown signal → treat conservatively as yellow (do not auto-pause).
-  return 'amarelo';
+  return null;
 }
 
 export async function handleQualityUpdate(
   input: HandleQualityUpdateInput
-): Promise<{ updated: boolean; rating: QualityRating; pausedJobs: number }> {
+): Promise<{ updated: boolean; rating: QualityRating | null; pausedJobs: number }> {
   const rating = mapQualitySignal(input.event);
 
-  // Resolve tenant + update the rating (service role: tenant unknown to webhook).
-  const rows = await withServiceRole(async (tx) =>
-    tx
+  // Unknown/benign signal → leave the stored rating and tenant state untouched.
+  if (rating === null) {
+    return { updated: false, rating: null, pausedJobs: 0 };
+  }
+
+  // Resolve tenant, capture the PREVIOUS rating, then update (service role:
+  // tenant unknown to webhook). The previous value lets us distinguish a
+  // recovery (RED → GREEN/YELLOW) from steady-state noise.
+  const rows = await withServiceRole(async (tx) => {
+    const [prev] = await tx
+      .select({
+        tenantId: schema.whatsappConnections.tenantId,
+        previous: schema.whatsappConnections.qualityRating,
+      })
+      .from(schema.whatsappConnections)
+      .where(eq(schema.whatsappConnections.phoneNumberId, input.phoneNumberId))
+      .limit(1);
+    if (!prev) return [] as { tenantId: string; previous: QualityRating | null }[];
+    await tx
       .update(schema.whatsappConnections)
       .set({ qualityRating: rating })
-      .where(eq(schema.whatsappConnections.phoneNumberId, input.phoneNumberId))
-      .returning({ tenantId: schema.whatsappConnections.tenantId })
-  );
+      .where(eq(schema.whatsappConnections.phoneNumberId, input.phoneNumberId));
+    return [{ tenantId: prev.tenantId, previous: prev.previous }];
+  });
 
   const tenantId = rows[0]?.tenantId;
   if (!tenantId) return { updated: false, rating, pausedJobs: 0 };
+  const previous = rows[0]?.previous ?? null;
 
   let pausedJobs = 0;
-  if (rating === 'vermelho' || rating === 'amarelo') {
-    if (rating === 'vermelho') {
-      const result = await pauseDispatchesForQuality(tenantId);
-      pausedJobs = result.paused;
-    }
+  if (rating === 'vermelho') {
+    const result = await pauseDispatchesForQuality(tenantId);
+    pausedJobs = result.paused;
     sendNotificationToTenantRole({
       tenantId,
       roles: ['owner', 'admin'],
-      tipo: 'quality_caindo',
-      titulo: 'Qualidade do número caindo',
-      corpo: `A qualidade do seu número WhatsApp está ${rating === 'vermelho' ? 'vermelha (crítica)' : 'amarela (atenção)'}.`,
+      tipo: 'quality_vermelho',
+      titulo: 'Disparos pausados — qualidade RED',
+      corpo:
+        '⚠️ Seu número teve queda de qualidade (RED). Todos os disparos ativos foram pausados automaticamente. Resolva o problema na Meta Business Suite antes de retomar.',
+    }).catch(() => {});
+  } else if ((rating === 'verde' || rating === 'amarelo') && previous === 'vermelho') {
+    // Recovery from RED. Jobs are NOT auto-resumed (manual resume — AC#4).
+    const label = rating === 'verde' ? 'GREEN' : 'YELLOW';
+    sendNotificationToTenantRole({
+      tenantId,
+      roles: ['owner', 'admin'],
+      tipo: 'quality_restaurada',
+      titulo: 'Qualidade do número restaurada',
+      corpo: `✅ Qualidade do número restaurada para ${label}. Você pode retomar os disparos pausados manualmente em Disparos.`,
     }).catch(() => {});
   }
 

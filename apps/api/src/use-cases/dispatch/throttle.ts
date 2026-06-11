@@ -12,7 +12,7 @@ const TIER_INTERVAL_MS: Record<MessagingTier, number> = {
   '1k': 1000,
   '10k': 500,
   '100k': 100,
-  unlimited: 50,
+  unlimited: 0, // no enforced delay (AC#4)
 };
 
 /** Per-message interval in ms for a tier. Unknown/null tiers fall back to the safest (1k) pace. */
@@ -23,12 +23,12 @@ export function tierIntervalMs(tier: MessagingTier | null | undefined): number {
 
 /**
  * Delay (seconds) before the NEXT batch is scheduled, given the per-message
- * interval. For sub-second intervals we don't add a QStash delay (>= than the
- * send loop itself); for the 1k tier (1000ms) we space batches by batchSize seconds.
+ * interval. The batch of `batchSize` messages must be spaced by at least
+ * `batchSize * intervalMs`, so we translate that to whole seconds (QStash delay
+ * granularity). Enforced for every throttled tier; an interval of 0 (unlimited)
+ * means no delay (AC#4).
  */
 export function tierDelaySeconds(intervalMs: number, batchSize: number = BATCH_SIZE): number {
-  if (intervalMs >= 1000) {
-    return batchSize * Math.ceil(intervalMs / 1000);
-  }
-  return 0;
+  if (intervalMs <= 0) return 0;
+  return Math.ceil((batchSize * intervalMs) / 1000);
 }

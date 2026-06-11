@@ -1,14 +1,14 @@
 // Tool: agendar_followup — configurable action. Schedules a free-text follow-up
 // with the lead inside the 24h service window.
 //
-// schema-vs-ctx boundary: Claude supplies { emHoras, motivo, conteudoSugerido? }.
+// schema-vs-ctx boundary: Claude supplies { agendado_para, motivo, conteudoSugerido? }.
 // tenantId, leadId, conversationWindowId come from ToolContext.
 //
 // Flow:
-//   1. Validate emHoras (0 < emHoras <= 23 — must land inside the 24h window).
+//   1. Validate agendado_para (ISO 8601; future; <= 23h from now — inside the 24h window).
 //   2. Verify the conversation window is still open.
 //   3. Insert a followups row (status='agendado').
-//   4. Schedule a QStash job (/api/internal/dispatch/send-followup, delay=emHoras*3600).
+//   4. Schedule a QStash job (/api/internal/dispatch/send-followup, delay=agendado_para-now).
 //   5. Return a confirmation string.
 
 import { withTenant, schema, eq, and, sql } from '@leedi/db';
@@ -17,10 +17,15 @@ import { env } from '@leedi/config';
 import type { ToolContext } from './types.js';
 
 export interface AgendarFollowupInput {
-  emHoras: number;
+  /** ISO 8601 datetime; must fall inside the active 24h window (<= 23h from now). */
+  agendado_para: string;
   motivo: string;
   conteudoSugerido?: string;
 }
+
+/** Hard limit: must land inside the active 24h window (kept at 23h for safety margin). */
+const MAX_WINDOW_MS = 23 * 3600 * 1000;
+const WINDOW_ERROR = 'O follow-up deve ser agendado dentro da janela de 24 horas ativa.';
 
 function apiBaseUrl(): string {
   return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
@@ -30,15 +35,15 @@ export async function agendarFollowup(
   input: AgendarFollowupInput,
   ctx: Pick<ToolContext, 'tenantId' | 'leadId' | 'conversationWindowId'>
 ): Promise<string> {
-  const emHoras = Number(input.emHoras);
-  if (!Number.isFinite(emHoras) || emHoras <= 0) {
-    return 'Não foi possível agendar: informe um tempo positivo em horas.';
+  const agendadoPara = new Date(input.agendado_para);
+  if (Number.isNaN(agendadoPara.getTime())) {
+    return 'Não foi possível agendar: data/hora inválida (use o formato ISO 8601).';
   }
-  if (emHoras > 23) {
-    return 'Não foi possível agendar: o follow-up deve ocorrer em até 23 horas (limite da janela de 24h).';
+  const delayMs = agendadoPara.getTime() - Date.now();
+  // Must be in the future AND inside the active 24h window.
+  if (delayMs <= 0 || delayMs > MAX_WINDOW_MS) {
+    return WINDOW_ERROR;
   }
-
-  const agendadoPara = new Date(Date.now() + emHoras * 3600 * 1000);
 
   // Verify the conversation window is still open.
   const windowRows = await withTenant(ctx.tenantId, async (tx) =>
@@ -83,10 +88,10 @@ export async function agendarFollowup(
   const qstash = new Client({ token: env.QSTASH_TOKEN });
   await qstash.publishJSON({
     url: `${apiBaseUrl()}/api/internal/dispatch/send-followup`,
-    delay: Math.ceil(emHoras * 3600),
+    delay: Math.ceil(delayMs / 1000),
     deduplicationId: `followup-${followup!.id}`,
     body: { followupId: followup!.id, tenantId: ctx.tenantId },
   });
 
-  return `Follow-up agendado para daqui a ${emHoras} hora(s).`;
+  return `Follow-up agendado para ${agendadoPara.toISOString()}.`;
 }

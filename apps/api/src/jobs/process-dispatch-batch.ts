@@ -35,7 +35,10 @@ export async function processDispatchBatch(
   payload: ProcessDispatchBatchPayload
 ): Promise<{ done: boolean; sent: number; failed: number }> {
   const { dispatchJobId, tenantId } = payload;
-  const batchSize = payload.batchSize ?? BATCH_SIZE;
+  // Nullish-coalescing keeps 0; an explicit 0 would .limit(0) and prematurely
+  // finalise the job with pending targets unsent — guard against it.
+  const batchSize =
+    payload.batchSize && payload.batchSize > 0 ? payload.batchSize : BATCH_SIZE;
 
   const ctx = await withTenant(tenantId, async (tx) => {
     const [job] = await tx
@@ -136,8 +139,23 @@ export async function processDispatchBatch(
 
   let sent = 0;
   let failed = 0;
+  let aborted = false;
 
   for (const target of targets) {
+    // Honour pause / quality-RED before EACH send (AC#7): an operator pause or a
+    // quality drop mid-batch must stop the remaining sends, not only the next batch.
+    const [live] = await withTenant(tenantId, async (tx) =>
+      tx
+        .select({ status: schema.dispatchJobs.status })
+        .from(schema.dispatchJobs)
+        .where(eq(schema.dispatchJobs.id, dispatchJobId))
+        .limit(1)
+    );
+    if (live?.status === 'pausado' || live?.status === 'concluido' || live?.status === 'erro') {
+      aborted = true;
+      break;
+    }
+
     const telefone = phoneByLead.get(target.leadId);
     if (!provider || !telefone || !templateName) {
       await withTenant(tenantId, async (tx) => {
@@ -181,13 +199,24 @@ export async function processDispatchBatch(
       .where(eq(schema.dispatchJobs.id, dispatchJobId));
   });
 
-  // Chain the next batch with a tier-based delay.
+  // If we aborted mid-batch (pause / quality-RED), don't chain another batch —
+  // the remaining targets stay 'pendente' for a manual resume.
+  if (aborted) {
+    return { done: true, sent, failed };
+  }
+
+  // Chain the next batch with a tier-based delay. The deduplicationId is keyed on
+  // the last target processed so a QStash redelivery of THIS handler doesn't
+  // double-schedule the same next batch, while a genuine next batch (different
+  // pending rows) still goes through.
   const throttle = (ctx.job.configThrottle ?? {}) as DispatchThrottleConfig;
   const delaySeconds = tierDelaySeconds(throttle.tier_interval_ms ?? 1000, batchSize);
+  const lastTargetId = targets[targets.length - 1]?.id ?? 'none';
   const qstash = new Client({ token: env.QSTASH_TOKEN });
   await qstash.publishJSON({
     url: `${apiBaseUrl()}/api/internal/dispatch/process-batch`,
     delay: delaySeconds,
+    deduplicationId: `dispatch-batch:${dispatchJobId}:${lastTargetId}`,
     body: { dispatchJobId, tenantId, offset: 0, batchSize },
   });
 

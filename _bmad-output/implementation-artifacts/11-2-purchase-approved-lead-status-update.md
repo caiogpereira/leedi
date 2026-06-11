@@ -1,10 +1,10 @@
 ---
-baseline_commit: dac69f85aadc0b72f07d4d7c0b6cf51b0eec6db8
+baseline_commit: 992b842
 ---
 
 # Story 11.2: Purchase Approved — Lead Status Update
 
-Status: review
+Status: done
 
 ## Story
 
@@ -70,6 +70,18 @@ so that I don't receive redundant sales messages.
 - [Source: _bmad-output/implementation-artifacts/11-1-hotmart-webhook-receiver-canonical-event-normalization.md]
 - [Source: _bmad-output/implementation-artifacts/5-1-lead-database-schema-list-view.md]
 - [Source: _bmad-output/implementation-artifacts/7-3-lead-context-tools-history-offers-eligibility.md]
+
+## Review Findings (2026-06-10, code-review)
+
+Reviewed against ACs #1–#5. Lead resolve-or-create, `comprou=true`, `produto_comprado_id` resolution
+via `gateway_product_id`, journey event creation, `processado`+`lead_id` backfill, and the product-not-found
+warning path all match spec. `verificar_elegibilidade` `already_purchased` guard confirmed present (Story 7.3).
+Note: `lead_journey_events` has no `origem` column (schema is `id, lead_id, tenant_id, tipo, detalhes,
+created_at`), so the Task-1 reference to `origem: 'gateway'` is not implementable — code correctly omits it
+(no fix needed). All Epic 11 tests green after fixes.
+
+- [x] [Review][Patch] Duplicate "Nova venda!" notification on the idempotent re-run path — the secondary journey-dedup branch returned from the `withTenant` callback but execution still reached `sendNotificationToTenantRole`, re-notifying on a duplicate `compra_aprovada` [apps/api/src/use-cases/gateway/handle-purchase-approved.ts:174] — FIXED: callback now returns a `didProcess` flag; notification is skipped on the idempotent path.
+- [x] [Review][Patch] Flaky test — `handle-purchase-approved.test.ts` did not mock `@leedi/notification`, so the real fire-and-forget call hung and timed out (5s) when the test ran in the full suite [apps/api/src/use-cases/gateway/__tests__/handle-purchase-approved.test.ts] — FIXED: added a `vi.mock('@leedi/notification')`; the 2 full-suite failures are resolved.
 
 ## Dev Agent Record
 

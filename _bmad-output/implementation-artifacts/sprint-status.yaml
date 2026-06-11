@@ -1,5 +1,5 @@
 # generated: 2026-05-29
-# last_updated: 2026-06-10  (epic-5 code review complete — stories 5.1–5.5 → done)
+# last_updated: 2026-06-11  (epic-13 code review complete — stories 13.1–13.5 → done; 13.4/13.5 deferred MEDIUMs implemented; 13.2 residual → PL-17)
 # project: leedi
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-29
-last_updated: 2026-06-10  # epic 6 → done — code review fixed HIGH dashboard build break (@/ alias) + false-confidence test + 4 typecheck errors; all 4 stories review→done. See epic-6-code-review-report.md.
+last_updated: 2026-06-10  # epic-12 → done — code review applied 8 patches (HIGH /library route shadow, DELETE swallowed returns, ?status= enum 500, AC#2 approval notification, AC#7 edit page); stories 12.1/12.2 review→done. See 12-1/12-2 Review Findings.
 project: leedi
 project_key: NOKEY
 tracking_system: file-system
@@ -156,29 +156,29 @@ development_status:
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 11: Hotmart Gateway Integration
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-11: in-progress
-  11-1-hotmart-webhook-receiver-canonical-event-normalization: review
-  11-2-purchase-approved-lead-status-update: review
-  11-3-recovery-flow-triggers-abandoned-cart-boleto-pix: review
+  epic-11: done
+  11-1-hotmart-webhook-receiver-canonical-event-normalization: done
+  11-2-purchase-approved-lead-status-update: done
+  11-3-recovery-flow-triggers-abandoned-cart-boleto-pix: done
   epic-11-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 12: Meta Template Management
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-12: in-progress
-  12-1-template-builder-meta-submission: review
-  12-2-template-status-tracking-suggested-library: review
+  epic-12: done  # epic-12 code review (Opus, 2026-06-10): 8 patches applied — HIGH /library route shadowed by /:id (Hono registration-order, empirically confirmed) + DELETE swallowed-guard-returns + ?status= enum 22P02→500; AC#2 approval notification (was never sent); AC#7 edit-approved UI (detail/edit page + warning modal + duplicate flow, fixes dead /templates/[id] link). 6 defers (2 pre-existing Epic 4 webhook, 1 systemic repo-wide RLS WITH CHECK). templates tests 14/14. See 12-1/12-2 Review Findings + deferred-work.md.
+  12-1-template-builder-meta-submission: done
+  12-2-template-status-tracking-suggested-library: done
   epic-12-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 13: Smart Message Dispatch
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-13: in-progress
-  13-1-lead-segment-builder: review
-  13-2-manual-template-dispatch: review
-  13-3-automatic-dispatch-rules: review
-  13-4-24h-window-followup-reengagement: review
-  13-5-quality-gate-dispatch-pausing: review
+  epic-13: done  # code review 2026-06-11; 13.2 done w/ caveat → PL-17
+  13-1-lead-segment-builder: done
+  13-2-manual-template-dispatch: done
+  13-3-automatic-dispatch-rules: done
+  13-4-24h-window-followup-reengagement: done
+  13-5-quality-gate-dispatch-pausing: done
   epic-13-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────

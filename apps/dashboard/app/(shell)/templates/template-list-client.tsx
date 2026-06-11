@@ -47,6 +47,7 @@ const STATUS_FILTER_TABS: Array<{ value: string; label: string }> = [
   { value: 'pendente', label: 'Pendente' },
   { value: 'aprovado', label: 'Aprovado' },
   { value: 'rejeitado', label: 'Rejeitado' },
+  { value: 'pausado', label: 'Pausado' },
 ];
 
 function StatusBadge({ status }: { status: TemplateStatus }) {

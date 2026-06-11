@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input, Label, Dialog, DialogContent, DialogHeader, DialogTitle } from '@leedi/ui';
-import type { TemplateCategoria, Template } from './template-list-client';
+import type { TemplateCategoria, TemplateStatus, Template } from './template-list-client';
 
 interface TemplateLibraryEntry {
   id: string;
@@ -40,7 +40,7 @@ interface TemplateButtonsComp {
   buttons: TemplateButton[];
 }
 
-interface TemplateComponentes {
+export interface TemplateComponentes {
   header?: TemplateHeaderComp;
   body: TemplateBodyComp;
   footer?: TemplateFooterComp;
@@ -52,9 +52,24 @@ interface TemplateVariavel {
   exemplo: string;
 }
 
+/** Full template payload (incl. componentes/variaveis) returned by GET /:id. */
+export interface FullTemplate {
+  id: string;
+  nome: string;
+  categoria: TemplateCategoria;
+  idioma: string;
+  status: TemplateStatus;
+  componentes: TemplateComponentes;
+  variaveis: TemplateVariavel[];
+  metaTemplateId: string | null;
+  motivoRejeicao: string | null;
+}
+
 interface BuilderProps {
   tenantId: string;
-  libraryId?: string;
+  libraryId?: string | undefined;
+  /** When set, the builder edits this existing template (PATCH) instead of creating one. */
+  editTemplate?: FullTemplate | undefined;
 }
 
 const CATEGORIA_OPTIONS: Array<{ value: TemplateCategoria; label: string }> = [
@@ -78,22 +93,40 @@ function extractVariableIndices(text: string): number[] {
   return [...new Set(indices)].sort((a, b) => a - b);
 }
 
-export function TemplateBuilderClient({ tenantId, libraryId }: BuilderProps) {
+export function TemplateBuilderClient({ tenantId, libraryId, editTemplate }: BuilderProps) {
   const router = useRouter();
+  const isEdit = Boolean(editTemplate);
+  const initComp = editTemplate?.componentes;
 
-  const [nome, setNome] = useState('');
-  const [categoria, setCategoria] = useState<TemplateCategoria>('marketing');
-  const [idioma, setIdioma] = useState('pt_BR');
-  const [headerFormat, setHeaderFormat] = useState<'NONE' | 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT'>('NONE');
-  const [headerText, setHeaderText] = useState('');
-  const [bodyText, setBodyText] = useState('');
-  const [footerText, setFooterText] = useState('');
-  const [buttons, setButtons] = useState<TemplateButton[]>([]);
-  const [variaveis, setVariaveis] = useState<TemplateVariavel[]>([]);
+  const [nome, setNome] = useState(editTemplate?.nome ?? '');
+  const [categoria, setCategoria] = useState<TemplateCategoria>(editTemplate?.categoria ?? 'marketing');
+  const [idioma, setIdioma] = useState(editTemplate?.idioma ?? 'pt_BR');
+  const [headerFormat, setHeaderFormat] = useState<'NONE' | 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT'>(
+    initComp?.header?.format ?? 'NONE'
+  );
+  const [headerText, setHeaderText] = useState(initComp?.header?.text ?? '');
+  const [bodyText, setBodyText] = useState(initComp?.body.text ?? '');
+  const [footerText, setFooterText] = useState(initComp?.footer?.text ?? '');
+  const [buttons, setButtons] = useState<TemplateButton[]>(initComp?.buttons?.buttons ?? []);
+  const [variaveis, setVariaveis] = useState<TemplateVariavel[]>(editTemplate?.variaveis ?? []);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [savedTemplate, setSavedTemplate] = useState<Template | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [savedTemplate, setSavedTemplate] = useState<Template | null>(
+    editTemplate
+      ? ({
+          id: editTemplate.id,
+          nome: editTemplate.nome,
+          categoria: editTemplate.categoria,
+          idioma: editTemplate.idioma,
+          status: editTemplate.status,
+          metaTemplateId: editTemplate.metaTemplateId,
+          createdAt: '',
+          updatedAt: '',
+        } satisfies Template)
+      : null
+  );
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
 
   // Load library template if libraryId is provided
@@ -154,18 +187,24 @@ export function TemplateBuilderClient({ tenantId, libraryId }: BuilderProps) {
     e.preventDefault();
     setSaving(true);
     setError(null);
+    setSaveSuccess(false);
     try {
-      const res = await fetch(`/api/tenants/${tenantId}/templates`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          nome,
-          categoria,
-          idioma,
-          componentes: buildComponentes(),
-          variaveis,
-        }),
-      });
+      const res = await fetch(
+        isEdit
+          ? `/api/tenants/${tenantId}/templates/${editTemplate!.id}`
+          : `/api/tenants/${tenantId}/templates`,
+        {
+          method: isEdit ? 'PATCH' : 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            nome,
+            categoria,
+            idioma,
+            componentes: buildComponentes(),
+            variaveis,
+          }),
+        }
+      );
 
       const data = await res.json();
       if (!res.ok) {
@@ -173,6 +212,7 @@ export function TemplateBuilderClient({ tenantId, libraryId }: BuilderProps) {
         return;
       }
       setSavedTemplate(data as Template);
+      setSaveSuccess(true);
     } finally {
       setSaving(false);
     }
@@ -219,9 +259,11 @@ export function TemplateBuilderClient({ tenantId, libraryId }: BuilderProps) {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Novo template</h1>
+        <h1 className="text-2xl font-semibold">{isEdit ? 'Editar template' : 'Novo template'}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Crie um template de mensagem para submeter à Meta para aprovação.
+          {isEdit
+            ? 'Edite o rascunho e salve as alterações antes de enviar para aprovação.'
+            : 'Crie um template de mensagem para submeter à Meta para aprovação.'}
         </p>
       </div>
 
@@ -421,9 +463,9 @@ export function TemplateBuilderClient({ tenantId, libraryId }: BuilderProps) {
           </div>
         )}
 
-        {savedTemplate && (
+        {saveSuccess && (
           <div className="rounded-md bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
-            Rascunho salvo com sucesso!
+            {isEdit ? 'Alterações salvas com sucesso!' : 'Rascunho salvo com sucesso!'}
           </div>
         )}
 
