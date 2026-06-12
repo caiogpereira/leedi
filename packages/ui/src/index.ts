@@ -11,6 +11,8 @@ export {
   cardVariants,
 } from './components/ui/card.js';
 export type { CardProps } from './components/ui/card.js';
+export { Badge, badgeVariants } from './components/ui/badge.js';
+export type { BadgeProps } from './components/ui/badge.js';
 export { Textarea } from './components/ui/textarea.js';
 export type { TextareaProps } from './components/ui/textarea.js';
 export {
