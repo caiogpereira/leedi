@@ -62,7 +62,9 @@ vi.mock('@leedi/db', () => ({
   },
   eq: vi.fn((_a: unknown, _b: unknown) => true),
   and: vi.fn((...args: unknown[]) => args),
-  sql: vi.fn(),
+  // Embed interpolated args so the captured jsonb payload (onboarding_config) is
+  // visible to assertions — a bare vi.fn() would erase the SET write's contents.
+  sql: vi.fn((s: TemplateStringsArray, ...args: unknown[]) => s.join('?') + JSON.stringify(args)),
 }));
 
 const TENANT_ID = '00000000-0000-0000-0000-000000000042';
@@ -101,6 +103,12 @@ describe('POST /api/tenants/:tenantId/onboarding/complete', () => {
         })
     );
 
+    // Capture every .set() payload + every jsonb execute() so we can assert the
+    // endpoint actually flips status→active and marks onboarding_completed — not
+    // just that it returns { success: true } (which it would even on a no-op).
+    const setCalls: Array<Record<string, unknown>> = [];
+    const executeCalls: string[] = [];
+
     vi.mocked(withTenant).mockImplementation(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       async (_tid: string, fn: (tx: any) => Promise<unknown>) =>
@@ -112,8 +120,16 @@ describe('POST /api/tenants/:tenantId/onboarding/complete', () => {
               }),
             }),
           }),
-          update: () => ({ set: () => ({ where: () => Promise.resolve([]) }) }),
-          execute: vi.fn().mockResolvedValue({ rows: [] }),
+          update: () => ({
+            set: (payload: Record<string, unknown>) => {
+              setCalls.push(payload);
+              return { where: () => Promise.resolve([]) };
+            },
+          }),
+          execute: vi.fn((q: unknown) => {
+            executeCalls.push(String(q));
+            return Promise.resolve({ rows: [] });
+          }),
         })
     );
 
@@ -124,6 +140,13 @@ describe('POST /api/tenants/:tenantId/onboarding/complete', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as { success: boolean };
     expect(body.success).toBe(true);
+
+    // Real assertions: the tenant row was flipped to 'active'…
+    expect(setCalls).toContainEqual({ status: 'active' });
+    // …and the onboarding_config jsonb was written with the completion flag.
+    expect(
+      executeCalls.some((s) => s.includes('onboarding_config'))
+    ).toBe(true);
   });
 
   it('is idempotent — returns 200 when already completed', async () => {

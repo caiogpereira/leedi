@@ -84,3 +84,36 @@ claude-sonnet-4-6 (1M context)
 ### Change Log
 
 - 2026-06-04: Implemented Step 5 (playground test + completion) with all tests
+- 2026-06-11: Code review (Opus 4.8) — strengthened the `complete` API test (see Code Review Findings)
+
+## Code Review Findings (2026-06-11, Opus 4.8)
+
+**MEDIUM (fixed) — `onboarding-complete.test.ts` "sets status to active" was weak.**
+The test asserted only `body.success === true`, which the endpoint returns even
+on a no-op (the idempotent path also returns `{ success: true }`). It would have
+passed even if the status flip and jsonb write were deleted. **Fix:** the test now
+captures every `.set()` payload and every jsonb `execute()` and asserts
+`status: 'active'` was written AND `onboarding_config` was persisted (the `sql`
+mock was upgraded to embed interpolated args so the payload is visible). Proven
+real by mutation: changing `.set({ status: 'active' })` → `'trial'` makes it fail.
+
+**Verified correct (no change):**
+- Step 5 component tests are real (assert the `agentResponded` gate disables
+  "Concluir", the confirm dialog opens, cancel keeps the user on step 5, and
+  `POST /onboarding/complete` fires on confirm). Playground contract matches:
+  `POST /playground/message` returns `{ sessionId, segments }` — Step 5 reads both.
+- `complete` audit log uses `db.insert(schema.auditLogs)` directly (not
+  `withTenant`). This is the project convention for **workspace-scoped**
+  `audit_logs` — documented in `write-audit-log.ts` and matched by
+  `start-/stop-impersonation`, `tenant-session` middleware, etc. Not a bug.
+
+**LOW (deferred, project-wide) — hardcoded `redirect("http://localhost:3000/login")`
+in `onboarding/layout.tsx` (Story 19.1).** This is consistent with the identical
+acknowledged-debt literal `LOGIN_ORIGIN = 'http://localhost:3000'` in
+`apps/dashboard/middleware.ts` (which gates `/onboarding` and redirects
+unauthenticated users *before* this layout's fallback ever runs). Fixing the
+layout alone changes nothing user-facing; the correct fix is to env-derive the
+login origin in both places at pre-launch. Folds into the existing project-wide
+`:3000`-localhost deferral — not an Epic-19-local regression.
+
+Result: api 221/221, dashboard 65/65, api typecheck 0 errors.

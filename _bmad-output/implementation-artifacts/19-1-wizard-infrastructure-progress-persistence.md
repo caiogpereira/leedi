@@ -130,3 +130,22 @@ claude-sonnet-4-6 (1M context)
 ### Change Log
 
 - 2026-06-04: Implemented onboarding infrastructure — API routes, DB types, dashboard wizard shell, step indicator, step stubs 1-5, hotmart webhook flag
+- 2026-06-11: Code review (Opus 4.8) — no code change; see Code Review Findings
+
+## Code Review Findings (2026-06-11, Opus 4.8)
+
+**Verified correct (no change):**
+- **AC#1 redirect works:** new tenants are created with `status: 'trial'`
+  (`create-tenant.ts`; `tenant_status` enum default is also `trial`), and the
+  `(shell)/layout.tsx` gate redirects `status === 'trial' && !onboarding_completed`
+  to `/onboarding`. Active/impersonated tenants are not redirected (AC#2).
+- `GET/PATCH /progress` `completedSteps`/`current_step` logic is correct and
+  idempotent (re-submitting an earlier step does not regress `current_step`) — the
+  6 `onboarding.test.ts` API tests are real and cover this.
+
+**LOW (deferred, project-wide) — hardcoded `redirect("http://localhost:3000/login")`
+in `onboarding/layout.tsx`.** Consistent with the identical acknowledged-debt
+literal in `apps/dashboard/middleware.ts` (`LOGIN_ORIGIN`), which already
+redirects unauthenticated users before this fallback runs. Env-derive both at
+pre-launch; folds into the existing project-wide `:3000`-localhost deferral. Full
+write-up in Story 19.4 Code Review Findings.

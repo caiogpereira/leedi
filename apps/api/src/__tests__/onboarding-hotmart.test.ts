@@ -95,7 +95,10 @@ vi.mock('@leedi/db', () => ({
     tenants: { id: 'id', config: 'config' },
   },
   eq: vi.fn((_a: unknown, _b: unknown) => true),
-  sql: vi.fn((s: TemplateStringsArray, ..._args: unknown[]) => s.join('?')),
+  // Embed the interpolated args in the captured string so assertions can inspect
+  // the jsonb payload (onboarding_config / gateway_webhook_received) — otherwise
+  // the values live only in the args array and the SET write is invisible to tests.
+  sql: vi.fn((s: TemplateStringsArray, ...args: unknown[]) => s.join('?') + JSON.stringify(args)),
 }));
 
 const TENANT_ID = '00000000-0000-0000-0000-000000000042';
@@ -133,13 +136,13 @@ describe('Hotmart webhook — onboarding gateway flag', () => {
 
     expect(res.status).toBe(200);
 
-    // Allow async flag-set to complete
-    await new Promise((r) => setTimeout(r, 50));
-
-    const updateCalls = executeCallArgs.calls.filter((s) =>
-      s.includes('gateway_webhook_received') || s.includes('onboarding_config')
-    );
-    expect(updateCalls.length).toBeGreaterThanOrEqual(0); // async — may or may not have run yet
+    // The flag-set is fire-and-forget — poll instead of a fixed sleep (avoids flake).
+    await vi.waitFor(() => {
+      const updateCalls = executeCallArgs.calls.filter(
+        (s) => s.includes('gateway_webhook_received') && s.includes('onboarding_config')
+      );
+      expect(updateCalls.length).toBeGreaterThanOrEqual(1);
+    });
   });
 
   it('does NOT set gateway_webhook_received when current_step is NOT 3', async () => {
@@ -155,9 +158,11 @@ describe('Hotmart webhook — onboarding gateway flag', () => {
     });
 
     expect(res.status).toBe(200);
+    // Give the fire-and-forget guard a chance to run, then assert it wrote nothing.
     await new Promise((r) => setTimeout(r, 50));
 
-    // The SET should not write gateway_webhook_received for completed onboarding
+    // The early-return guard (current_step !== 3) must skip the SET entirely —
+    // no jsonb write touching gateway_webhook_received for completed onboarding.
     const updateCalls = executeCallArgs.calls.filter((s) =>
       s.includes('gateway_webhook_received')
     );

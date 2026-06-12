@@ -74,3 +74,30 @@ claude-sonnet-4-6 (1M context)
 ### Change Log
 
 - 2026-06-04: Implemented Steps 3 and 4 with hotmart webhook flag + tests
+- 2026-06-11: Code review (Opus 4.8) — fixed 2 vacuous hotmart-gateway tests (see Code Review Findings)
+
+## Code Review Findings (2026-06-11, Opus 4.8)
+
+**HIGH (fixed) — `onboarding-hotmart.test.ts`: both tests were vacuous (fake green).**
+The two "hotmart-gateway tests" claimed in the Completion Notes asserted nothing real:
+- Test 1 (`sets gateway_webhook_received when current_step is 3`) ended in
+  `expect(updateCalls.length).toBeGreaterThanOrEqual(0)` — always true (`.length`
+  is never negative); the comment even admitted "may or may not have run yet".
+- Both tests filtered the captured SQL for `gateway_webhook_received` /
+  `onboarding_config`, but the `sql` mock joined only the template
+  (`s.join('?')`) and discarded the interpolated args — so the jsonb payload was
+  never in the captured string and the filters could never match.
+
+**Fix:** the `sql` mock now embeds args (`s.join('?') + JSON.stringify(args)`) so
+the SET payload is visible; Test 1 asserts the flag write happened
+(`>= 1`, via `vi.waitFor` instead of a flaky fixed `setTimeout`) and Test 2 asserts
+the `current_step !== 3` guard skips the write (`== 0`). Proven real by mutation:
+forcing `setGatewayWebhookReceivedIfOnboarding` to early-return makes Test 1 fail.
+
+**Verified correct (no change):** `step-3`/`step-4` component tests are real
+(assert disabled gating, `onAdvance(4,3)` skip args, agent-config pre-fill,
+validation errors). Cross-epic contracts confirmed: `GET /api/sales-methods`
+returns `{ id, titulo }[]`; `GET/PATCH /agent-config` use
+`nomeAgente`/`persona`/`salesMethodId` — all match Step 4's reads.
+
+Result: api 221/221, dashboard 65/65, api typecheck 0 errors.

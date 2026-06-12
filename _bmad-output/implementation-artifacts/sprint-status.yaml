@@ -228,11 +228,11 @@ development_status:
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 19: Assisted Onboarding Wizard
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-19: in-progress
-  19-1-wizard-infrastructure-progress-persistence: review
-  19-2-wizard-steps-1-2-company-data-whatsapp-connection: review
-  19-3-wizard-steps-3-4-gateway-connection-agent-configuration: review
-  19-4-wizard-step-5-playground-test-completion: review
+  epic-19: done  # code review 2026-06-11 (Opus 4.8); stories 19.1–19.4 review→done. Implementation solid (all cross-epic contracts verified: /whatsapp/connect, /playground/message, /agent-config, /sales-methods; tenant default 'trial' → AC#1 redirect works). HIGH: 2 vacuous hotmart-gateway tests (19.3) — toBeGreaterThanOrEqual(0) always-true + sql mock discarded args so filters never matched → fixed (args embedded in mock, vi.waitFor, mutation-proven). MEDIUM: complete API test (19.4) asserted only success:true (passes on no-op) → now asserts status='active' + onboarding_config write. LOW deferred (project-wide): hardcoded localhost:3000/login in onboarding/layout.tsx, consistent w/ middleware LOGIN_ORIGIN debt. audit_logs db.insert confirmed = convention (not a bug). api 221/221, dashboard 65/65, api typecheck 0.
+  19-1-wizard-infrastructure-progress-persistence: done
+  19-2-wizard-steps-1-2-company-data-whatsapp-connection: done
+  19-3-wizard-steps-3-4-gateway-connection-agent-configuration: done
+  19-4-wizard-step-5-playground-test-completion: done
   epic-19-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────

@@ -80,3 +80,21 @@ claude-sonnet-4-6 (1M context)
 ### Change Log
 
 - 2026-06-04: Implemented Steps 1 and 2 components with tests
+- 2026-06-11: Code review (Opus 4.8) — no code change; see Code Review Findings
+
+## Code Review Findings (2026-06-11, Opus 4.8)
+
+**Verified correct (no change):**
+- The `step-2` test "does NOT include access_token in the progress PATCH" is real
+  — it parses the actual PATCH body and asserts `access_token` is `undefined`
+  while `phone_number_id` is present (AC#7 security requirement holds).
+- WhatsApp validation reuses `POST /api/tenants/:tenantId/whatsapp/connect`
+  (Epic 4). Contract confirmed: the route accepts `{ phone_number_id, waba_id,
+  access_token }` and returns `{ status: 'conectado', displayName }` — Step 2's
+  `connectBodySchema` payload and `connectResult.displayName` read both match, so
+  the "Número conectado: {displayName}" success indicator (AC#5) renders correctly.
+- Step 1 pre-fill (AC#2), empty-name validation (AC#3), and the parallel
+  profile+progress PATCH on "Próximo" (AC#1) are all covered by real component
+  tests.
+
+No defects. api 221/221, dashboard 65/65.
