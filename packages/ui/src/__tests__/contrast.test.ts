@@ -28,15 +28,15 @@ const LIGHT = {
 
 // ─── Dark theme token values ─────────────────────────────────────────────────
 const DARK = {
-  background: '#0a0a0f',       // off-black #0A0A0F (--color-neutral-950)
-  foreground: '#f0f0f3',       // hsl(240 5% 95%)
-  primary: '#6675fd',          // indigo-400 — 5.1:1 on #0A0A0F per design
-  primaryFg: '#0a0a0f',
-  muted: '#1e1e28',            // hsl(240 4% 16%)
-  mutedFg: '#a0a0ab',          // hsl(240 5% 65%)
-  destructive: '#ef4444',      // hsl(0 84% 60%) — 5.8:1 on #0A0A0F ✓ WCAG AA
-  success: '#22c55e',          // hsl(142 71% 55%)
-  accentAi: '#a78bfa',         // hsl(262 100% 75%) — violet AI, large text (3:1)
+  background: '#0c1017',       // hsl(222 30% 7%) — deeper bluish off-black (Gemini)
+  foreground: '#eceff4',       // hsl(213 27% 94%) — NOT pure white
+  primary: '#737cfc',          // hsl(236 96% 72%) — indigo, 5.46:1 on bg
+  primaryFg: '#0c1017',
+  muted: '#1f2533',            // hsl(222 20% 16%)
+  mutedFg: '#96a3b6',          // hsl(215 18% 65%) — 7.45:1 on bg
+  destructive: '#ef4343',      // hsl(0 84% 60%) — 5.04:1 on bg
+  success: '#3bde77',          // hsl(142 71% 55%) — large text
+  accentAi: '#ae80ff',         // hsl(262 100% 75%) — violet AI, large text
 };
 
 const NORMAL_TEXT_THRESHOLD = 4.5;
@@ -110,6 +110,6 @@ describe('WCAG AA contrast — dark theme', () => {
 
   it('dark background is NOT pure black #000000', () => {
     expect(DARK.background.toLowerCase()).not.toBe('#000000');
-    expect(DARK.background.toLowerCase()).toBe('#0a0a0f');
+    expect(DARK.background.toLowerCase()).toBe('#0c1017');
   });
 });
