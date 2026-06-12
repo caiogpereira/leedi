@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { cn } from '@leedi/ui';
-import { LayoutDashboard, Users, DollarSign, Activity, Settings, X } from 'lucide-react';
+import { LayoutDashboard, Users, DollarSign, Activity, Settings, X, ShieldCheck } from 'lucide-react';
 import { useSidebar } from './sidebar-context';
 
 interface AdminNavItem {
@@ -33,11 +33,11 @@ function AdminNavLink({ item }: { item: AdminNavItem }) {
       href={item.href}
       aria-current={isActive ? 'page' : undefined}
       className={cn(
-        'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+        'flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         isActive
-          ? 'bg-primary text-primary-foreground'
-          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+          ? 'glass bg-gradient-active border border-primary/40 text-foreground shadow-glow'
+          : 'text-muted-foreground hover:glass-subtle hover:text-foreground'
       )}
     >
       <Icon className="h-4 w-4 shrink-0" />
@@ -62,12 +62,21 @@ export function AdminSidebar() {
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-background',
+          'fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-sidebar',
           'w-64 transition-transform duration-300 ease-in-out',
           'md:relative md:z-auto md:w-16 md:translate-x-0 lg:w-64',
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         )}
       >
+        {/* Brand + ADMIN badge */}
+        <div className="flex h-14 items-center gap-2 px-4">
+          <ShieldCheck className="h-5 w-5 text-primary" aria-hidden="true" />
+          <span className="hidden text-base font-bold text-foreground lg:block">Leedi</span>
+          <span className="hidden rounded bg-primary/15 px-1.5 py-0.5 text-xs font-semibold tracking-wider text-primary lg:inline">
+            ADMIN
+          </span>
+        </div>
+
         {/* Mobile close */}
         <div className="flex items-center justify-between px-4 py-4 md:hidden">
           <span className="text-sm font-semibold text-foreground">Menu</span>

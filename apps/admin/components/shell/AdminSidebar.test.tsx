@@ -31,6 +31,7 @@ vi.mock('lucide-react', () => {
     Activity: Icon,
     Settings: Icon,
     X: Icon,
+    ShieldCheck: Icon,
   };
 });
 
