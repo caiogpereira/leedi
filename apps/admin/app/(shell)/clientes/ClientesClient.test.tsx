@@ -45,6 +45,8 @@ vi.mock('@leedi/ui', () => ({
   DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
   DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  Avatar: ({ name }: { name: string }) => <span aria-label={name} />,
 }));
 
 function makeTenant(overrides: Partial<TenantDetail>): TenantDetail {

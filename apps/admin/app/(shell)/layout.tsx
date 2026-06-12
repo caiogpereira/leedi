@@ -41,7 +41,7 @@ export default async function AdminShellLayout({
         <AdminSidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
           <AdminHeader />
-          <main id="main-content" className="flex-1 overflow-auto p-6">
+          <main id="main-content" className="app-texture flex-1 overflow-auto p-6">
             {children}
           </main>
         </div>

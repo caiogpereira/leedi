@@ -13,7 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  Badge,
+  Avatar,
 } from '@leedi/ui';
+import type { BadgeProps } from '@leedi/ui';
 import { AlertTriangle, Plus, Search } from 'lucide-react';
 import type { TenantDetail, TenantInvoice } from '@leedi/tenancy';
 import { ImpersonateButton } from './ImpersonateButton';
@@ -24,18 +27,18 @@ import {
   getTenantInvoicesAction,
 } from './actions';
 
-const STATUS_STYLES: Record<string, string> = {
-  trial: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
-  active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
-  blocked: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
-  cancelled: 'bg-muted text-muted-foreground',
+const STATUS_INTENT: Record<string, NonNullable<BadgeProps['variant']>> = {
+  trial: 'info',
+  active: 'success',
+  blocked: 'danger',
+  cancelled: 'neutral',
 };
 
-const INVOICE_STATUS_STYLES: Record<string, string> = {
-  pago: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
-  pendente: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
-  atrasado: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
-  cancelado: 'bg-muted text-muted-foreground',
+const INVOICE_STATUS_INTENT: Record<string, NonNullable<BadgeProps['variant']>> = {
+  pago: 'success',
+  pendente: 'warning',
+  atrasado: 'danger',
+  cancelado: 'neutral',
 };
 
 function formatBRL(value: number | null): string {
@@ -116,13 +119,14 @@ export function ClientesClient({
             </thead>
             <tbody>
               {filtered.map((tenant) => (
-                <tr key={tenant.id} className="border-b hover:bg-muted/40">
+                <tr key={tenant.id} className="border-b hover:bg-surface-2">
                   <td className="py-3 pr-4">
                     <button
                       type="button"
                       onClick={() => setHistoryTarget(tenant)}
                       className="flex items-center gap-2 font-medium hover:underline"
                     >
+                      <Avatar name={tenant.name} size="sm" />
                       {tenant.name}
                       {tenant.billingStatus === 'pendente_configuracao' ? (
                         <span title={t('billingPending')} className="inline-flex">
@@ -136,13 +140,9 @@ export function ClientesClient({
                   </td>
                   <td className="py-3 pr-4 capitalize text-muted-foreground">{tenant.plan}</td>
                   <td className="py-3 pr-4">
-                    <span
-                      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                        STATUS_STYLES[tenant.status] ?? 'bg-muted text-muted-foreground'
-                      }`}
-                    >
+                    <Badge variant={STATUS_INTENT[tenant.status] ?? 'neutral'}>
                       {t(`status.${tenant.status}` as Parameters<typeof t>[0])}
-                    </span>
+                    </Badge>
                   </td>
                   <td className="py-3 pr-4 text-right">{formatBRL(tenant.subscriptionValor)}</td>
                   <td className="py-3 pr-4 text-right text-muted-foreground">
@@ -466,13 +466,9 @@ function HistoryDialog({ tenant, onClose }: { tenant: TenantDetail; onClose: () 
                       {formatBRL(inv.valorOverage)}
                     </td>
                     <td className="py-3 pr-4">
-                      <span
-                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                          INVOICE_STATUS_STYLES[inv.status] ?? 'bg-muted text-muted-foreground'
-                        }`}
-                      >
+                      <Badge variant={INVOICE_STATUS_INTENT[inv.status] ?? 'neutral'}>
                         {inv.status}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="py-3 pr-4 text-muted-foreground">{formatDate(inv.pagoEm)}</td>
                   </tr>
