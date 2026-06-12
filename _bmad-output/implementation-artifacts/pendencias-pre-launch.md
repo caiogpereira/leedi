@@ -201,21 +201,23 @@
   expectation under the `leedi_app` role; and drive the inbox + detail in a browser confirming the
   8s poll does not wipe "Carregar mais"/older-history or drop an in-flight reply.
 
-- [ ] **PL-19 · [Cross-cutting / Epics 2,3,19] Hardcoded `http://localhost:3000` login origin
-  breaks the redirect-to-login flow in production.** The web-app login page lives on a separate
-  origin (port 3000), and that origin is a **hardcoded literal** in two places:
-  `apps/dashboard/middleware.ts` (`LOGIN_ORIGIN = 'http://localhost:3000'`, with a `TODO: derive
-  from env` already noted) and `apps/dashboard/app/onboarding/layout.tsx`
-  (`redirect("http://localhost:3000/login")`). In production an unauthenticated user who hits any
-  protected dashboard route is redirected by the Edge middleware to `http://localhost:3000/login`
-  — a dead address on the customer's machine → **login is unreachable**. The onboarding layout's
-  `getSession` fallback carries the same literal (defense-in-depth; the middleware fires first, so
-  fixing the layout alone changes nothing). **Fix project-wide:** introduce a `NEXT_PUBLIC_WEB_URL`
-  (or equivalent) env var and derive the login origin from it in *both* sites. Surfaced by the
-  Epic 19 review (2026-06-11) but pre-existing since the Epic 2/3 middleware. Distinct from PL-14
-  (that's the *internal/API* `:3000`→`API_PORT` substitution; this is the *public web/login* origin).
-  *Exit:* an unauthenticated request to a protected route in staging redirects to the real login URL,
-  with no `localhost:3000` literal in the dashboard app.
+- [x] **PL-19 · [Cross-cutting / Epics 2,3,19] Hardcoded `http://localhost:3000` login origin
+  broke the redirect-to-login flow in production.** ✅ **FIXED 2026-06-11 (commit pending).** The
+  web-app login page lives on a separate origin (port 3000), and that origin was a **hardcoded
+  literal** in `apps/dashboard/middleware.ts` (`LOGIN_ORIGIN`) and
+  `apps/dashboard/app/onboarding/layout.tsx`. In production an unauthenticated user who hit any
+  protected dashboard route was redirected by the Edge middleware to `http://localhost:3000/login`
+  — a dead address → **login unreachable**. **Fix:** both sites now derive the origin from
+  `BETTER_AUTH_URL` (the canonical web/auth origin) — middleware reads `process.env.BETTER_AUTH_URL`
+  (Edge runtime forbids importing the Node-only `@leedi/config`, per `@leedi/auth/edge`); the
+  onboarding Server Component uses the validated `env.BETTER_AUTH_URL` via `new URL('/login', …)`.
+  **No new env var** — reuses `BETTER_AUTH_URL`. **Empirically verified** against the built bundle
+  (`.next/server/middleware.js`): Next keeps this as a **runtime** `process.env.BETTER_AUTH_URL`
+  read (NOT a build-time inline), so the only remaining dependency is that `BETTER_AUTH_URL` is set
+  to the real web origin in the **runtime** environment — already required by **PL-2**. Distinct
+  from PL-14 (internal `:3000`→`API_PORT` substitution). *Exit (met in code; verify in staging):* an
+  unauthenticated request to a protected route redirects to `${BETTER_AUTH_URL}/login`; no
+  `localhost:3000` literal remains in dashboard source (only the local-dev fallback).
 
 ---
 
@@ -297,8 +299,8 @@
   creation, webhook lock/unlock idempotency, signature verification).
 - **Epic 18 — Notifications:** PL-2 (real VAPID keys), PL-6 (typecheck), PL-7 (⚠ `no-process-env`
   exception). *Not yet reviewed.*
-- **Epic 19 — Onboarding Wizard:** PL-19 (hardcoded `localhost:3000` login origin in
-  `onboarding/layout.tsx` + middleware, P1), PL-14 (the `gateway-webhook-url` endpoint derives the
+- **Epic 19 — Onboarding Wizard:** ~~PL-19 (hardcoded `localhost:3000` login origin)~~ ✅ **FIXED
+  2026-06-11** (derive from `BETTER_AUTH_URL`; runtime-verified). PL-14 (the `gateway-webhook-url` endpoint derives the
   webhook URL shown to the user via the same `:3000`→`API_PORT` replace → wrong host in prod);
   P2: 19.2 logo upload (V1.5), 19.4 PostHog tracking deferred. **Reviewed 2026-06-11** (Opus 4.8,
   commit `197ce4f`); stories 19.1–19.4 + epic-19 `done`. **No production-code defects** — all

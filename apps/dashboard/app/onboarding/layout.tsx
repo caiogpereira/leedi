@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSession } from "@leedi/auth";
+import { env } from "@leedi/config";
 
 export default async function OnboardingLayout({
   children,
@@ -11,7 +12,9 @@ export default async function OnboardingLayout({
   const session = await getSession(requestHeaders);
 
   if (!session) {
-    redirect("http://localhost:3000/login");
+    // Login lives on the web app origin (BETTER_AUTH_URL). Defense-in-depth fallback —
+    // the Edge middleware already redirects unauthenticated users to login first.
+    redirect(new URL("/login", env.BETTER_AUTH_URL).toString());
   }
 
   return (

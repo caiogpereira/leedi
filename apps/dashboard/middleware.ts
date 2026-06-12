@@ -5,10 +5,17 @@ import { hasSessionCookie } from '@leedi/auth/edge';
 // Routes that don't require authentication.
 const PUBLIC_PATHS = ['/api/health'];
 
-// Login lives on the web app (port 3000), not the dashboard.
-// TODO: derive this from env (e.g. NEXT_PUBLIC_WEB_URL) once multi-origin config
-// is wired up. Hardcoded for the current local/same-origin setup.
-const LOGIN_ORIGIN = 'http://localhost:3000';
+// Login lives on the web app's origin (BETTER_AUTH_URL), not the dashboard (3001).
+// The Edge middleware runtime cannot import @leedi/config — it loads node:path and
+// crashes the Edge bundle (see @leedi/auth/edge) — so we read the validated origin
+// straight from process.env.
+//
+// Verified against the built bundle (.next/server/middleware.js): Next keeps this as
+// a RUNTIME `process.env.BETTER_AUTH_URL` read (not a build-time inline), so the value
+// resolves from the runtime environment — set BETTER_AUTH_URL to the real web origin
+// in production (already required by PL-2). The localhost fallback is for local dev.
+// eslint-disable-next-line no-restricted-properties -- @leedi/config is Node-only and forbidden in the Edge middleware bundle
+const LOGIN_ORIGIN = process.env.BETTER_AUTH_URL ?? 'http://localhost:3000';
 
 /**
  * Edge middleware that gates the protected dashboard.
