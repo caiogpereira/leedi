@@ -42,6 +42,7 @@ vi.mock('lucide-react', () => {
     Settings: Icon,
     X: Icon,
     FlaskConical: Icon,
+    Sparkles: Icon,
   };
 });
 

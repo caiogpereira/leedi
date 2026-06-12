@@ -17,6 +17,7 @@ import {
   Settings,
   FlaskConical,
   X,
+  Sparkles,
 } from 'lucide-react';
 import { useSidebar } from './sidebar-context';
 
@@ -54,8 +55,8 @@ function NavItemLink({ item }: { item: NavItem }) {
         'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         isActive
-          ? 'bg-primary text-primary-foreground'
-          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+          ? 'glass bg-gradient-active border border-primary/40 text-foreground shadow-glow'
+          : 'text-muted-foreground hover:glass-subtle hover:text-foreground'
       )}
     >
       <Icon className="h-4 w-4 shrink-0" />
@@ -81,12 +82,20 @@ export function Sidebar() {
       {/* Sidebar panel */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-background',
+          'fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-sidebar',
           'w-64 transition-transform duration-300 ease-in-out',
           'md:relative md:z-auto md:w-16 md:translate-x-0 lg:w-64',
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         )}
       >
+        {/* Brand */}
+        <div className="flex h-14 items-center gap-2 px-4">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-cta shadow-glow">
+            <Sparkles className="h-4 w-4 text-primary-foreground" aria-hidden="true" />
+          </span>
+          <span className="hidden text-base font-bold text-foreground lg:block">Leedi</span>
+        </div>
+
         {/* Mobile close button */}
         <div className="flex items-center justify-between px-4 py-4 md:hidden">
           <span className="text-sm font-semibold text-foreground">Menu</span>
