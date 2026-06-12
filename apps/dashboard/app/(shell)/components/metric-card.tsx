@@ -1,5 +1,7 @@
 'use client';
 
+import { Card } from '@leedi/ui';
+
 interface MetricCardProps {
   label: string;
   value: string;
@@ -9,9 +11,9 @@ interface MetricCardProps {
 
 export function MetricCard({ label, value, subtext, tooltip }: MetricCardProps) {
   return (
-    <div className="rounded-lg border bg-card p-5 shadow-sm">
+    <Card variant="metric" className="p-5">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
         {tooltip && (
           <div className="group relative">
             <button
@@ -27,8 +29,8 @@ export function MetricCard({ label, value, subtext, tooltip }: MetricCardProps) 
           </div>
         )}
       </div>
-      <p className="mt-2 text-2xl font-bold tracking-tight">{value}</p>
+      <p className="mt-2 text-3xl font-bold tracking-tight">{value}</p>
       {subtext && <p className="mt-1 text-xs text-muted-foreground">{subtext}</p>}
-    </div>
+    </Card>
   );
 }

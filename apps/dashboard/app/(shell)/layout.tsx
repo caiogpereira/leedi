@@ -122,7 +122,7 @@ export default async function ShellLayout({
           <Header tenants={tenants} currentTenantId={currentTenantId} />
           <main
             id="main-content"
-            className="flex-1 overflow-auto p-6"
+            className="app-texture flex-1 overflow-auto p-6"
           >
             {children}
           </main>
