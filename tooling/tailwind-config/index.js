@@ -107,6 +107,12 @@ const config = {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
+        surface: {
+          1: 'hsl(var(--surface-1))',
+          2: 'hsl(var(--surface-2))',
+          3: 'hsl(var(--surface-3))',
+        },
+        sidebar: 'hsl(var(--sidebar))',
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -116,6 +122,20 @@ const config = {
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
         mono: ['var(--font-mono)', 'monospace'],
+      },
+      boxShadow: {
+        glow: '0 0 20px hsl(var(--glow-primary))',
+        'glow-ai': '0 0 20px hsl(var(--glow-ai))',
+      },
+      backgroundImage: {
+        'gradient-metric':
+          'linear-gradient(135deg, hsl(var(--surface-1)) 0%, hsl(var(--surface-2)) 100%)',
+        'gradient-active':
+          'linear-gradient(135deg, hsl(var(--primary) / 0.20) 0%, hsl(var(--primary) / 0.05) 100%)',
+        'gradient-cta':
+          'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.85) 100%)',
+        'gradient-header':
+          'linear-gradient(180deg, hsl(var(--surface-1)) 0%, hsl(var(--background)) 100%)',
       },
     },
   },
