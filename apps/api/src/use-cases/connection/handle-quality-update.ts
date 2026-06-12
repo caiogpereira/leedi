@@ -73,7 +73,10 @@ export async function handleQualityUpdate(
     sendNotificationToTenantRole({
       tenantId,
       roles: ['owner', 'admin'],
-      tipo: 'quality_vermelho',
+      // `quality_caindo` is the event key exposed in the notification-preferences
+      // matrix (Story 18.2 AC#3). Emitting any other tipo here leaves the user's
+      // toggle disconnected — an unknown tipo silently defaults to ON.
+      tipo: 'quality_caindo',
       titulo: 'Disparos pausados — qualidade RED',
       corpo:
         '⚠️ Seu número teve queda de qualidade (RED). Todos os disparos ativos foram pausados automaticamente. Resolva o problema na Meta Business Suite antes de retomar.',

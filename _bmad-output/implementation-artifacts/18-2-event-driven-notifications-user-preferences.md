@@ -4,7 +4,7 @@ baseline_commit: c7247e797c274ac8c2f8ef1bed83f6c991f11aec
 
 # Story 18.2: Event-Driven Notifications & User Preferences
 
-Status: review
+Status: done
 
 ## Story
 
@@ -135,3 +135,10 @@ _none_
 ### Change Log
 
 - 2026-06-03: Implemented Story 18.2 — Event-Driven Notifications & User Preferences. Added preferences API, UI settings page, preferences filtering in sendNotification, sendNotificationToTenantRole, and wired all 7 event types.
+
+### Review Findings (code review 2026-06-11, Opus)
+
+Verified empirically: all 7 events are wired to handlers that the real pipeline invokes (process-gateway-event, internal routes, webhook-meta) — no orphaned reimplementations despite the Dev Notes listing different paths. `sendNotificationToTenantRole`'s real query against `memberships`/`tenant_role` enum/`users.email` is correct (confirmed vs the actual schema, which the mocked tests cannot validate). Fan-out, preference-filtering, and default-ON logic are sound.
+
+- [x] [Review][Patch] `quality_caindo` toggle was dead — emitter/matrix tipo mismatch (AC#2/#3) [apps/api/src/use-cases/connection/handle-quality-update.ts:76] — the notification-preferences matrix (UI + API) exposes the key `quality_caindo`, but the quality handler emitted `tipo: 'quality_vermelho'`. Since `sendNotification` defaults an unknown tipo to ON, the user's `quality_caindo` push/email toggle controlled nothing — a direct violation of AC#2/#3 ("delivery respects the user's channel preferences"). Fixed: the RED-drop alert now emits `tipo: 'quality_caindo'` so the matrix toggle works; test assertion updated. (`quality_restaurada` recovery + `template_aprovado` + `alerta_overage` are intentionally beyond the spec's 7-event matrix and remain always-on — acceptable.)
+- [x] [Review][Defer] Push subscription upsert does not refresh `tenant_id` on conflict [apps/api/src/routes/push-subscriptions.ts] — `onConflictDoUpdate` targets `(user_id, endpoint)` and updates only `p256dh`/`auth`; if the same browser endpoint is reused after a tenant switch, the stored `tenant_id` is stale. Low impact (push routing keys on `user_id`, not tenant). Deferred.

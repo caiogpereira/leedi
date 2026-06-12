@@ -3,8 +3,18 @@ import { env } from '@leedi/config';
 import { withServiceRole, schema, eq } from '@leedi/db';
 import { captureException } from '@leedi/observability';
 
-// VAPID must be configured once at module load, not per-request.
-webpush.setVapidDetails(env.VAPID_SUBJECT, env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY);
+// VAPID is global web-push state and only needs to be set once. Do it LAZILY on
+// first send (not at module load): an invalid/empty VAPID_SUBJECT makes web-push
+// throw inside setVapidDetails, and doing that at import would crash every module
+// that transitively imports this package — including the API at boot, and any
+// unrelated test that imports the notification graph. Many deployments never send
+// push, so an unconfigured VAPID must not break import.
+let vapidConfigured = false;
+function ensureVapidConfigured(): void {
+  if (vapidConfigured) return;
+  webpush.setVapidDetails(env.VAPID_SUBJECT, env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY);
+  vapidConfigured = true;
+}
 
 export interface PushPayload {
   title: string;
@@ -29,6 +39,8 @@ export async function sendPush(
 ): Promise<PushResult[]> {
   const results: PushResult[] = [];
   const goneEndpoints: string[] = [];
+
+  ensureVapidConfigured();
 
   for (const sub of subscriptions) {
     try {

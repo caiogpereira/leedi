@@ -90,8 +90,8 @@
   - Epic 7 — `@leedi/agent` `tools/transferir-humano.ts:216` missing `@leedi/notification` (TS2307).
   - Epic 10 — `@leedi/api` `campaign-phase-transition.test.ts:86` (TS2532).
   - Epic 12 — `@leedi/dashboard` `templates/new/page.tsx:29` (TS2375).
-  - Epic 17 — `@leedi/api` `jobs/daily-billing-check.ts:24` (TS2344).
-  - Epic 18 — `@leedi/dashboard` `src/lib/push-registration.ts:24` (TS2322).
+  - ~~Epic 17 — `@leedi/api` `jobs/daily-billing-check.ts:24` (TS2344).~~ ✅ STALE — verified during the Epic 18 review (2026-06-11): full `@leedi/api` `tsc --noEmit` is clean, so this was already fixed (Epic 17 review per memory). No longer RED.
+  - ~~Epic 18 — `@leedi/dashboard` `src/lib/push-registration.ts:24` (TS2322).~~ ✅ FIXED in Epic 18 review (2026-06-11): `urlBase64ToUint8Array` now returns `Uint8Array<ArrayBuffer>` (BufferSource-assignable); `@leedi/dashboard` typecheck green. Also fixed in the same review: the "health VAPID" runtime/test crash (push-provider `setVapidDetails` made lazy).
   *Exit:* `pnpm typecheck` green across the monorepo.
 
 - [ ] **PL-7 · [Code health] `pnpm lint` is RED on `main`.** Real lint debt in later-epic

@@ -4,7 +4,7 @@ baseline_commit: c7247e797c274ac8c2f8ef1bed83f6c991f11aec
 
 # Story 18.1: Notification Infrastructure (Push + Email)
 
-Status: review
+Status: done
 
 ## Story
 
@@ -153,3 +153,12 @@ _none_
 ### Change Log
 
 - 2026-06-03: Implemented Story 18.1 — Notification Infrastructure (Push + Email). Added push_subscriptions, notification_preferences, notifications DB tables; web-push VAPID adapter; sendNotification use case with push→email fallback; push subscription API endpoints; dashboard Service Worker registration; system-notification React Email template.
+
+### Review Findings (code review 2026-06-11, Opus)
+
+Empirical review (real test runs + schema/wiring verification; the unit suite mocks `@leedi/db` entirely, so it is blind to schema-name and import-graph divergence — those were checked manually). Schema fidelity (`memberships`/`users`/`leadJourneyEvents`) and handler wiring (all 5 event handlers confirmed invoked by the real pipeline) PASSED.
+
+- [x] [Review][Patch] VAPID `setVapidDetails` ran at module load → import-time crash [packages/notification/src/adapters/push-provider.ts:7] — `webpush.setVapidDetails(env.VAPID_SUBJECT, …)` at the top level throws when `VAPID_SUBJECT` is empty/invalid. Because the API and tests transitively import the notification graph, this crashed the whole `health.test.ts` suite ("No subject set in vapidDetails.subject") and would crash the API at boot on any deploy with a malformed VAPID subject. Fixed: made it LAZY/idempotent (`ensureVapidConfigured()` on first `sendPush`), matching the repo's lazy-validation pattern for audio keys. Resolves the "health VAPID" item flagged at PL-9. (api health + 221 tests green)
+- [x] [Review][Patch] Dashboard typecheck break in push registration [apps/dashboard/src/lib/push-registration.ts:42] — `urlBase64ToUint8Array` returned `Uint8Array<ArrayBufferLike>`, not assignable to `BufferSource` for `pushManager.subscribe({ applicationServerKey })` (TS2322). Broke `@leedi/dashboard` typecheck. Fixed by backing the view with a concrete `ArrayBuffer` and annotating `Uint8Array<ArrayBuffer>`. Resolves the "push-registration" item flagged at PL-9. (dashboard typecheck green)
+- [x] [Review][Defer] RLS policies use `auth.uid()` under Better-Auth (always NULL) [packages/db/migrations/0017_notifications_schema.sql] — push_subscriptions/notification_preferences/notifications policies are `USING (user_id = auth.uid())`, but the project uses Better-Auth, not Supabase Auth, so `auth.uid()` is NULL; all access is via `withServiceRole` (BYPASSRLS), so the policies are effectively decorative. Systemic, pre-existing (same as the Epic 2 app-layer-only isolation decision). Deferred to the Supabase Pro/staging RLS milestone.
+- [x] [Review][Defer] Drizzle migration journal out of sync [packages/db/migrations/meta/_journal.json] — journal stops at idx 16; `0016_billing_schema`, `0017_notifications_schema`, `0018_epic2_rls_hardening`, `0019_*` exist on disk un-journaled, and `0016` is duplicated as a filename prefix. Migrations are applied out-of-band via the Supabase MCP, so this does not break runtime, but `drizzle-kit migrate` would be inconsistent. Systemic across epics 16/17/18. Deferred to pre-launch.

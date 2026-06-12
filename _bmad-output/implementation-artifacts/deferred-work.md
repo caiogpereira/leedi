@@ -375,3 +375,9 @@ validate in staging. No code changes needed — the capability is shipped.
 - Story 15.3 — `active-campaign` "most recently activated" is approximated by `ORDER BY updated_at DESC` (no `activated_at` column); a later campaign edit can reorder which active campaign is shown. Needs a schema column for a clean fix.
 - Story 15.1/15.2/15.3 — Live UI not verified in a browser (component logic + API verified via unit tests/code review only); same precedent as Epic 8 — flagged for the e2e/a11y harness.
 - Story 15.3 — AC#4 active-campaign widget shows the campaign's main product, not the phase-specific product (`downsell` offers `config.downsell.produto_id`). Deferred: cosmetic display that doesn't affect operation; fix when the product is in active use with real customers.
+
+## Deferred from: code review of Epic 18 (2026-06-11)
+
+- Story 18.1 — Notification RLS policies (`0017_notifications_schema.sql`) use `auth.uid()`, but the project uses Better-Auth, not Supabase Auth, so `auth.uid()` is NULL and all access is via `withServiceRole` (BYPASSRLS) → policies are decorative. Systemic (same as Epic 2 app-layer-only isolation). Pre-launch RLS milestone.
+- Story 18.1 — Drizzle migration journal (`meta/_journal.json`) is out of sync: it stops at idx 16 while `0016_billing_schema`, `0017_notifications_schema`, `0018_epic2_rls_hardening`, `0019_*` exist on disk un-journaled, and `0016` is duplicated as a filename prefix. Migrations are applied out-of-band via the Supabase MCP so runtime is unaffected, but `drizzle-kit migrate` would be inconsistent. Systemic across epics 16/17/18. Pre-launch.
+- Story 18.2 — Push subscription upsert (`push-subscriptions.ts`) targets `(user_id, endpoint)` on conflict and updates only `p256dh`/`auth`; a browser endpoint reused after a tenant switch keeps a stale `tenant_id`. Low impact (push routing keys on `user_id`). 

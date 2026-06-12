@@ -66,7 +66,9 @@ describe('handleQualityUpdate', () => {
     expect(setSpy).toHaveBeenCalledWith(expect.objectContaining({ qualityRating: 'vermelho' }));
     expect(pauseSpy).toHaveBeenCalledWith('t1');
     expect(result.pausedJobs).toBe(2);
-    expect(notifySpy).toHaveBeenCalledWith(expect.objectContaining({ tipo: 'quality_vermelho' }));
+    // `quality_caindo` matches the notification-preferences matrix key (18.2 AC#3)
+    // so the user's toggle actually controls this alert.
+    expect(notifySpy).toHaveBeenCalledWith(expect.objectContaining({ tipo: 'quality_caindo' }));
   });
 
   it('does not pause when rating is verde', async () => {

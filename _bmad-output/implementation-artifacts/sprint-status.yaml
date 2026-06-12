@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-29
-last_updated: 2026-06-11  # epic-17 → done — deep money-module code review: 2 CRITICAL (webhook header auth; PAYMENT_CREATED/invoice lifecycle) + 2 HIGH (cpfCnpj; enqueue-loss) fixed + UNIQUE idempotency index (migration 0019). See Epic 17 Review Findings in stories.
+last_updated: 2026-06-11  # epic-18 → done — notifications code review: 3 patches (VAPID module-load crash→lazy, resolves PL-9 health-VAPID; push-registration BufferSource typecheck, resolves PL-9 push-registration; quality_caindo dead toggle→AC#2/#3). Empirical schema+wiring verification (mocked tests blind). notification 11/11, api 221/221, agent 121/121, all typechecks green. See Epic 18 Review Findings in stories.
 project: leedi
 project_key: NOKEY
 tracking_system: file-system
@@ -220,9 +220,9 @@ development_status:
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 18: Notifications
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-18: in-progress
-  18-1-notification-infrastructure-push-email: review
-  18-2-event-driven-notifications-user-preferences: review
+  epic-18: done  # code review 2026-06-11 (Opus); stories 18.1/18.2 review→done. 3 patches: VAPID setVapidDetails crashed at module load → import-time/boot crash + failed health suite (made lazy/idempotent — resolves PL-9 "health VAPID"); dashboard push-registration Uint8Array→BufferSource typecheck break (ArrayBuffer-backed — resolves PL-9 "push-registration"); quality_caindo toggle dead (handler emitted quality_vermelho, matrix key quality_caindo → AC#2/#3 violation, realigned). Empirically verified schema fidelity (memberships/users/leadJourneyEvents) + handler wiring (all 7 events invoked by real pipeline) — mocked tests are blind to both. 2 defers (auth.uid() RLS systemic; migration journal out of sync). notification 11/11, api 221/221, agent 121/121; Epic-18 packages (notification/api/agent/dashboard) typecheck green (NOT a monorepo claim — PL-6 still RED from epics 6/7/10/12). See Review Findings in stories.
+  18-1-notification-infrastructure-push-email: done
+  18-2-event-driven-notifications-user-preferences: done
   epic-18-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────
