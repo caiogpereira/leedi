@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { MessageSquare } from 'lucide-react';
+import { EmptyState } from '@leedi/ui';
 import { ConversationListItem, type ConversationListItemProps } from './conversation-list-item';
 import type { InboxStatus } from './status-badge';
 
@@ -182,12 +183,11 @@ export function ConversasClient({ tenantId }: { tenantId: string }) {
       {loading ? (
         <div className="py-20 text-center text-sm text-muted-foreground">Carregando...</div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-20 text-center text-muted-foreground">
-          <MessageSquare className="h-10 w-10 opacity-30" />
-          <p className="text-sm">
-            Nenhuma conversa ainda. Quando leads enviarem mensagens, elas aparecerão aqui.
-          </p>
-        </div>
+        <EmptyState
+          icon={<MessageSquare className="h-10 w-10" aria-hidden="true" />}
+          title="Nenhuma conversa ainda"
+          description="Quando leads enviarem mensagens, elas aparecerão aqui."
+        />
       ) : (
         <div className="flex flex-col gap-2">
           {items.map((item) => (
