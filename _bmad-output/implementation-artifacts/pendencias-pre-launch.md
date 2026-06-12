@@ -9,10 +9,12 @@
 > (`epic-{1,2,3}-code-review-report.md`), `epic-1-test-ci-backlog.md`, and the
 > embedded deferral notes inside individual story files.
 >
-> **Living document.** Only **Epics 1, 2, 3, 4** have had a formal code review so far
-> (others are `review` status). Items for Epics 5–20 below come from each story's own
-> "deferred" notes; the list for those epics will **grow as each epic gets its formal
-> review**. Re-run the review per epic and fold new findings in here.
+> **Living document.** **Epics 1–19** have had a formal code review (each with a
+> `project_epic{N}_code_review` record); **Epic 20** is still pending. Section D below carries
+> each epic's findings; a few Section-D lines for the mid-epics (5–7, 11, 12, 15–18) still read
+> "*Not yet reviewed*" from before their reviews landed and are **stale** — the authoritative
+> per-epic detail is in the `project_epic{N}_code_review` memories until those lines are
+> reconciled. Re-run the review per epic and fold new findings in here.
 >
 > **Severity legend**
 > - **P0 — Launch blocker.** Security, tenant-data isolation, money/billing, or data
@@ -199,6 +201,22 @@
   expectation under the `leedi_app` role; and drive the inbox + detail in a browser confirming the
   8s poll does not wipe "Carregar mais"/older-history or drop an in-flight reply.
 
+- [ ] **PL-19 · [Cross-cutting / Epics 2,3,19] Hardcoded `http://localhost:3000` login origin
+  breaks the redirect-to-login flow in production.** The web-app login page lives on a separate
+  origin (port 3000), and that origin is a **hardcoded literal** in two places:
+  `apps/dashboard/middleware.ts` (`LOGIN_ORIGIN = 'http://localhost:3000'`, with a `TODO: derive
+  from env` already noted) and `apps/dashboard/app/onboarding/layout.tsx`
+  (`redirect("http://localhost:3000/login")`). In production an unauthenticated user who hits any
+  protected dashboard route is redirected by the Edge middleware to `http://localhost:3000/login`
+  — a dead address on the customer's machine → **login is unreachable**. The onboarding layout's
+  `getSession` fallback carries the same literal (defense-in-depth; the middleware fires first, so
+  fixing the layout alone changes nothing). **Fix project-wide:** introduce a `NEXT_PUBLIC_WEB_URL`
+  (or equivalent) env var and derive the login origin from it in *both* sites. Surfaced by the
+  Epic 19 review (2026-06-11) but pre-existing since the Epic 2/3 middleware. Distinct from PL-14
+  (that's the *internal/API* `:3000`→`API_PORT` substitution; this is the *public web/login* origin).
+  *Exit:* an unauthenticated request to a protected route in staging redirects to the real login URL,
+  with no `localhost:3000` literal in the dashboard app.
+
 ---
 
 ## C. P2 — V2 / post-launch (descoped from V1 — listed for memory)
@@ -279,8 +297,16 @@
   creation, webhook lock/unlock idempotency, signature verification).
 - **Epic 18 — Notifications:** PL-2 (real VAPID keys), PL-6 (typecheck), PL-7 (⚠ `no-process-env`
   exception). *Not yet reviewed.*
-- **Epic 19 — Onboarding Wizard:** P2: 19.2 logo upload (V1.5), 19.4 PostHog tracking deferred.
-  *Not yet reviewed.*
+- **Epic 19 — Onboarding Wizard:** PL-19 (hardcoded `localhost:3000` login origin in
+  `onboarding/layout.tsx` + middleware, P1), PL-14 (the `gateway-webhook-url` endpoint derives the
+  webhook URL shown to the user via the same `:3000`→`API_PORT` replace → wrong host in prod);
+  P2: 19.2 logo upload (V1.5), 19.4 PostHog tracking deferred. **Reviewed 2026-06-11** (Opus 4.8,
+  commit `197ce4f`); stories 19.1–19.4 + epic-19 `done`. **No production-code defects** — all
+  cross-epic contracts verified (`/whatsapp/connect`, `/playground/message`, `/agent-config`,
+  `/sales-methods`); tenant default `trial` → AC#1 redirect works. Findings were **test-only**:
+  HIGH 2 vacuous hotmart-gateway tests (`toBeGreaterThanOrEqual(0)` always-true + `sql` mock
+  discarded args → filters never matched) and MEDIUM the `complete` test asserted only
+  `success:true` — both fixed + mutation-proven. `audit_logs` `db.insert` confirmed = convention.
 - **Epic 20 — Super-Admin Dashboard:** P2: 20.3 live FX, CRM CTA, days-at-risk precision; 20.1
   row-click → 20.2. `epic-20: backlog` in sprint-status though stories are `review`. *Not yet reviewed.*
 
