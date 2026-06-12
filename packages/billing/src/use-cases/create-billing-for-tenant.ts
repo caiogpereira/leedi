@@ -1,5 +1,6 @@
 import { withServiceRole, schema, eq, sql } from '@leedi/db';
 import type { PaymentProvider } from '../ports/payment-provider.js';
+import { isValidCpfCnpj, normalizeCpfCnpj } from '../lib/cpf-cnpj.js';
 
 const PLAN_VALUES: Record<'starter' | 'pro', number> = {
   starter: 697.0,
@@ -11,6 +12,11 @@ export interface CreateBillingInput {
   nome: string;
   ownerEmail: string;
   plano: 'starter' | 'pro' | 'enterprise';
+  /**
+   * Tenant CPF (11 digits) or CNPJ (14 digits). REQUIRED by Asaas to create a
+   * customer — an Asaas customer cannot be billed without it.
+   */
+  cpfCnpj: string;
   /** Required when plano === 'enterprise' */
   valorEnterprise?: number;
 }
@@ -58,8 +64,15 @@ export async function createBillingForTenant(
   input: CreateBillingInput,
   provider: PaymentProvider
 ): Promise<void> {
-  const { tenantId, nome, ownerEmail, plano, valorEnterprise } = input;
+  const { tenantId, nome, ownerEmail, plano, valorEnterprise, cpfCnpj } = input;
   const valor = resolvePlanValue(plano, valorEnterprise);
+
+  // Validate the taxpayer id before any side effect — Asaas rejects an invalid
+  // cpfCnpj with HTTP 400, so fail fast with a clear error instead.
+  if (!isValidCpfCnpj(cpfCnpj)) {
+    throw new Error('cpfCnpj inválido: informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido');
+  }
+  const cpfCnpjNormalized = normalizeCpfCnpj(cpfCnpj);
 
   // Idempotency: skip if subscription already exists
   if (await existingSubscription(tenantId)) {
@@ -69,7 +82,11 @@ export async function createBillingForTenant(
   // Create Asaas customer
   let asaasCustomerId: string;
   try {
-    asaasCustomerId = await provider.criarCliente({ nome, email: ownerEmail });
+    asaasCustomerId = await provider.criarCliente({
+      nome,
+      email: ownerEmail,
+      cpfCnpj: cpfCnpjNormalized,
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     await writeAuditLog(tenantId, msg);

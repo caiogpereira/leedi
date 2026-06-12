@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 17.1: Asaas Integration & Subscription Creation
 
-Status: review
+Status: done
 
 ## Story
 
@@ -131,3 +131,36 @@ claude-sonnet-4-6
 ### Change Log
 
 - 2026-06-03: Implemented Story 17.1 — Asaas integration, DB schema, PaymentProvider port, use case, tests
+- 2026-06-11: Code review (Opus) — see Code Review Findings below.
+
+## Code Review Findings (2026-06-11, Opus — deep "money module" review)
+
+### H2 (HIGH, fixed) — `cpfCnpj` is REQUIRED by Asaas but was never sent → every production billing setup would 400
+- **Bug:** Asaas `CustomerSaveRequestDTO.required = ["name", "cpfCnpj"]` (confirmed via Asaas
+  OpenAPI). `createBillingForTenant` called `provider.criarCliente({ nome, email })` with no
+  `cpfCnpj`, and the admin "Criar tenant" form never collected one. In production every
+  customer creation would fail with HTTP 400 → the tenant would be flagged
+  `billing_status: 'pendente_configuracao'` and never billed.
+- **Decision (Caio):** collect CPF/CNPJ in the super-admin "Criar tenant" form.
+- **Fix:**
+  - `CreateBillingInput.cpfCnpj` (required); validated with a real check-digit validator
+    (`packages/billing/src/lib/cpf-cnpj.ts`, CPF 11 / CNPJ 14) **before** any Asaas call or
+    DB side effect; normalized digits passed to `criarCliente`.
+  - Admin: `cpfCnpj` added to `createTenantSchema` (Zod `.refine(isValidCpfCnpj)`), to the
+    `CreateTenantDialog` form (new field + i18n), and plumbed into `createTenantAction`.
+
+### Idempotency hardening (supports 17.2)
+- Added a partial UNIQUE index on `invoices.asaas_payment_id`
+  (migration `0019_billing_invoice_payment_id_unique.sql`, applied to Supabase) so the
+  webhook upsert path (17.2) is idempotent at the database level, not just via Redis.
+
+### Notes (low)
+- `audit_logs.actorUserId`/`workspaceId` are set to `tenantId` for the system-initiated
+  `billing_setup_failed` row (no FK on the column → no crash); semantic smell, deferred.
+
+### Files changed in review
+- packages/billing/src/use-cases/create-billing-for-tenant.ts (cpfCnpj + validation)
+- packages/billing/src/lib/cpf-cnpj.ts (new — CPF/CNPJ check-digit validator), index.ts (export)
+- packages/db/migrations/0019_billing_invoice_payment_id_unique.sql (new, applied), src/schema/billing.ts
+- apps/admin/app/(shell)/clientes/actions.ts, ClientesClient.tsx, messages/pt-BR.json
+- Tests: __tests__/create-billing-for-tenant.test.ts, __tests__/cpf-cnpj.test.ts (new), clientes/actions.test.ts

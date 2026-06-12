@@ -11,11 +11,10 @@ function shiftRow(): unknown[] {
 }
 
 function makeSelectChain() {
-  let proxy: Record<string, unknown>;
   const chain: Record<string, unknown> = {
     limit: () => Promise.resolve(shiftRow()),
   };
-  proxy = new Proxy(chain, {
+  const proxy: Record<string, unknown> = new Proxy(chain, {
     get(target, prop) {
       if (prop === 'limit') return target['limit'];
       if (prop === 'then') return undefined;

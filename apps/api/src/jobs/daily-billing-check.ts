@@ -2,11 +2,13 @@
 // Cron: '0 12 * * *' UTC (09:00 BRT). Registered in QStash.
 // Finds overdue invoices and blocks tenants after 3 or 7 days.
 
-import { withServiceRole, schema, sql } from '@leedi/db';
+import { withServiceRole, sql } from '@leedi/db';
 import { sendNotificationToTenantRole } from '@leedi/notification';
 import { captureException } from '@leedi/observability';
 
 interface OverdueRow {
+  // Index signature satisfies drizzle's `execute<T extends Record<string, unknown>>`.
+  [key: string]: unknown;
   invoiceId: string;
   tenantId: string;
   vencimento: string;

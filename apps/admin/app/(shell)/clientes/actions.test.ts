@@ -23,6 +23,11 @@ vi.mock('@leedi/tenancy', () => ({
 vi.mock('@leedi/billing', () => ({
   AsaasProvider: class {},
   createBillingForTenant: vi.fn(),
+  // createTenantSchema uses this in a Zod `.refine`; provide a real digit-length check.
+  isValidCpfCnpj: (v: unknown) => {
+    const digits = String(v ?? '').replace(/\D/g, '');
+    return digits.length === 11 || digits.length === 14;
+  },
 }));
 
 vi.mock('@leedi/config', () => ({

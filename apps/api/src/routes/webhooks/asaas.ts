@@ -30,9 +30,12 @@ export function createAsaasWebhookRouter() {
       return c.json({ error: 'Invalid JSON' }, 400);
     }
 
-    // Token validation using constant-time comparison (AC: #6)
+    // Token validation (AC: #6). Asaas sends the auth token in the
+    // `asaas-access-token` HTTP header (NOT the JSON body — see Asaas webhook docs).
+    // Constant-time comparison guards against timing-based token enumeration.
+    const incomingToken = c.req.header('asaas-access-token');
     const provider = new AsaasProvider(env.ASAAS_API_KEY, env.ASAAS_SANDBOX);
-    if (!provider.verificarWebhook(payload, env.ASAAS_WEBHOOK_TOKEN)) {
+    if (!provider.verificarWebhook(incomingToken, env.ASAAS_WEBHOOK_TOKEN)) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
@@ -42,7 +45,9 @@ export function createAsaasWebhookRouter() {
       return c.text('OK', 200);
     }
 
-    // Idempotency: Redis SET NX TTL 24h (AC: #7)
+    // Idempotency optimization: Redis SET NX TTL 24h (AC: #7). This only avoids
+    // re-enqueuing concurrent duplicates — the durable idempotency guard is the
+    // UNIQUE index on invoices.asaas_payment_id enforced in processBillingEvent.
     const dedupKey = `webhook:asaas:${paymentId}`;
     const redis = redisClient();
     const set = await redis.set(dedupKey, '1', { nx: true, ex: 86400 });
@@ -51,16 +56,21 @@ export function createAsaasWebhookRouter() {
       return c.text('OK', 200);
     }
 
-    // Enqueue to QStash for async processing — return 200 immediately (AC: #1)
-    await qstashClient()
-      .publishJSON({
+    // Enqueue to QStash for async processing — return 200 immediately (AC: #1).
+    // CRITICAL (money flow): if the enqueue fails we must NOT swallow it. Releasing
+    // the dedup key and returning 500 makes Asaas retry the webhook — otherwise the
+    // dedup key would block reprocessing for 24h and the payment event is lost.
+    try {
+      await qstashClient().publishJSON({
         url: `${apiBaseUrl()}/api/internal/billing/process-asaas-event`,
         retries: 5,
         body: payload,
-      })
-      .catch((err: unknown) => {
-        console.error('[asaas-webhook] QStash enqueue failed', err);
       });
+    } catch (err) {
+      console.error('[asaas-webhook] QStash enqueue failed', err);
+      await redis.del(dedupKey).catch(() => {});
+      return c.json({ error: 'Enqueue failed' }, 500);
+    }
 
     return c.text('OK', 200);
   });

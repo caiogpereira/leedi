@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { PaymentProvider } from '../ports/payment-provider.js';
 
 const TENANT_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const VALID_CPF = '52998224725'; // valid CPF (check digits) for Asaas customer creation
 
 // ─── DB mock state ────────────────────────────────────────────────────────────
 
@@ -111,13 +112,14 @@ describe('createBillingForTenant', () => {
     const provider = makeProvider();
 
     await createBillingForTenant(
-      { tenantId: TENANT_ID, nome: 'Tenant A', ownerEmail: 'owner@example.com', plano: 'starter' },
+      { tenantId: TENANT_ID, nome: 'Tenant A', ownerEmail: 'owner@example.com', cpfCnpj: VALID_CPF, plano: 'starter' },
       provider
     );
 
     expect(provider.criarCliente).toHaveBeenCalledWith({
       nome: 'Tenant A',
       email: 'owner@example.com',
+      cpfCnpj: VALID_CPF,
     });
     expect(provider.criarAssinatura).toHaveBeenCalledWith(
       'asaas-customer-123',
@@ -128,13 +130,28 @@ describe('createBillingForTenant', () => {
     expect(state.serviceRoleCallCount).toBeGreaterThanOrEqual(2);
   });
 
+  it('rejects an invalid cpfCnpj before any Asaas call or DB side effect', async () => {
+    const { createBillingForTenant } = await import('../use-cases/create-billing-for-tenant.js');
+    const provider = makeProvider();
+
+    await expect(
+      createBillingForTenant(
+        { tenantId: TENANT_ID, nome: 'Tenant A', ownerEmail: 'owner@example.com', cpfCnpj: '12345678900', plano: 'starter' },
+        provider
+      )
+    ).rejects.toThrow('cpfCnpj inválido');
+
+    expect(provider.criarCliente).not.toHaveBeenCalled();
+    expect(state.serviceRoleCallCount).toBe(0);
+  });
+
   it('idempotency — second call with same tenant is no-op (no duplicate DB insert)', async () => {
     state.existingSubscription = { id: 'existing-sub-id' };
     const { createBillingForTenant } = await import('../use-cases/create-billing-for-tenant.js');
     const provider = makeProvider();
 
     await createBillingForTenant(
-      { tenantId: TENANT_ID, nome: 'Tenant A', ownerEmail: 'owner@example.com', plano: 'starter' },
+      { tenantId: TENANT_ID, nome: 'Tenant A', ownerEmail: 'owner@example.com', cpfCnpj: VALID_CPF, plano: 'starter' },
       provider
     );
 
@@ -152,7 +169,7 @@ describe('createBillingForTenant', () => {
 
     await expect(
       createBillingForTenant(
-        { tenantId: TENANT_ID, nome: 'Tenant A', ownerEmail: 'owner@example.com', plano: 'starter' },
+        { tenantId: TENANT_ID, nome: 'Tenant A', ownerEmail: 'owner@example.com', cpfCnpj: VALID_CPF, plano: 'starter' },
         provider
       )
     ).rejects.toThrow('Asaas 422');
@@ -170,7 +187,7 @@ describe('createBillingForTenant', () => {
 
     await expect(
       createBillingForTenant(
-        { tenantId: TENANT_ID, nome: 'Tenant A', ownerEmail: 'owner@example.com', plano: 'pro' },
+        { tenantId: TENANT_ID, nome: 'Tenant A', ownerEmail: 'owner@example.com', cpfCnpj: VALID_CPF, plano: 'pro' },
         provider
       )
     ).rejects.toThrow('Asaas 500');
@@ -189,6 +206,7 @@ describe('createBillingForTenant', () => {
         tenantId: TENANT_ID,
         nome: 'Big Corp',
         ownerEmail: 'cto@bigcorp.com',
+        cpfCnpj: VALID_CPF,
         plano: 'enterprise',
         valorEnterprise: 3500,
       },
@@ -208,7 +226,7 @@ describe('createBillingForTenant', () => {
 
     await expect(
       createBillingForTenant(
-        { tenantId: TENANT_ID, nome: 'Big Corp', ownerEmail: 'cto@bigcorp.com', plano: 'enterprise' },
+        { tenantId: TENANT_ID, nome: 'Big Corp', ownerEmail: 'cto@bigcorp.com', cpfCnpj: VALID_CPF, plano: 'enterprise' },
         provider
       )
     ).rejects.toThrow('valorEnterprise is required');

@@ -220,6 +220,7 @@ function CreateTenantDialog({
   const t = useTranslations('clientes');
   const [name, setName] = useState('');
   const [ownerEmail, setOwnerEmail] = useState('');
+  const [cpfCnpj, setCpfCnpj] = useState('');
   const [plano, setPlano] = useState<'starter' | 'pro' | 'enterprise'>('starter');
   const [valorEnterprise, setValorEnterprise] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -234,6 +235,7 @@ function CreateTenantDialog({
       const result = await createTenantAction({
         name,
         ownerEmail,
+        cpfCnpj,
         plano,
         valorEnterprise:
           plano === 'enterprise' && valorEnterprise ? Number(valorEnterprise) : undefined,
@@ -278,6 +280,17 @@ function CreateTenantDialog({
               type="email"
               value={ownerEmail}
               onChange={(e) => setOwnerEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="tenant-cpfcnpj">{t('create.cpfCnpj')}</Label>
+            <Input
+              id="tenant-cpfcnpj"
+              inputMode="numeric"
+              value={cpfCnpj}
+              onChange={(e) => setCpfCnpj(e.target.value)}
+              placeholder={t('create.cpfCnpjPlaceholder')}
               required
             />
           </div>

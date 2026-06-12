@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   boolean,
   date,
@@ -6,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { tenants } from './tenancy.js';
@@ -55,4 +57,10 @@ export const invoices = pgTable('invoices', {
   valorOverage: numeric('valor_overage').notNull().default('0'),
   receiptUrl: text('receipt_url'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => ({
+  // Idempotency guard for Asaas payment webhooks (Story 17.2). Partial because
+  // asaas_payment_id is nullable; ON CONFLICT targets this index.
+  asaasPaymentIdUnique: uniqueIndex('invoices_asaas_payment_id_unique')
+    .on(table.asaasPaymentId)
+    .where(sql`${table.asaasPaymentId} IS NOT NULL`),
+}));

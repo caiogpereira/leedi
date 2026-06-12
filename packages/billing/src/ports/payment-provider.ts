@@ -6,6 +6,10 @@ export interface PaymentProvider {
     valor: number
   ): Promise<{ subscriptionId: string; proximoVencimento: Date }>;
   cancelarAssinatura(subscriptionId: string): Promise<void>;
-  /** Constant-time comparison of payload.accessToken against the expected token. */
-  verificarWebhook(payload: unknown, token: string): boolean;
+  /**
+   * Constant-time comparison of the token Asaas sends in the `asaas-access-token`
+   * HTTP header against the expected webhook token. Returns false when the
+   * incoming token is missing.
+   */
+  verificarWebhook(incomingToken: string | undefined | null, expectedToken: string): boolean;
 }

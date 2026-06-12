@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-29
-last_updated: 2026-06-11  # epic-15 → done — code review applied 7 patches + 1 decision (deferred); stories 15.1–15.3 review→done. See Epic 15 Review Findings + deferred-work.md.
+last_updated: 2026-06-11  # epic-17 → done — deep money-module code review: 2 CRITICAL (webhook header auth; PAYMENT_CREATED/invoice lifecycle) + 2 HIGH (cpfCnpj; enqueue-loss) fixed + UNIQUE idempotency index (migration 0019). See Epic 17 Review Findings in stories.
 project: leedi
 project_key: NOKEY
 tracking_system: file-system
@@ -211,10 +211,10 @@ development_status:
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 17: Billing & Subscription Management
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-17: in-progress
-  17-1-asaas-integration-subscription-creation: review
-  17-2-payment-webhook-tenant-lock-unlock: review
-  17-3-tenant-billing-panel: review
+  epic-17: done  # code review 2026-06-11 (Opus, deep "money module"); stories 17.1–17.3 review→done. 2 CRITICAL (webhook auth read body.accessToken vs Asaas header asaas-access-token → all real webhooks 401; PAYMENT_CREATED never handled → invoices never created → all events no-op, daily-check & panel dead) + 2 HIGH (cpfCnpj required by Asaas but never sent → all prod billing setups 400, fixed w/ check-digit validator + admin form field per Caio; Redis dedup set before QStash enqueue + swallowed failure → lost payment, now DEL key + 500). Added partial UNIQUE invoices.asaas_payment_id (migration 0019, applied) for DB-enforced idempotency. Pre-existing daily-billing-check typecheck fixed. billing 34/34, api Epic-17 20/20, admin 18/18. See Code Review Findings in each story.
+  17-1-asaas-integration-subscription-creation: done
+  17-2-payment-webhook-tenant-lock-unlock: done
+  17-3-tenant-billing-panel: done
   epic-17-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────────

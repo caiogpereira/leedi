@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 17.3: Tenant Billing Panel
 
-Status: review
+Status: done
 
 ## Story
 
@@ -110,3 +110,21 @@ claude-sonnet-4-6
 ### Change Log
 
 - 2026-06-03: Implemented Story 17.3 — billing API endpoints, dashboard billing panel, settings sub-nav
+- 2026-06-11: Code review (Opus) — see Code Review Findings below.
+
+## Code Review Findings (2026-06-11, Opus — deep "money module" review)
+
+- **AC#4 (owner-only) verified:** `billing:read` is owner-only in the RBAC matrix
+  (`packages/auth/src/rbac.ts`; `rbac.test.ts` asserts admin/operator/viewer → false).
+  Server-side `requirePermission('billing:read')` guards both endpoints; the client only renders.
+- **AC#2 receipt link / invoice table now actually populated:** these depend on `invoices`
+  rows existing — which never happened until the 17.2 `PAYMENT_CREATED` fix. With invoices
+  materialised and `receipt_url` stored, the panel's invoice table, "Baixar comprovante" link,
+  and empty-state behave as specified. No code change needed in the panel itself.
+- **No internal ids leaked (AC pitfall):** `/billing/summary` and `/billing/invoices` do not
+  return `asaas_customer_id` / `asaas_subscription_id`. Confirmed.
+- **Cleanup (lint):** removed unused `sql` import in `routes/billing.ts`; `const proxy` in
+  `routes/__tests__/billing.test.ts`.
+
+### Files changed in review
+- apps/api/src/routes/billing.ts (unused import), routes/__tests__/billing.test.ts (lint)

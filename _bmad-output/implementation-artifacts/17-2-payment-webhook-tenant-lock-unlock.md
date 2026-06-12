@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 17.2: Payment Webhook — Tenant Lock & Unlock
 
-Status: review
+Status: done
 
 ## Story
 
@@ -129,3 +129,79 @@ claude-sonnet-4-6
 ### Change Log
 
 - 2026-06-03: Implemented Story 17.2 — webhook, event processor, daily check, tenant blocking guard
+- 2026-06-11: Code review (Opus) — see Code Review Findings below.
+
+## Code Review Findings (2026-06-11, Opus — deep "money module" review)
+
+Two CRITICAL defects made the entire payment flow non-functional in production; both
+are fixed. The original implementation faithfully followed the written ACs — the ACs
+themselves were wrong / incomplete (deviations recorded below) and the unit tests
+were green over the bugs because they mocked the wrong contract.
+
+### C1 (CRITICAL, fixed) — webhook auth read the wrong location → every real webhook 401
+- **Bug:** `verificarWebhook(payload, token)` validated `payload.accessToken` (JSON body).
+  Asaas sends the webhook auth token in the **`asaas-access-token` HTTP header**, never in
+  the body (confirmed in Asaas docs + OpenAPI `securitySchemes`). Result: every legitimate
+  Asaas webhook returned 401; nothing downstream ever ran.
+- **Spec deviation:** AC#6 literally says "the `accessToken` in the payload" — this is wrong.
+  Corrected to read the header. AC#6 should be read as "the token Asaas sends".
+- **Fix:** `PaymentProvider.verificarWebhook(incomingToken, expectedToken)` now compares two
+  token strings constant-time (SHA-256 → `timingSafeEqual`); the route reads
+  `c.req.header('asaas-access-token')`. Tests rewritten to send the header (incl. the
+  missing-header 401 case).
+
+### C2 (CRITICAL, fixed) — no `PAYMENT_CREATED` handler → invoices never created → every event a silent no-op
+- **Bug:** The Asaas charge lifecycle is always `PAYMENT_CREATED → … → PAYMENT_RECEIVED`.
+  Nothing in Epic 17 ever inserted an `invoices` row (create-billing only inserts a
+  `subscriptions` row), and the processor only handled RECEIVED/OVERDUE/DELETED/REFUNDED.
+  `getInvoiceByPaymentId` therefore always returned null → RECEIVED/OVERDUE/DELETED were
+  no-ops, `daily-billing-check` never found overdue invoices, and the tenant billing panel
+  (17.3) was permanently empty.
+- **Spec gap:** invoice creation from `PAYMENT_CREATED` was never in any AC.
+- **Fix:** `process-billing-event.ts` rewritten:
+  - `PAYMENT_CREATED` upserts an `invoices` row (resolves our subscription+tenant from
+    `payment.subscription` → fallback `payment.customer`; stores valor, vencimento, receipt_url).
+  - RECEIVED/OVERDUE upsert-if-missing so a lost `PAYMENT_CREATED` never loses state.
+  - `PAYMENT_CONFIRMED` also reactivates (funds committed for boleto/pix go straight to RECEIVED).
+  - Idempotency is DB-enforced: **partial UNIQUE index on `invoices.asaas_payment_id`**
+    (migration `0019_billing_invoice_payment_id_unique.sql`, applied) + `ON CONFLICT DO NOTHING`.
+  - Unrecognised events are a logged no-op (Asaas warns: never throw on unexpected payloads).
+
+### H1 (HIGH, fixed) — a confirmed payment could be permanently lost
+- **Bug:** the webhook set the Redis dedup key (`SET NX`, TTL 24h) **before** enqueuing to
+  QStash, and the enqueue failure was swallowed (`.catch` log) while still returning 200.
+  Asaas would not retry (got 200) and the Redis key blocked reprocessing for 24h → the
+  payment event vanished.
+- **Fix:** on enqueue failure, release the dedup key (`redis.del`) and return **500** so Asaas
+  retries. The durable idempotency guard is now the UNIQUE index, not the Redis key.
+
+### Notes / deferred (low)
+- AC#1 refinement: `conta_reativada` now fires only on a real **blocked → active** transition
+  (pre-update tenant status captured), not on every routine renewal payment — avoids
+  "your account is active!" spam on normal monthly charges.
+- Daily check still maps both 3-day (partial) and 7-day (full) overdue to `tenants.status =
+  'blocked'` with distinct notification copy (AC#4/#5 distinction is cosmetic for now — a
+  separate "partial" status would need a tenant_status enum migration). Acknowledged in dev notes.
+- `packages/notification/.../send-billing-notification.ts` is dead code (the daily check uses
+  `sendNotificationToTenantRole` directly). Left in place; harmless. Low.
+- `audit_logs.actorUserId`/`workspaceId` are populated with `tenantId` for system-initiated
+  rows (no FK on the column, so no crash) — semantic smell, consistent with create-billing; low.
+- Pre-existing typecheck break fixed: `daily-billing-check.ts` `OverdueRow` now satisfies
+  drizzle's `execute<T extends Record<string, unknown>>` (index signature).
+- **`daily-billing-check.ts` (AC#4/#5 — 3-day/7-day tenant blocking) now has behavioral
+  coverage** (`__tests__/daily-billing-check.test.ts`, 4 tests): 3-day partial block +
+  "Pagamento atrasado" notice, 7-day full block + "Conta suspensa" notice, below-threshold
+  (2-day) no-op, and already-blocked skip. It was the load-bearing path that actually blocks
+  paying customers and had zero tests before this review.
+- DB smoke (rolled back) confirmed the upsert path on real Postgres: `::invoice_status_enum`
+  cast + `ON CONFLICT (asaas_payment_id) WHERE … DO NOTHING` deduplicates (2 identical inserts
+  → 1 row) and the subscription FK holds.
+
+### Files changed in review
+- apps/api/src/routes/webhooks/asaas.ts (header auth + enqueue-failure handling)
+- apps/api/src/jobs/process-billing-event.ts (rewritten: PAYMENT_CREATED + upsert + ON CONFLICT)
+- apps/api/src/jobs/daily-billing-check.ts (typecheck + unused import)
+- packages/billing/src/ports/payment-provider.ts, adapters/asaas-provider.ts (verificarWebhook signature)
+- packages/db/migrations/0019_billing_invoice_payment_id_unique.sql (new, applied), src/schema/billing.ts (unique index)
+- Tests: webhooks/__tests__/asaas.test.ts, jobs/__tests__/process-billing-event.test.ts (rewritten),
+  jobs/__tests__/daily-billing-check.test.ts (new)

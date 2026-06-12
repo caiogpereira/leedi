@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { requireTenantSession } from '../middleware/tenant-session.js';
 import { requirePermission } from '../middleware/require-role.js';
 import { rateLimitTenant } from '../middleware/rate-limit.js';
-import { withTenant, schema, eq, desc, sql } from '@leedi/db';
+import { withTenant, schema, eq, desc } from '@leedi/db';
 
 export function createBillingRouter() {
   const router = new Hono();

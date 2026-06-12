@@ -120,6 +120,8 @@
       "description": "Um convite será enviado ao responsável e a cobrança no Asaas será inicializada.",
       "name": "Nome da empresa",
       "ownerEmail": "E-mail do responsável",
+      "cpfCnpj": "CPF ou CNPJ",
+      "cpfCnpjPlaceholder": "Somente números",
       "plan": "Plano",
       "enterpriseValue": "Valor mensal (R$)",
       "cancel": "Cancelar",

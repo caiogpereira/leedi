@@ -11,7 +11,7 @@ import {
   getTenantInvoices,
   type TenantInvoice,
 } from '@leedi/tenancy';
-import { AsaasProvider, createBillingForTenant } from '@leedi/billing';
+import { AsaasProvider, createBillingForTenant, isValidCpfCnpj } from '@leedi/billing';
 import { env } from '@leedi/config';
 
 /**
@@ -37,6 +37,11 @@ async function requireSuperAdmin(): Promise<{ userId: string; workspaceId: strin
 const createTenantSchema = z.object({
   name: z.string().trim().min(2, 'Nome é obrigatório'),
   ownerEmail: z.string().trim().email('E-mail inválido'),
+  // CPF (11 digits) or CNPJ (14 digits) — required by Asaas to create the customer.
+  cpfCnpj: z
+    .string()
+    .trim()
+    .refine(isValidCpfCnpj, 'CPF ou CNPJ inválido'),
   plano: z.enum(['starter', 'pro', 'enterprise']),
   // Required only for the enterprise plan (custom monthly value, in BRL).
   valorEnterprise: z.number().positive().optional(),
@@ -55,7 +60,7 @@ export async function createTenantAction(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Dados inválidos' };
   }
-  const { name, ownerEmail, plano, valorEnterprise } = parsed.data;
+  const { name, ownerEmail, cpfCnpj, plano, valorEnterprise } = parsed.data;
 
   if (plano === 'enterprise' && !valorEnterprise) {
     return { ok: false, error: 'Informe o valor mensal para o plano Enterprise' };
@@ -84,6 +89,7 @@ export async function createTenantAction(
         tenantId: created.tenantId,
         nome: name,
         ownerEmail,
+        cpfCnpj,
         plano,
         ...(valorEnterprise !== undefined ? { valorEnterprise } : {}),
       },

@@ -7,26 +7,29 @@ describe('AsaasProvider.verificarWebhook', () => {
   const provider = new AsaasProvider(SANDBOX_KEY, true);
   const TOKEN = 'my-webhook-secret-token';
 
-  it('returns true when accessToken matches expected token', () => {
-    expect(provider.verificarWebhook({ accessToken: TOKEN }, TOKEN)).toBe(true);
+  it('returns true when the incoming token matches the expected token', () => {
+    expect(provider.verificarWebhook(TOKEN, TOKEN)).toBe(true);
   });
 
-  it('returns false when accessToken does not match', () => {
-    expect(provider.verificarWebhook({ accessToken: 'wrong-token' }, TOKEN)).toBe(false);
+  it('returns false when the incoming token does not match', () => {
+    expect(provider.verificarWebhook('wrong-token', TOKEN)).toBe(false);
   });
 
-  it('returns false when accessToken is missing from payload', () => {
-    expect(provider.verificarWebhook({ event: 'PAYMENT_RECEIVED' }, TOKEN)).toBe(false);
-  });
-
-  it('returns false when payload is not an object', () => {
+  it('returns false when the incoming token is missing (undefined/null/empty)', () => {
+    // Asaas sends the token in the `asaas-access-token` header; a request without
+    // it (undefined) must be rejected — this is the real-world 401 case.
+    expect(provider.verificarWebhook(undefined, TOKEN)).toBe(false);
     expect(provider.verificarWebhook(null, TOKEN)).toBe(false);
-    expect(provider.verificarWebhook('string', TOKEN)).toBe(false);
+    expect(provider.verificarWebhook('', TOKEN)).toBe(false);
   });
 
-  it('uses constant-time comparison (does not short-circuit on length mismatch)', () => {
-    // Both tokens go through sha256 so length is always 64 hex chars — safe
-    expect(provider.verificarWebhook({ accessToken: '' }, TOKEN)).toBe(false);
-    expect(provider.verificarWebhook({ accessToken: TOKEN.slice(0, -1) }, TOKEN)).toBe(false);
+  it('returns false when the expected token is empty (misconfiguration)', () => {
+    expect(provider.verificarWebhook(TOKEN, '')).toBe(false);
+  });
+
+  it('uses constant-time comparison over equal-length sha256 digests', () => {
+    // Near-miss tokens (differ by one char / length) must still return false.
+    expect(provider.verificarWebhook(TOKEN.slice(0, -1), TOKEN)).toBe(false);
+    expect(provider.verificarWebhook(TOKEN + 'x', TOKEN)).toBe(false);
   });
 });

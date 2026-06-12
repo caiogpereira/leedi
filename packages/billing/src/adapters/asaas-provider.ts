@@ -101,20 +101,18 @@ export class AsaasProvider implements PaymentProvider {
     }
   }
 
-  verificarWebhook(payload: unknown, token: string): boolean {
-    if (typeof payload !== 'object' || payload === null) return false;
-    const incoming = (payload as Record<string, unknown>)['accessToken'];
-    if (typeof incoming !== 'string') return false;
+  verificarWebhook(incomingToken: string | undefined | null, expectedToken: string): boolean {
+    // Asaas sends the configured webhook auth token in the `asaas-access-token`
+    // HTTP header (see https://docs.asaas.com/docs/sobre-os-webhooks), NOT in the
+    // JSON body. The caller is responsible for reading the header and passing it here.
+    if (typeof incomingToken !== 'string' || incomingToken.length === 0) return false;
+    if (typeof expectedToken !== 'string' || expectedToken.length === 0) return false;
 
     try {
-      const a = Buffer.from(
-        createHash('sha256').update(incoming).digest('hex'),
-        'utf8'
-      );
-      const b = Buffer.from(
-        createHash('sha256').update(token).digest('hex'),
-        'utf8'
-      );
+      // SHA-256 first so the constant-time compare always runs over equal-length
+      // buffers regardless of the raw token lengths (avoids leaking length).
+      const a = Buffer.from(createHash('sha256').update(incomingToken).digest('hex'), 'utf8');
+      const b = Buffer.from(createHash('sha256').update(expectedToken).digest('hex'), 'utf8');
       if (a.length !== b.length) return false;
       return timingSafeEqual(a, b);
     } catch {
