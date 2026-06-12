@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { getOperationalHealth } from '@leedi/billing';
 import { env } from '@leedi/config';
+import { Card } from '@leedi/ui';
 import { ContactButton } from './ContactButton';
 import { AutoRefresh } from './AutoRefresh';
 import { marginEmphasis, netGrowthDisplay } from './presentation';
@@ -189,11 +190,11 @@ function KpiCard({
   emphasis?: 'default' | 'good' | 'warn' | 'danger';
 }) {
   return (
-    <div className="rounded-lg border bg-card p-4 shadow-sm">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className={`mt-1 text-2xl font-bold ${EMPHASIS_CLASS[emphasis] ?? ''}`}>{value}</p>
+    <Card variant="metric" className="p-5">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={`mt-2 text-3xl font-bold tracking-tight ${EMPHASIS_CLASS[emphasis] ?? ''}`}>{value}</p>
       {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
-    </div>
+    </Card>
   );
 }
 

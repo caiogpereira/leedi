@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { CheckCircle2 } from "lucide-react";
 import { getFinancialHealth } from "@leedi/billing";
+import { Card } from "@leedi/ui";
 
 // Always render on request so a refresh reflects the latest payments/cancellations
 // (AC#3: after an Asaas webhook is processed, refreshing must show updated metrics
@@ -107,18 +108,18 @@ function KpiCard({
   emphasis?: "default" | "danger";
 }) {
   return (
-    <div className="rounded-lg border bg-card p-4 shadow-sm">
-      <p className="text-sm text-muted-foreground">{label}</p>
+    <Card variant="metric" className="p-5">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <p
         className={
           emphasis === "danger"
-            ? "mt-1 text-2xl font-bold text-destructive"
-            : "mt-1 text-2xl font-bold"
+            ? "mt-2 text-3xl font-bold tracking-tight text-destructive"
+            : "mt-2 text-3xl font-bold tracking-tight"
         }
       >
         {value}
       </p>
       {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
-    </div>
+    </Card>
   );
 }
