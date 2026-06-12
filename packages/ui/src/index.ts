@@ -15,6 +15,8 @@ export { Badge, badgeVariants } from './components/ui/badge.js';
 export type { BadgeProps } from './components/ui/badge.js';
 export { Avatar, initialsFromName, avatarColorIndex } from './components/ui/avatar.js';
 export type { AvatarProps } from './components/ui/avatar.js';
+export { EmptyState } from './components/ui/empty-state.js';
+export type { EmptyStateProps } from './components/ui/empty-state.js';
 export { Textarea } from './components/ui/textarea.js';
 export type { TextareaProps } from './components/ui/textarea.js';
 export {
