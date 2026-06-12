@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 20.2: Tenant List & Lifecycle Management
 
-Status: review
+Status: done
 
 > **ARCHITECTURE OVERRIDE (approved, same as Story 20.1):** the story was authored
 > assuming a Hono REST API (`apps/api/src/routes/admin/tenants.ts`) + an `(admin)`
@@ -178,3 +178,28 @@ _none_
 ### Change Log
 
 - 2026-06-08: Implemented Story 20.2 — super-admin Clientes page (tenant list with subscription value/overage/last-payment, lifecycle actions: create + impersonate + block/unblock with audited reason, client-side search, billing-pending warning, per-tenant financial history). Use-cases in `@leedi/tenancy` + Server Actions (override of story's Hono design). Consolidated the 2.8 `/tenants` surface into `/clientes`. Status → review.
+- 2026-06-12: Code review (Opus 4.8) → **done**. 2 test-quality patches under the "testes reais" mandate + 4 mutation proofs; no production-code defects. See Code Review Findings.
+
+### Code Review Findings (2026-06-12)
+
+**Patches (test quality — the "testes reais" mandate):**
+
+1. **`list-all-tenants-detailed.test.ts` was mapping-only with a query-discarding mock** (`sql: Object.assign(() => ({}), …)`) — the *same* fake-green "sql mock discards args" pattern flagged in the Epic 19 review. It gave **zero** coverage of the most complex SQL in the epic: the `LEFT JOIN LATERAL` fan-out guards, the AC#1 previous-month overage period (`CURRENT_DATE - INTERVAL '1 month'`), `status != 'cancelada'`, `MAX(pago_em)` and ordering. **Fix:** mock now interpolates the template and a new test asserts the SQL contract. **Mutation-proven:** reverting the overage period to the current month turns the new test red.
+2. **`list-tenant-invoices.test.ts`** had the same query-discarding mock — added a SQL-contract test asserting tenant scoping (`WHERE tenant_id = …::uuid`), `ORDER BY created_at DESC` and `LIMIT 12`.
+
+**Mutation proofs (load-bearing assertions confirmed non-vacuous — broke the code, watched the test go red, reverted):**
+
+- `set-tenant-block.test.ts`: `blockTenant` `'blocked'`→`'active'` → red. ✓
+- `actions.test.ts` super_admin gate: `requireSuperAdmin` also accepting `'support'` → the RLS-bypass gate test goes red. ✓ (most security-critical assertion)
+- `list-all-tenants-detailed` overage period mutation → new SQL-contract test red. ✓
+
+**Verified clean (no change needed):**
+
+- **Enum trap:** `tenants.status` is the English enum (`active`/`blocked`/`trial`/`cancelled`) — block→`blocked`, unblock→`active` are correct; `subscriptions.status` keeps PT-BR `cancelada`. Checked against `packages/db/src/schema/tenancy.ts` + `billing.ts`.
+- **Security (RLS bypass):** every server action re-verifies super_admin via `requireSuperAdmin` (session → `getWorkspaceAdmin` → `role === 'super_admin'`) before any `withServiceRole` read/write — the layout guard alone is insufficient for a direct action POST. Confirmed + mutation-proven.
+- **AC#4/#5 cross-epic contract verified empirically:** the agent read path aborts on `tenantStatus === 'blocked'` (`packages/agent/src/use-cases/process-message.ts:257` → `{ status: 'aborted', reason: 'tenant_blocked' }`), so a manual block stops new-message processing — not assumed, read in source.
+- **AC#7 cross-epic contract verified:** `createBillingForTenant` writes the `billing_status: 'pendente_configuracao'` flag inside the catch of BOTH throwable Asaas calls (`criarCliente`/`criarAssinatura`) *before* re-throwing, and the two early throws (`cpfCnpj`/`valorEnterprise`) are pre-validated by the action — so the real Asaas-failure case always flags the tenant and the warning icon appears.
+- **No dead links:** `AdminSidebar` links `/clientes` `/financeiro` `/operacional`; `/tenants` is a permanent redirect to `/clientes`. i18n `clientes` namespace complete.
+- **Other tests real:** `create-tenant` (slug-collision regex, invite forwarding, failure propagation), `actions` (5-case auth gate), `ClientesClient` (client filter / action visibility / billing warning) all assert behaviour.
+
+tenancy 33/33 (+2 new), admin 18/18, typecheck clean.

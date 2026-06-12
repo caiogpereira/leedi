@@ -1,11 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 let executeRows: unknown[] = [];
-const executeSpy = vi.fn(async () => executeRows);
+const executeSpy = vi.fn(async (..._args: unknown[]) => executeRows);
 
+// sql tag mocked to INTERPOLATE the template so a test can assert the SQL
+// contract (tenant scoping + LIMIT 12 + ordering) — otherwise the query itself
+// is mock-blind and a regression in the WHERE/LIMIT would pass silently.
 vi.mock('@leedi/db', () => ({
   withServiceRole: vi.fn((fn: (tx: unknown) => unknown) => fn({ execute: executeSpy })),
-  sql: Object.assign((..._args: unknown[]) => ({}), { raw: (s: string) => s }),
+  sql: Object.assign(
+    (strings: TemplateStringsArray, ...values: unknown[]) => {
+      let result = '';
+      strings.forEach((s, i) => {
+        result += s;
+        if (i < values.length) result += String(values[i]);
+      });
+      return result;
+    },
+    { raw: (s: string) => s }
+  ),
 }));
 
 import { getTenantInvoices } from './list-tenant-invoices.js';
@@ -68,5 +81,14 @@ describe('getTenantInvoices', () => {
       status: 'pendente',
       asaasPaymentId: null,
     });
+  });
+
+  it('scopes to the tenant and caps at the last 12 invoices (SQL contract)', async () => {
+    await getTenantInvoices(TENANT);
+
+    const querySql = String(executeSpy.mock.calls[0]?.[0]);
+    expect(querySql).toContain(`WHERE tenant_id = ${TENANT}::uuid`);
+    expect(querySql).toContain('ORDER BY created_at DESC');
+    expect(querySql).toContain('LIMIT 12');
   });
 });

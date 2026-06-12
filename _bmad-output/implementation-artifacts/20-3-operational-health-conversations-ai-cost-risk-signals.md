@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 20.3: Operational Health (Conversations, AI Cost, Risk Signals)
 
-Status: review
+Status: done
 
 > **ARCHITECTURE OVERRIDE (approved, same as Stories 20.1/20.2):** the story assumes
 > a Hono REST API (`apps/api/src/routes/admin/operational-health.ts`) + an `(admin)`
@@ -163,3 +163,13 @@ claude-opus-4-8 (BMad Dev)
 ### Change Log
 
 - 2026-06-08: Implemented Story 20.3 — super-admin Operacional dashboard (aggregate conversations + AI cost, estimated margin with fixed USD→BRL rate, new tenants + net growth, upsell-opportunity and churn-risk signals). `getOperationalHealth` use-case in `@leedi/billing` + server-component page with auto-refresh (override of the story's Hono design). Status → review.
+- 2026-06-12: Code review (Opus 4.8) → **done**. No defects. See Code Review Findings.
+
+### Code Review Findings (2026-06-12)
+
+- **No defects.** The enum traps the dev notes claim to have fixed are **verified correct against the real schema** (`packages/db/src/schema/connection.ts`): table is `whatsapp_connections`; `whatsapp_quality_rating` enum is PT-BR `verde`/`amarelo`/`vermelho` (risk filter = `amarelo`/`vermelho`, NOT `yellow`/`red`); connection status enum includes `conectado`; `subscriptions.status` PT-BR. All SQL column references (`conversas_usadas`, `custo_ia_usd`, `periodo`, `conversas_limite`, `overage_valor`, `c.updated_at`) checked against the schema — the mock-blind surface.
+- **Mutation-proven** the enum-trap guard: changing the query's `'amarelo'`→`'yellow'` turns `get-operational-health.test.ts`'s "uses the PT-BR quality enum" test red. ✓
+- **Margin** (`computeMarginPct`) is a pure, exported, unit-tested function with the injected rate; MRR=0 → 0 (no NaN). Aggregates split into 3 queries to avoid fan-out. `custo_ia_usd` only returned in the aggregate (FR108, super-admin only).
+- **AC#6** satisfied by the authoritative `(shell)/layout.tsx` super_admin guard (read-only page, no server action); `force-dynamic` + `AutoRefresh` (5 min) satisfy AC#5.
+- **`days_at_risk` approximation** (AC#4) is a known, documented limitation (no `quality_rating_changed_at` column; `updated_at` proxy) — the risk-list *membership* is exact, only the day count is approximate. The user previously reverted the write-path fix to avoid touching the shipped 4.3 health-check / mid-flight migration journal. Left as a documented deferred follow-up (NOT a review defect).
+- **i18n** `operacional` namespace complete (incl. dynamic `quality.amarelo`/`quality.vermelho` keys); `USD_TO_BRL_RATE` config schema entry verified (config 5/5). billing 26/26 (within 34 total), admin 18/18, typecheck clean.

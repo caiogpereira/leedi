@@ -4,7 +4,7 @@ baseline_commit: 992b842
 
 # Story 20.1: Financial Health Dashboard (MRR, Revenue, Delinquencies)
 
-Status: review
+Status: done
 
 ## Story
 
@@ -129,3 +129,10 @@ _none_
 ### Change Log
 
 - 2026-06-04: Implemented Story 20.1 — financial health aggregation use-case (`getFinancialHealth`) + super-admin Financeiro server-component dashboard (MRR, received, projected, open receivables, churn, delinquency table). Followed existing server-component admin architecture (override of story's Hono design). Status → review.
+- 2026-06-12: Code review (Opus 4.8) → **done**. Clean: all enum literals verified against the real schema (`subscriptions` `ativa`/`atrasada`/`cancelada`; `invoices` `pendente`/`pago`/`atrasado`/`cancelado`; `tenants.name`/`tenants.plan` English) — the mock-blind surface checked directly, not assumed. The two split aggregate queries (subscriptions / invoices) correctly avoid the fan-out double-count; delinquency query filters strictly on `i.status = 'atrasado'`. AC#5 reinterpretation (layout guard vs literal 403) accepted — `(shell)/layout.tsx` `getWorkspaceAdminRole === 'super_admin'` is authoritative and child pages cannot bypass it; `force-dynamic` satisfies AC#3 freshness. Tests are genuinely real (not vacuous): `get-financial-health.test.ts` asserts SQL contract + numeric coercion + empty-state mapping. i18n `financeiro` namespace complete, sidebar links `/financeiro` (no dead link). billing 34/34, typecheck clean.
+
+### Code Review Findings (2026-06-12)
+
+- **No defects.** Implementation matches the ACs (with the documented, sound architecture override) and the SQL is correct against the real schema.
+- Tests confirmed real by inspection + suite run (billing 34/34). SQL-contract assertions in `get-financial-health.test.ts` would catch an enum/filter regression.
+- Cross-epic contracts spot-checked empirically: delinquency disappears on payment (AC#3) rides the Asaas webhook + `force-dynamic` refresh; no code change needed.

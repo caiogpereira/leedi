@@ -238,8 +238,8 @@ development_status:
   # ─────────────────────────────────────────────────────────────────────────────
   # Epic 20: Super-Admin Financial & Operational Dashboard
   # ─────────────────────────────────────────────────────────────────────────────
-  epic-20: backlog
-  20-1-financial-health-dashboard-mrr-revenue-delinquencies: review
-  20-2-tenant-list-lifecycle-management: review
-  20-3-operational-health-conversations-ai-cost-risk-signals: review
+  epic-20: done  # code review 2026-06-12 (Opus 4.8); stories 20.1–20.3 review→done. Super-admin Financeiro/Clientes/Operacional dashboards (server-component override of story's Hono design). NO production-code defects — unusually clean (dev applied advisor catches during build). 2 test-quality patches under "testes reais" mandate: list-all-tenants-detailed + list-tenant-invoices tests used a query-DISCARDING sql mock (same Epic-19 fake-green pattern) → zero coverage of the LATERAL joins / prev-month overage period / LIMIT 12 → hardened into SQL-contract tests. 4 mutation proofs (broke code, watched red, reverted): blockTenant blocked→active; super_admin gate accepting support; operational enum amarelo→yellow; overage period mutation. Verified EMPIRICALLY (mock-blind surface): all enum literals vs real schema (verde/amarelo/vermelho, ativa/atrasada/cancelada, pendente/atrasado, active/blocked/trial/cancelled), all raw-SQL columns, AC#4/#5 contract (process-message.ts:257 aborts on blocked), AC#7 contract (createBillingForTenant flags pendente_configuracao before re-throw), i18n namespaces complete, no dead nav links (/tenants→/clientes redirect). billing 34/34, tenancy 33/33 (+2), config 5/5, admin 18/18, typecheck clean.
+  20-1-financial-health-dashboard-mrr-revenue-delinquencies: done
+  20-2-tenant-list-lifecycle-management: done
+  20-3-operational-health-conversations-ai-cost-risk-signals: done
   epic-20-retrospective: optional

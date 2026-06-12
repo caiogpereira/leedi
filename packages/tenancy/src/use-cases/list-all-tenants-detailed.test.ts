@@ -1,11 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 let executeRows: unknown[] = [];
-const executeSpy = vi.fn(async () => executeRows);
+const executeSpy = vi.fn(async (..._args: unknown[]) => executeRows);
 
+// sql tag mocked to INTERPOLATE the template so tests can assert on the SQL
+// contract (LATERAL joins, the previous-month overage period, ordering) — the
+// raw query is the most complex, mock-blind surface in this use-case.
 vi.mock('@leedi/db', () => ({
   withServiceRole: vi.fn((fn: (tx: unknown) => unknown) => fn({ execute: executeSpy })),
-  sql: Object.assign((..._args: unknown[]) => ({}), { raw: (s: string) => s }),
+  sql: Object.assign(
+    (strings: TemplateStringsArray, ...values: unknown[]) => {
+      let result = '';
+      strings.forEach((s, i) => {
+        result += s;
+        if (i < values.length) result += String(values[i]);
+      });
+      return result;
+    },
+    { raw: (s: string) => s }
+  ),
 }));
 
 import { listAllTenantsDetailed } from './list-all-tenants-detailed.js';
@@ -65,5 +78,22 @@ describe('listAllTenantsDetailed', () => {
       overageValor: 0,
       lastPayment: null,
     });
+  });
+
+  it('builds the SQL contract: LATERAL joins, previous-month overage, no fan-out', async () => {
+    await listAllTenantsDetailed();
+
+    const querySql = String(executeSpy.mock.calls[0]?.[0]);
+    // LATERAL subqueries (not GROUP BY) — the fan-out guard for tenants with >1 sub/invoice.
+    expect(querySql).toContain('LEFT JOIN LATERAL');
+    // Latest NON-cancelled subscription only.
+    expect(querySql).toContain("status != 'cancelada'");
+    // AC#1 "overage last month": usage_counters joined on the PREVIOUS month.
+    expect(querySql).toContain("CURRENT_DATE - INTERVAL '1 month'");
+    expect(querySql).toContain('overage_valor');
+    // Last payment = max invoice pago_em.
+    expect(querySql).toContain('MAX(pago_em)');
+    expect(querySql).toContain('billing_status');
+    expect(querySql).toContain('ORDER BY t.created_at DESC');
   });
 });
