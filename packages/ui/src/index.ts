@@ -2,6 +2,15 @@ export { Button, buttonVariants } from './components/ui/button.js';
 export type { ButtonProps } from './components/ui/button.js';
 export { Input } from './components/ui/input.js';
 export type { InputProps } from './components/ui/input.js';
+export {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+  cardVariants,
+} from './components/ui/card.js';
+export type { CardProps } from './components/ui/card.js';
 export { Textarea } from './components/ui/textarea.js';
 export type { TextareaProps } from './components/ui/textarea.js';
 export {
