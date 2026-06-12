@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
-import { Menu, Sun, Moon } from 'lucide-react';
+import { Menu, Sun, Moon, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@leedi/ui';
 import type { UserTenant } from '@leedi/tenancy';
@@ -49,7 +49,7 @@ export function Header({ tenants, currentTenantId }: HeaderProps) {
   const t = useTranslations('app');
 
   return (
-    <header className="flex h-14 items-center justify-between border-b bg-background px-4">
+    <header className="flex h-14 items-center gap-4 border-b bg-gradient-header px-4 backdrop-blur">
       <div className="flex items-center gap-2">
         {/* Hamburger — visible only on mobile */}
         <button
@@ -66,6 +66,22 @@ export function Header({ tenants, currentTenantId }: HeaderProps) {
           <Menu className="h-5 w-5" />
         </button>
         <span className="hidden text-sm font-bold text-foreground lg:block">{t('title')}</span>
+      </div>
+
+      {/* Visual search (non-functional this round — decorative only) */}
+      <div className="relative hidden max-w-md flex-1 md:block">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+          aria-hidden="true"
+        />
+        <input
+          type="search"
+          disabled
+          aria-hidden="true"
+          tabIndex={-1}
+          placeholder="Buscar…"
+          className="glass-subtle h-9 w-full rounded-md pl-9 pr-3 text-sm text-muted-foreground placeholder:text-muted-foreground focus-visible:outline-none"
+        />
       </div>
 
       <div className="flex items-center gap-2">
