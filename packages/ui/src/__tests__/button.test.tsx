@@ -9,7 +9,7 @@ describe('Button', () => {
     const { container } = render(<Button>Click me</Button>);
     const btn = container.querySelector('button');
     expect(btn).toBeTruthy();
-    expect(btn?.className).toContain('bg-primary');
+    expect(btn?.className).toContain('bg-gradient-cta');
   });
 
   it('renders with correct text', () => {
