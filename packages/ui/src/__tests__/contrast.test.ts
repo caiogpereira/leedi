@@ -32,7 +32,7 @@ const DARK = {
   foreground: '#eceff4',       // hsl(213 27% 94%) — NOT pure white
   primary: '#737cfc',          // hsl(236 96% 72%) — indigo, 5.46:1 on bg
   primaryFg: '#0c1017',
-  muted: '#1f2533',            // hsl(222 20% 16%)
+  muted: '#212631',            // hsl(222 20% 16%)
   mutedFg: '#96a3b6',          // hsl(215 18% 65%) — 7.45:1 on bg
   destructive: '#ef4343',      // hsl(0 84% 60%) — 5.04:1 on bg
   success: '#3bde77',          // hsl(142 71% 55%) — large text
