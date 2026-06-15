@@ -138,12 +138,24 @@
     -webkit-backdrop-filter: blur(4px);
     border: 1px solid hsl(0 0% 100% / 0.06);
   }
+  /* Texture lives on a ::before layer BEHIND the content — never on the element
+     itself, or the mask would also clip the page content (table rows, text). */
   .app-texture {
+    position: relative;
+    isolation: isolate;
+  }
+  .app-texture::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
     background-image: var(--texture-circuit);
     background-repeat: repeat;
     /* Vignette: clear the central content zone, let the traces live only toward
        the edges/corners (as in the Gemini mockup). Also hides the tile-repeat
-       rhythm behind content so the texture reads as ambient depth. */
+       rhythm so the texture reads as ambient depth. Applies to the texture layer
+       ONLY (the ::before), so page content stays fully opaque. */
     -webkit-mask-image: radial-gradient(
       ellipse 80% 85% at 50% 28%,
       transparent 8%,
