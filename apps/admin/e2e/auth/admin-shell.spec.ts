@@ -31,7 +31,9 @@ test.describe('Admin shell navigation (Story 3.2)', () => {
     await page.goto('/');
 
     const header = page.locator('header');
-    await expect(header.getByText('ADMIN')).toBeVisible();
+    // `exact: true` isolates the "ADMIN" badge from the role card ("Admin" /
+    // "Super Admin"), which the redesigned header now also renders.
+    await expect(header.getByText('ADMIN', { exact: true })).toBeVisible();
     // Admin has no per-tenant switcher (it operates across all tenants).
     await expect(header.getByText(/selecionar empresa/i)).toHaveCount(0);
   });
