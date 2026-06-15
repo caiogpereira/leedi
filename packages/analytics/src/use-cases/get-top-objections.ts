@@ -49,8 +49,8 @@ export async function getTopObjections(
         FROM lead_journey_events lje
         LEFT JOIN leads l ON l.id = lje.lead_id
         WHERE lje.tipo = 'objecao'
-          AND lje.created_at >= ${from}
-          AND lje.created_at <= ${to}
+          AND lje.created_at >= ${from.toISOString()}
+          AND lje.created_at <= ${to.toISOString()}
       ),
       grouped AS (
         SELECT

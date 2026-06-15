@@ -76,8 +76,8 @@ export async function getTenantSalesMetrics(
         ) then cw.id end) as int) as windows_with_reply
       from conversation_windows cw
       where cw.billable = true
-        and cw.created_at >= ${from}
-        and cw.created_at <= ${to}
+        and cw.created_at >= ${from.toISOString()}
+        and cw.created_at <= ${to.toISOString()}
     `);
     const taxaRow = (taxaRows as unknown as Array<{ windows_with_reply: unknown }>)[0];
     const windows_with_reply = Number(taxaRow?.windows_with_reply ?? 0);

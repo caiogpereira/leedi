@@ -262,7 +262,10 @@ Outline: Hotmart sandbox + webhook secret → `${tunnel}/api/webhooks/hotmart`.
 
 | # | Journey | Type | Finding | Status / action |
 |---|---|---|---|---|
-| _(empty — first session populates this)_ | | | | |
+| F-01 | J-10 / home | **Bug (HIGH)** | **Analytics `sales` + `objections` 500 for every tenant, always.** Root cause: `getTenantSalesMetrics` + `getTopObjections` pass JS `Date` objects (`${from}`/`${to}`) into a raw `tx.execute(sql\`…\`)`; postgres.js v3.4.9 can't serialize a `Date` param in the prepared-statement Bind path → `TypeError [ERR_INVALID_ARG_TYPE] … Received an instance of Date` (node:buffer `Buffer.byteLength`). Fails with **zero data** too (Bind happens before execution). Affects the **dashboard home** widgets (Conversas/Conversões/objeções show `...` forever) **and** `/relatorios` sales+objections. Pre-existing (branch didn't touch `packages/analytics`; last edit = Epic 15 review `5c83a5f`); invisible to unit tests because they mock the DB driver. Verified via isolated repro (`scripts/debug-analytics.ts`) + the same SQL runs clean when dates are passed as ISO strings. **Fix:** interpolate `from.toISOString()`/`to.toISOString()` (or cast) in the two raw `tx.execute` calls. | **→ propose PL-N (launch-gating: core dashboard 500).** Fix candidate identified. Awaiting Caio: fix now or log+defer. |
+| F-02 | J-01 | Confirmed OK | **PL-19 fix live.** Logged-out hit on dashboard `:3001` redirects to `${BETTER_AUTH_URL}/login` = `:3000/login?redirect=%2F` (real web origin), not a hardcoded literal. Static: redirect path derives from `BETTER_AUTH_URL` in `actions.ts:20` + `middleware.ts:18` (only `localhost:3000` literals are the `??` fallback + the `.replace(':3000', …)` source token). | Closed — PL-19 verified. |
+| F-03 | J-11 | Bug (to triage) | `GET /api/tenants/{id}/usage/current` → **404** on dashboard home (plan-usage widget). To investigate under J-11 (could be missing route or upstream 404). | Open — revisit in J-11. |
+| F-04 | home | Cosmetic | `/favicon.ico` 404 on dashboard. | Low. |
 
 ### Pre-identified to confirm (found while writing this roadmap)
 - **`/relatorios` sidebar link** (J-10): `Sidebar.tsx:40` links to `/relatorios` but no `app/(shell)/relatorios/page.tsx` exists — suspected dead link. Confirm + fix or repoint.
