@@ -55,8 +55,9 @@
 
     --sidebar: 240 6% 98%;
 
-    /* Circuit texture — black strokes at ~2.5% alpha for light mode */
-    --texture-circuit: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' stroke='%23000000' stroke-opacity='0.025' stroke-width='1'%3E%3Cpath d='M0 30h21m18 0h21M30 0v21m0 18v21'/%3E%3Ccircle cx='30' cy='30' r='3'/%3E%3Ccircle cx='0' cy='30' r='1.5'/%3E%3Ccircle cx='60' cy='30' r='1.5'/%3E%3Ccircle cx='30' cy='0' r='1.5'/%3E%3Ccircle cx='30' cy='60' r='1.5'/%3E%3C/g%3E%3C/svg%3E");
+    /* Circuit texture — organic PCB traces: large 240px tile, asymmetric routing,
+       rounded bends + a diagonal, sparse pads/vias. Black strokes ~2.2% (light). */
+    --texture-circuit: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cg fill='none' stroke='%23000000' stroke-opacity='0.022' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M0 40H72Q88 40 88 56V92Q88 108 104 108H136Q152 108 152 92V56Q152 40 168 40H240'/%3E%3Cpath d='M200 0V56Q200 72 184 72H160Q144 72 144 88V160Q144 176 160 176H184Q200 176 200 192V240'/%3E%3Cpath d='M40 200L72 168Q80 160 92 160H120'/%3E%3Cpath d='M214 214L182 182Q176 176 168 176'/%3E%3Cpath d='M24 104H52Q60 104 60 96'/%3E%3Ccircle cx='182' cy='182' r='3'/%3E%3C/g%3E%3Cg fill='%23000000' fill-opacity='0.028'%3E%3Ccircle cx='104' cy='108' r='2.5'/%3E%3Ccircle cx='144' cy='88' r='2.5'/%3E%3Ccircle cx='120' cy='160' r='2.5'/%3E%3Ccircle cx='24' cy='104' r='2'/%3E%3Ccircle cx='200' cy='40' r='2'/%3E%3C/g%3E%3C/svg%3E");
   }
 
   .dark {
@@ -107,8 +108,10 @@
 
     --sidebar: 222 32% 6%;         /* slightly darker than app */
 
-    /* Circuit texture — white strokes at ~4% alpha baked into the SVG */
-    --texture-circuit: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.04' stroke-width='1'%3E%3Cpath d='M0 30h21m18 0h21M30 0v21m0 18v21'/%3E%3Ccircle cx='30' cy='30' r='3'/%3E%3Ccircle cx='0' cy='30' r='1.5'/%3E%3Ccircle cx='60' cy='30' r='1.5'/%3E%3Ccircle cx='30' cy='0' r='1.5'/%3E%3Ccircle cx='30' cy='60' r='1.5'/%3E%3C/g%3E%3C/svg%3E");
+    /* Circuit texture — organic PCB traces: large 240px tile, asymmetric routing,
+       rounded bends + a diagonal, sparse pads/vias. White strokes ~3.2% (dark) —
+       kept faint/ambient like the Gemini mockup. */
+    --texture-circuit: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.032' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M0 40H72Q88 40 88 56V92Q88 108 104 108H136Q152 108 152 92V56Q152 40 168 40H240'/%3E%3Cpath d='M200 0V56Q200 72 184 72H160Q144 72 144 88V160Q144 176 160 176H184Q200 176 200 192V240'/%3E%3Cpath d='M40 200L72 168Q80 160 92 160H120'/%3E%3Cpath d='M214 214L182 182Q176 176 168 176'/%3E%3Cpath d='M24 104H52Q60 104 60 96'/%3E%3Ccircle cx='182' cy='182' r='3'/%3E%3C/g%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='104' cy='108' r='2.5'/%3E%3Ccircle cx='144' cy='88' r='2.5'/%3E%3Ccircle cx='120' cy='160' r='2.5'/%3E%3Ccircle cx='24' cy='104' r='2'/%3E%3Ccircle cx='200' cy='40' r='2'/%3E%3C/g%3E%3C/svg%3E");
   }
 }
 
@@ -138,5 +141,18 @@
   .app-texture {
     background-image: var(--texture-circuit);
     background-repeat: repeat;
+    /* Vignette: clear the central content zone, let the traces live only toward
+       the edges/corners (as in the Gemini mockup). Also hides the tile-repeat
+       rhythm behind content so the texture reads as ambient depth. */
+    -webkit-mask-image: radial-gradient(
+      ellipse 80% 85% at 50% 28%,
+      transparent 8%,
+      #000 78%
+    );
+    mask-image: radial-gradient(
+      ellipse 80% 85% at 50% 28%,
+      transparent 8%,
+      #000 78%
+    );
   }
 }
