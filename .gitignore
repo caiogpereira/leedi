@@ -25,3 +25,5 @@ _bmad-output/implementation-artifacts/*.diff
 test-results/
 playwright-report/
 playwright/.cache/
+.playwright-mcp/
+scripts/test-leads.csv
