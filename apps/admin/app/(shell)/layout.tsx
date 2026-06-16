@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getSession, getWorkspaceAdminRole } from "@leedi/auth";
+import { env } from "@leedi/config";
 import { SidebarProvider } from "../../components/shell/sidebar-context";
 import { AdminSidebar } from "../../components/shell/AdminSidebar";
 import { AdminHeader } from "../../components/shell/AdminHeader";
@@ -21,12 +22,16 @@ export default async function AdminShellLayout({
   const session = await getSession(requestHeaders);
 
   if (!session?.user?.id) {
-    redirect("/login");
+    // Login lives on the web app origin (BETTER_AUTH_URL), not this admin app —
+    // a relative `/login` 404s here (no such route, no middleware). F-28.
+    redirect(new URL("/login", env.BETTER_AUTH_URL).toString());
   }
 
   const wsRole = await getWorkspaceAdminRole(session.user.id);
   if (wsRole !== "super_admin") {
-    redirect("/login");
+    // Authenticated but not a super-admin: this is a forbidden access, not a
+    // missing session — send them to the in-app /403 page (F-28).
+    redirect("/403");
   }
 
   return (
