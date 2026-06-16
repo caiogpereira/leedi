@@ -5,6 +5,11 @@ export type { Auth, Session } from './auth.js';
 export { hasSessionCookie } from './edge.js';
 export { registerUser } from './use-cases/register-user.js';
 export type { RegisterInput, RegisterResult } from './use-cases/register-user.js';
+export { provisionSelfServeTenant } from './use-cases/provision-self-serve-tenant.js';
+export type {
+  ProvisionSelfServeInput,
+  ProvisionSelfServeResult,
+} from './use-cases/provision-self-serve-tenant.js';
 export { loginUser } from './use-cases/login-user.js';
 export type { LoginResult } from './use-cases/login-user.js';
 export { logoutUser } from './use-cases/logout-user.js';

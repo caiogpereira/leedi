@@ -5,6 +5,7 @@ import { createAuthMiddleware, APIError } from 'better-auth/api';
 import { db, schema } from '@leedi/db';
 import { env } from '@leedi/config';
 import { passwordSchema } from './schemas/password.js';
+import { provisionSelfServeTenant } from './use-cases/provision-self-serve-tenant.js';
 
 /**
  * Enforces the full password policy (Story 2.1 — min 8 + uppercase + digit) at
@@ -105,6 +106,25 @@ export const auth = betterAuth({
     sendVerificationEmail: async ({ user, url }) => {
       const { sendVerificationEmail } = await import('./email-senders.js');
       await sendVerificationEmail(user.email, url);
+    },
+    // F-31: self-serve signup provisions nothing on its own. Once the user
+    // confirms their email, create their workspace + trial tenant + owner
+    // membership so they land in /onboarding instead of "Nenhum workspace
+    // encontrado". Idempotent; failures are swallowed so a provisioning hiccup
+    // never blocks the verification itself (the next login retries via the
+    // shell's missing-membership path once that fallback exists).
+    afterEmailVerification: async (user) => {
+      try {
+        await provisionSelfServeTenant({
+          userId: user.id,
+          email: user.email,
+          name: user.name,
+        });
+      } catch (err) {
+        // Don't let a provisioning failure block email verification. Log so it's
+        // visible; never log tokens/PII (err here is a DB error, safe).
+        console.error('[auth] self-serve tenant provisioning failed', err);
+      }
     },
   },
   // Global request hook: enforce the password policy on the native endpoints
