@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
-import { Menu, Sun, Moon, ShieldCheck, Search } from 'lucide-react';
+import { Menu, Sun, Moon, ShieldCheck, Search, LogOut } from 'lucide-react';
 import { cn, Avatar } from '@leedi/ui';
 import { useSidebar } from './sidebar-context';
+import { logoutAction } from '../../app/actions';
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -98,6 +99,20 @@ export function AdminHeader() {
           </div>
         </div>
         <ThemeToggle />
+        <form action={logoutAction}>
+          <button
+            type="submit"
+            aria-label="Sair"
+            className={cn(
+              'inline-flex h-9 w-9 items-center justify-center rounded-md',
+              'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+              'transition-colors'
+            )}
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </form>
       </div>
     </header>
   );
