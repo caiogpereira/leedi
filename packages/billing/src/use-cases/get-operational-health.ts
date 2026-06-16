@@ -129,7 +129,7 @@ export async function getOperationalHealth(usdToBrlRate: number): Promise<Operat
       ) owner ON true
       WHERE uc.periodo = TO_CHAR(CURRENT_DATE, 'YYYY-MM')
         AND uc.conversas_limite > 0
-        AND uc.conversas_usadas >= uc.conversas_limite * ${NEAR_LIMIT_THRESHOLD}
+        AND uc.conversas_usadas >= uc.conversas_limite::numeric * ${NEAR_LIMIT_THRESHOLD}
       ORDER BY usage_pct DESC
     `)) as Array<{
       tenant_id: string;
