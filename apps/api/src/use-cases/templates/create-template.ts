@@ -40,7 +40,10 @@ export const TemplateComponentesSchema = z.object({
 
 const VariavelSchema = z.object({
   index: z.number().int().positive(),
-  exemplo: z.string().min(1),
+  // F-20: an example is required only when SUBMITTING to Meta ("obrigatório para
+  // envio"), not for saving a rascunho. Allow empty/missing here; submitTemplate
+  // enforces a non-empty example for every variable before the Meta call.
+  exemplo: z.string().default(''),
 });
 
 export const CreateTemplateSchema = z.object({

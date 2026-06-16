@@ -30,6 +30,8 @@ const CONNECTION_ROW = {
 
 let updatedValues: unknown[] = [];
 let shouldAdapterThrow = false;
+// F-20: lets a test drive the draft's variables (e.g. a blank example).
+let draftVariaveis: { index: number; exemplo: string }[] = [{ index: 1, exemplo: 'João' }];
 
 // Mock class constructor properly
 vi.mock('@leedi/connection', () => ({
@@ -44,23 +46,18 @@ vi.mock('@leedi/connection', () => ({
 }));
 
 vi.mock('@leedi/db', () => {
-  let withTenantCallCount = 0;
-
+  // Unified tx supporting both select (load template) and update (flip status),
+  // so the mock does not depend on call-count parity (which leaked across tests).
   return {
-    withTenant: vi.fn((_tenantId: string, fn: (tx: unknown) => unknown) => {
-      withTenantCallCount++;
-      if (withTenantCallCount % 2 === 1) {
-        return fn({
-          select: () => ({
-            from: () => ({
-              where: () => ({
-                limit: () => Promise.resolve([DRAFT_TEMPLATE]),
-              }),
+    withTenant: vi.fn((_tenantId: string, fn: (tx: unknown) => unknown) =>
+      fn({
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              limit: () => Promise.resolve([{ ...DRAFT_TEMPLATE, variaveis: draftVariaveis }]),
             }),
           }),
-        });
-      }
-      return fn({
+        }),
         update: () => ({
           set: () => ({
             where: () => ({
@@ -72,8 +69,8 @@ vi.mock('@leedi/db', () => {
             }),
           }),
         }),
-      });
-    }),
+      })
+    ),
     withServiceRole: vi.fn((_fn: (tx: unknown) => unknown) =>
       _fn({
         select: () => ({
@@ -101,6 +98,7 @@ vi.mock('@leedi/observability', () => ({ captureException: vi.fn() }));
 beforeEach(() => {
   updatedValues = [];
   shouldAdapterThrow = false;
+  draftVariaveis = [{ index: 1, exemplo: 'João' }];
   vi.clearAllMocks();
 });
 
@@ -119,6 +117,17 @@ describe('submitTemplate', () => {
     const { submitTemplate } = await import('../submit-template.js');
     await expect(submitTemplate(TENANT_ID, TEMPLATE_ID)).rejects.toThrow(
       'duplicate template name'
+    );
+    expect(updatedValues).toHaveLength(0);
+  });
+
+  // F-20: a rascunho may be saved with blank variable examples, but submitting
+  // it must be rejected up front (never reaches Meta, never flips status).
+  it('rejects submit when a variable has a blank example', async () => {
+    draftVariaveis = [{ index: 1, exemplo: '' }];
+    const { submitTemplate } = await import('../submit-template.js');
+    await expect(submitTemplate(TENANT_ID, TEMPLATE_ID)).rejects.toThrow(
+      /exemplo para cada variável/
     );
     expect(updatedValues).toHaveLength(0);
   });

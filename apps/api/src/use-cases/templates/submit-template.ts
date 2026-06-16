@@ -80,6 +80,17 @@ export async function submitTemplate(
     );
   }
 
+  // F-20: examples are optional while drafting but REQUIRED to submit — Meta
+  // rejects a template whose variables lack examples. Enforce here so a draft
+  // saved with blank examples fails fast with a clear message instead of a
+  // raw Meta API error.
+  const variaveisToSubmit = (template.variaveis ?? []) as unknown as TemplateVariavel[];
+  if (variaveisToSubmit.some((v) => !v.exemplo || v.exemplo.trim() === '')) {
+    throw new TemplateValidationError(
+      'Preencha um exemplo para cada variável antes de enviar o template para aprovação.'
+    );
+  }
+
   // Load the WhatsApp connection for this template's WABA. Prefer the template's
   // own connectionId so a tenant with multiple numbers submits to the correct WABA;
   // fall back to the tenant's connection (deterministic order) for V1 single-
