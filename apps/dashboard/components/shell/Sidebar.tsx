@@ -13,7 +13,6 @@ import {
   Megaphone,
   FileText,
   Send,
-  BarChart3,
   Settings,
   FlaskConical,
   X,
@@ -37,7 +36,8 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/campanhas', icon: Megaphone, labelKey: 'campanhas' },
   { href: '/templates', icon: FileText, labelKey: 'templates' },
   { href: '/disparos', icon: Send, labelKey: 'disparos' },
-  { href: '/relatorios', icon: BarChart3, labelKey: 'relatorios' },
+  // F-23: '/relatorios' had no page (dead 404 link). Analytics live on the home
+  // dashboard ('/'); a dedicated /relatorios page is deferred to future work.
   { href: '/configuracoes', icon: Settings, labelKey: 'configuracoes' },
 ];
 
