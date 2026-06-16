@@ -59,6 +59,23 @@ export function Step2({ tenantId, stepData, onAdvance }: Props) {
     }
   }
 
+  async function handleSkip() {
+    // F-34: WhatsApp connection requires Meta credentials the user may not have
+    // ready. Mirror the Gateway step's skip so onboarding is never hard-blocked —
+    // the number can be connected later in /settings/whatsapp.
+    setSubmitting(true);
+    try {
+      await fetch(`/api/tenants/${tenantId}/onboarding/progress`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ step: 2, data: { skipped: true } }),
+      });
+      onAdvance(3, 2);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function handleNext() {
     if (!connectResult) return;
     setSubmitting(true);
@@ -155,13 +172,22 @@ export function Step2({ tenantId, stepData, onAdvance }: Props) {
       )}
 
       <div className="mt-8 flex items-center justify-between">
-        <Button
-          variant="outline"
-          onClick={handleValidate}
-          disabled={validating || !phoneNumberId || !wabaId || !accessToken}
-        >
-          {validating ? 'Validando...' : 'Validar conexão'}
-        </Button>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            onClick={handleValidate}
+            disabled={validating || !phoneNumberId || !wabaId || !accessToken}
+          >
+            {validating ? 'Validando...' : 'Validar conexão'}
+          </Button>
+          <button
+            className="text-sm text-muted-foreground hover:text-foreground underline"
+            onClick={handleSkip}
+            disabled={submitting}
+          >
+            Pular por enquanto
+          </button>
+        </div>
 
         <Button onClick={handleNext} disabled={!connectResult || submitting}>
           {submitting ? 'Salvando...' : 'Próximo'}
