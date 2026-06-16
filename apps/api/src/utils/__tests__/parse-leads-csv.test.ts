@@ -36,6 +36,13 @@ describe('parseLeadsCsv', () => {
     expect(valid[0]?.telefone).toBe('+5511999998888');
   });
 
+  it('normalizes a 10-digit BR landline as +55 (not +1) — F-06', () => {
+    const csv = ['telefone', '1133334444'].join('\n');
+    const { valid, errors } = parseLeadsCsv(csv);
+    expect(errors).toHaveLength(0);
+    expect(valid[0]?.telefone).toBe('+551133334444');
+  });
+
   it('reports a malformed phone as an error but keeps valid rows', () => {
     const csv = [
       'telefone,nome',

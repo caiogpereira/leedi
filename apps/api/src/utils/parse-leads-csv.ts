@@ -57,6 +57,9 @@ const E164_RE = /^\+\d{10,15}$/;
  * Rules (in order):
  *  - Strip every non-digit character.
  *  - 11 digits, not starting with "55"  -> assume local BR (DDD + mobile), prefix "+55".
+ *  - 10 digits, not starting with "55"  -> assume local BR (DDD + landline), prefix "+55".
+ *    Without this, a 10-digit landline falls through to the catch-all and becomes
+ *    "+1…" (read as NANP / US-Canada) — silent wrong-country corruption (F-06).
  *  - 12 or 13 digits starting with "55" -> already has country code, prefix "+".
  *  - Otherwise treat the digits as already-international and prefix "+".
  *
@@ -69,6 +72,10 @@ function normalizeToE164(rawValue: string): string | null {
   let candidate: string;
   if (digits.length === 11 && !digits.startsWith('55')) {
     // Typical BR mobile entered without country code: DD + 9 digits.
+    candidate = `+55${digits}`;
+  } else if (digits.length === 10 && !digits.startsWith('55')) {
+    // BR landline entered without country code: DD + 8 digits. Must come before
+    // the catch-all, which would otherwise produce "+1…" (NANP) — see F-06.
     candidate = `+55${digits}`;
   } else if ((digits.length === 12 || digits.length === 13) && digits.startsWith('55')) {
     candidate = `+${digits}`;
