@@ -124,6 +124,15 @@
   route → confirm an `audit_logs` row (actor = real super-admin, target = tenant). **Known
   gap:** direct dashboard server actions (not the `/api/tenants/*` proxies — e.g. team
   `inviteAction`) are NOT covered by the API-layer audit. *Exit:* audit row verified in staging.
+  **Added 2026-06-16 (F-30):** impersonation scoping fixed to platform-wide + browser-verified
+  (start works cross-workspace, helper-based pages render) — but **33 dashboard content pages
+  re-implement `listUserTenants(session.user.id)+header` inline**, so under impersonation they
+  read the super-admin's empty memberships and render "Nenhum workspace encontrado". Full
+  dashboard render under impersonation needs routing those pages through the shared
+  `getCurrentTenantContext`/`requireTenantRouteAccess` helper (which is now impersonation-aware).
+  Pre-existing (broader than the old `/settings/*`-only note), LOW. *Exit:* the 33 pages resolve
+  the active tenant via the shared helper, OR explicit decision to keep impersonation read-only
+  on helper-gated pages.
 
 - [ ] **PL-11 · [Epic 4 / Story 4.4] Inbound webhook rate limiting.** Task 8 deferred — V1
   relies on HMAC signature + dedup for abuse protection; no `@upstash/ratelimit` on the
