@@ -78,9 +78,10 @@ describe('Sidebar', () => {
     expect(homeLink?.getAttribute('aria-current')).toBeNull();
   });
 
-  it('renders all 11 nav items', () => {
+  it('renders all 10 nav items', () => {
     render(<Sidebar />);
     const links = screen.getAllByRole('link');
-    expect(links.length).toBe(11);
+    // 10 since the dead "/relatorios" link was removed (F-23, commit 86f8bfc).
+    expect(links.length).toBe(10);
   });
 });
