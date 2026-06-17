@@ -43,9 +43,10 @@ describe('AdminSidebar', () => {
     expect(screen.getByRole('navigation', { name: 'Navegação administrativa' })).toBeTruthy();
   });
 
-  it('renders exactly 5 admin nav items', () => {
+  it('renders exactly 4 admin nav items', () => {
     render(<AdminSidebar />);
-    expect(screen.getAllByRole('link').length).toBe(5);
+    // 4 since the dead "/configuracoes" link was removed (admin settings unbuilt).
+    expect(screen.getAllByRole('link').length).toBe(4);
   });
 
   it('highlights the active route with aria-current="page"', async () => {

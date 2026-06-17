@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { cn } from '@leedi/ui';
-import { LayoutDashboard, Users, DollarSign, Activity, Settings, X, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Users, DollarSign, Activity, X, ShieldCheck } from 'lucide-react';
 import { useSidebar } from './sidebar-context';
 
 interface AdminNavItem {
@@ -13,12 +13,14 @@ interface AdminNavItem {
   labelKey: string;
 }
 
-const ADMIN_NAV_ITEMS: AdminNavItem[] = [
+export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { href: '/', icon: LayoutDashboard, labelKey: 'visaoGeral' },
   { href: '/clientes', icon: Users, labelKey: 'clientes' },
   { href: '/financeiro', icon: DollarSign, labelKey: 'financeiro' },
   { href: '/operacional', icon: Activity, labelKey: 'operacional' },
-  { href: '/configuracoes', icon: Settings, labelKey: 'configuracoes' },
+  // NOTE: no '/configuracoes' entry — the admin settings section is not built
+  // yet, so a nav link to it would 404. Re-add together with the page when admin
+  // settings exist (guarded by nav-routes.test.ts).
 ];
 
 function AdminNavLink({ item }: { item: AdminNavItem }) {
