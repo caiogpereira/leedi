@@ -21,10 +21,11 @@ export interface ImpersonationContext {
  *   - `leedi_impersonation_expires` is in the future (server-side re-validation of
  *     the 1-hour window — the cookie max-age alone is client-trustable);
  *   - the session user is a `super_admin` in `workspace_admins`;
- *   - the target tenant exists AND belongs to that admin's workspace.
+ *   - the target tenant exists (no workspace-scoping — `super_admin` is a
+ *     platform-wide role; see `startImpersonation`).
  *
  * These mirror `startImpersonation` exactly, so the API authorization can never be
- * looser than the impersonation it was granted under.
+ * looser (nor stricter) than the impersonation it was granted under.
  */
 export async function resolveImpersonation(
   getCookieValue: (name: string) => string | undefined,
@@ -48,12 +49,12 @@ export async function resolveImpersonation(
 
   const [tenant] = await withServiceRole(async (tx) =>
     tx
-      .select({ workspaceId: schema.tenants.workspaceId })
+      .select({ id: schema.tenants.id })
       .from(schema.tenants)
       .where(eq(schema.tenants.id, tenantId))
       .limit(1)
   );
-  if (!tenant || tenant.workspaceId !== admin.workspaceId) return null;
+  if (!tenant) return null;
 
   return { realUserId, workspaceId: admin.workspaceId };
 }

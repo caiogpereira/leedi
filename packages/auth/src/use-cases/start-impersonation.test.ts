@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Capture the insert/values mock so we can assert on the audited payload, and a
 // mutable holder for the `withServiceRole` tenant lookup result (the target-tenant
-// existence + workspace-ownership check added by the 2.8 security patch).
+// EXISTENCE check — super_admin is platform-wide, so there is no workspace-scoping).
 const { insertValues, tenantRowsRef, WORKSPACE_ID } = vi.hoisted(() => ({
   insertValues: vi.fn(),
   tenantRowsRef: { current: [] as Array<{ workspaceId: string }> },
@@ -38,7 +38,7 @@ describe('startImpersonation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     insertValues.mockResolvedValue(undefined);
-    // Default: the target tenant exists and belongs to the admin's workspace.
+    // Default: the target tenant exists (workspace is irrelevant to authorization).
     tenantRowsRef.current = [{ workspaceId: WORKSPACE_ID }];
   });
 
@@ -76,12 +76,19 @@ describe('startImpersonation', () => {
     expect(insertValues).not.toHaveBeenCalled();
   });
 
-  it('rejects a tenant in a different workspace (no audit row written)', async () => {
+  it('succeeds across workspaces — super_admin is platform-wide (F-30)', async () => {
+    // A tenant in a DIFFERENT workspace than the admin must still be impersonable:
+    // self-serve signup gives every tenant its own workspace, so requiring a shared
+    // workspace (the old behaviour) made impersonation impossible in practice.
     mockGetAdmin.mockResolvedValueOnce({ role: 'super_admin', workspaceId: WORKSPACE_ID });
     tenantRowsRef.current = [{ workspaceId: '22222222-2222-2222-2222-222222222222' }];
     const result = await startImpersonation('u1', 'tenant-x');
-    expect(result.success).toBe(false);
-    expect(insertValues).not.toHaveBeenCalled();
+    expect(result.success).toBe(true);
+    // Audit row is written under the ACTOR's workspace (mirrors blockTenant).
+    expect(insertValues).toHaveBeenCalledTimes(1);
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId: WORKSPACE_ID, acao: 'impersonate_start' })
+    );
   });
 
   it('writes an impersonate_start audit row with the REAL workspaceId (uuid)', async () => {

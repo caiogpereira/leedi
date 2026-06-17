@@ -82,9 +82,13 @@ describe('resolveImpersonation', () => {
     expect(await resolveImpersonation(cookies(), ADMIN, TENANT)).toBeNull();
   });
 
-  it('rejects a tenant that belongs to a different workspace', async () => {
+  it('allows a tenant in a different workspace — super_admin is platform-wide (F-30)', async () => {
+    // Mirrors startImpersonation: no workspace-scoping. A tenant living in its own
+    // self-serve workspace must still authorize, else writes under impersonation
+    // would be rejected even though impersonation itself was granted.
     tenantRowsRef.current = [{ workspaceId: 'other-workspace' }];
-    expect(await resolveImpersonation(cookies(), ADMIN, TENANT)).toBeNull();
+    const result = await resolveImpersonation(cookies(), ADMIN, TENANT);
+    expect(result).toEqual({ realUserId: ADMIN, workspaceId: WORKSPACE });
   });
 });
 

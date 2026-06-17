@@ -14,6 +14,13 @@ export type StartImpersonationResult =
  * and is rejected here (defense: the entire point of impersonation is auditable
  * write-access, so it is gated to the highest-trust role).
  *
+ * `super_admin` is a PLATFORM-WIDE role: it may impersonate ANY tenant, exactly
+ * like the cross-workspace block/unblock and the global tenant list already do
+ * (`listAllTenantsDetailed`, `blockTenant`). Tenant↔workspace scoping is NOT a
+ * constraint here — self-serve signup gives every tenant its own workspace, so a
+ * tenant almost never shares the admin's workspace, and an earlier same-workspace
+ * check made impersonation impossible in practice (F-30).
+ *
  * The real `workspaceId` is resolved from the `workspace_admins` row (NOT passed
  * in by the caller): `audit_logs.workspace_id` is a `uuid` column, so it must be
  * the genuine workspace UUID, never a placeholder.
@@ -31,21 +38,20 @@ export async function startImpersonation(
     return { success: false, error: 'Apenas super_admin pode impersonar tenants' };
   }
 
-  // AC#1 scopes impersonation to "tenants in the workspace": verify the target
-  // exists AND belongs to the admin's workspace BEFORE writing the audit row or
-  // returning success. Without this, a well-formed but nonexistent/foreign tenant
-  // UUID would set impersonation cookies for a tenant the admin can't support
-  // (and pollute the audit trail). Service-role read because the admin is not a
-  // member of the target tenant.
+  // Verify the target tenant EXISTS before writing the audit row or returning
+  // success — a well-formed but nonexistent tenant UUID would otherwise set
+  // impersonation cookies for nothing and pollute the audit trail. We do NOT
+  // require it to share the admin's workspace (platform-wide role — see above).
+  // Service-role read because the admin is not a member of the target tenant.
   const [tenant] = await withServiceRole(async (tx) =>
     tx
-      .select({ workspaceId: schema.tenants.workspaceId })
+      .select({ id: schema.tenants.id })
       .from(schema.tenants)
       .where(eq(schema.tenants.id, targetTenantId))
       .limit(1)
   );
-  if (!tenant || tenant.workspaceId !== admin.workspaceId) {
-    return { success: false, error: 'Tenant não encontrado neste workspace' };
+  if (!tenant) {
+    return { success: false, error: 'Tenant não encontrado' };
   }
 
   const expiresAt = Date.now() + IMPERSONATION_TTL_MS;
