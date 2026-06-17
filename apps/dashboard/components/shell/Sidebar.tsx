@@ -26,7 +26,7 @@ interface NavItem {
   labelKey: string;
 }
 
-const NAV_ITEMS: NavItem[] = [
+export const NAV_ITEMS: NavItem[] = [
   { href: '/', icon: LayoutDashboard, labelKey: 'dashboard' },
   { href: '/conversas', icon: MessageSquare, labelKey: 'conversas' },
   { href: '/leads', icon: Users, labelKey: 'leads' },
