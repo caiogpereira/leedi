@@ -130,9 +130,15 @@
   read the super-admin's empty memberships and render "Nenhum workspace encontrado". Full
   dashboard render under impersonation needs routing those pages through the shared
   `getCurrentTenantContext`/`requireTenantRouteAccess` helper (which is now impersonation-aware).
-  Pre-existing (broader than the old `/settings/*`-only note), LOW. *Exit:* the 33 pages resolve
-  the active tenant via the shared helper, OR explicit decision to keep impersonation read-only
-  on helper-gated pages.
+  Pre-existing (broader than the old `/settings/*`-only note), LOW. **RESOLVED 2026-06-17
+  (`a58e0ef`..`5ad635f`):** all 31 inline pages + `settings/whatsapp/actions.ts` now route through
+  the impersonation-aware `getCurrentTenantContext`; a guard test
+  (`apps/dashboard/lib/__tests__/no-inline-tenant-resolution.test.ts`) prevents regression;
+  browser-verified across all batches under impersonation (home/leads/agente/conhecimento/
+  templates/disparos/configuracoes render, no 403, no "Nenhum workspace"). **PL-10 now reduces to
+  the original item only:** exercise the impersonated write+audit flow on a deployed env (audit
+  row: actor = real super-admin, target = tenant). Direct-server-action audit coverage remains a
+  separate pre-existing gap.
 
 - [ ] **PL-11 · [Epic 4 / Story 4.4] Inbound webhook rate limiting.** Task 8 deferred — V1
   relies on HMAC signature + dedup for abuse protection; no `@upstash/ratelimit` on the
