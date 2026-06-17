@@ -6,6 +6,29 @@
   "home": {
     "heading": "Visão Geral"
   },
+  "visaoGeral": {
+    "title": "Visão Geral",
+    "subtitle": "Resumo da operação — clientes, receita e sinais de atenção.",
+    "kpi": {
+      "activeClients": "Clientes ativos",
+      "activeClientsHint": "{trial} em trial · {blocked} bloqueados",
+      "mrr": "MRR",
+      "mrrHint": "Receita recorrente mensal",
+      "margin": "Margem estimada",
+      "marginHint": "(MRR − custo IA) / MRR",
+      "newTenants": "Novos clientes no mês"
+    },
+    "alerts": {
+      "title": "Pontos de atenção",
+      "delinquency": "Clientes em atraso",
+      "delinquencyHint": "Ver no Financeiro",
+      "upsell": "Perto do limite (upsell)",
+      "upsellHint": "Ver no Operacional",
+      "churnRisk": "Risco de churn (qualidade)",
+      "churnRiskHint": "Ver no Operacional",
+      "allClear": "Tudo certo — nenhum ponto de atenção no momento."
+    }
+  },
   "adminNav": {
     "visaoGeral": "Visão Geral",
     "clientes": "Clientes",
