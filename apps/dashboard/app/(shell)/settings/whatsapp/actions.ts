@@ -1,8 +1,6 @@
 'use server';
 
-import { headers } from 'next/headers';
-import { getSession } from '@leedi/auth';
-import { listUserTenants } from '@leedi/tenancy';
+import { getCurrentTenantContext } from '../../../../lib/tenant-context';
 import { withTenant, schema, eq } from '@leedi/db';
 import {
   connectWhatsappNumber,
@@ -31,9 +29,8 @@ export async function connectWhatsapp(
   _prev: ConnectState,
   formData: FormData
 ): Promise<ConnectState> {
-  const requestHeaders = await headers();
-  const session = await getSession(requestHeaders);
-  if (!session) {
+  const ctx = await getCurrentTenantContext();
+  if (!ctx) {
     return { status: 'error', error: 'Sessão expirada. Faça login novamente.' };
   }
 
@@ -42,10 +39,10 @@ export async function connectWhatsapp(
     return { status: 'error', error: 'Tenant não identificado.' };
   }
 
-  // Re-validate: ensure the caller is actually an owner of this tenant
-  const tenants = await listUserTenants(session.user.id);
-  const membership = tenants.find((t) => t.tenantId === tenantId);
-  if (!membership || membership.role !== 'owner') {
+  // Re-validate: the active context must be THIS tenant and the caller must be an
+  // owner (a real owner member, or a super_admin impersonating — both resolve to
+  // role 'owner' here). Blocks acting on a tenant other than the active one.
+  if (ctx.tenant.tenantId !== tenantId || ctx.role !== 'owner') {
     return { status: 'error', error: 'Apenas proprietários podem configurar a conexão WhatsApp.' };
   }
 
@@ -80,13 +77,8 @@ export interface ConnectionHealthData {
 }
 
 export async function triggerHealthCheck(tenantId: string): Promise<ConnectionHealthData | null> {
-  const requestHeaders = await headers();
-  const session = await getSession(requestHeaders);
-  if (!session) return null;
-
-  // Validate caller has access to this tenant
-  const tenants = await listUserTenants(session.user.id);
-  if (!tenants.some((t) => t.tenantId === tenantId)) return null;
+  const ctx = await getCurrentTenantContext();
+  if (!ctx || ctx.tenant.tenantId !== tenantId) return null;
 
   await checkConnectionHealth({ tenantId }, healthFactory);
 
