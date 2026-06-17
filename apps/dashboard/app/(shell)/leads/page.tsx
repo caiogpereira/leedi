@@ -1,8 +1,6 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { Check } from "lucide-react";
-import { getSession } from "@leedi/auth";
-import { listUserTenants } from "@leedi/tenancy";
+import { getCurrentTenantContext } from "../../../lib/tenant-context";
 import { listLeads, type LeadTemperatura, type LeadStatus } from "@leedi/lead";
 import { LeadsFilters } from "./leads-filters";
 
@@ -88,29 +86,17 @@ export default async function LeadsPage({
   searchParams: Promise<{ temperatura?: string; status?: string; page?: string }>;
 }) {
   const params = await searchParams;
-  const requestHeaders = await headers();
-  const session = await getSession(requestHeaders);
+  const ctx = await getCurrentTenantContext();
 
-  if (!session) {
-    return (
-      <div className="mx-auto max-w-2xl p-8">
-        <p className="text-muted-foreground">Sessão expirada.</p>
-      </div>
-    );
-  }
-
-  const tenants = await listUserTenants(session.user.id);
-  const headerTenantId = requestHeaders.get("x-leedi-tenant-id");
-  const currentTenant =
-    tenants.find((t) => t.tenantId === headerTenantId) ?? tenants[0];
-
-  if (!currentTenant) {
+  if (!ctx) {
     return (
       <div className="mx-auto max-w-2xl p-8">
         <p className="text-muted-foreground">Nenhum workspace encontrado.</p>
       </div>
     );
   }
+
+  const currentTenant = ctx.tenant;
 
   const temperatura = pickEnum(params.temperatura, TEMPERATURAS);
   const status = pickEnum(params.status, STATUSES);

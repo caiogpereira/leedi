@@ -1,8 +1,6 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { ArrowLeft } from "lucide-react";
-import { getSession } from "@leedi/auth";
-import { listUserTenants } from "@leedi/tenancy";
+import { getCurrentTenantContext } from "../../../../lib/tenant-context";
 import { ImportForm } from "./import-form";
 
 /**
@@ -13,29 +11,17 @@ import { ImportForm } from "./import-form";
  * the tenantId to the interactive client form.
  */
 export default async function LeadsImportPage() {
-  const requestHeaders = await headers();
-  const session = await getSession(requestHeaders);
+  const ctx = await getCurrentTenantContext();
 
-  if (!session) {
-    return (
-      <div className="mx-auto max-w-2xl p-8">
-        <p className="text-muted-foreground">Sessão expirada.</p>
-      </div>
-    );
-  }
-
-  const tenants = await listUserTenants(session.user.id);
-  const headerTenantId = requestHeaders.get("x-leedi-tenant-id");
-  const currentTenant =
-    tenants.find((t) => t.tenantId === headerTenantId) ?? tenants[0];
-
-  if (!currentTenant) {
+  if (!ctx) {
     return (
       <div className="mx-auto max-w-2xl p-8">
         <p className="text-muted-foreground">Nenhum workspace encontrado.</p>
       </div>
     );
   }
+
+  const currentTenant = ctx.tenant;
 
   return (
     <div className="space-y-6">
