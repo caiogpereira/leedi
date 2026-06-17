@@ -18,6 +18,10 @@ export const schema = z.object({
   BETTER_AUTH_SECRET: z.string().min(32, 'BETTER_AUTH_SECRET must be at least 32 chars'),
   BETTER_AUTH_URL: z.string().url('BETTER_AUTH_URL must be a valid URL'),
   DASHBOARD_URL: z.string().url('DASHBOARD_URL must be a valid URL').default('http://localhost:3001'),
+  // Super-admin app origin. Used by the dashboard to send an admin back to their
+  // admin context when they exit impersonation (the impersonating super_admin has
+  // no membership, so landing on the dashboard root shows "Nenhum workspace").
+  ADMIN_URL: z.string().url('ADMIN_URL must be a valid URL').default('http://localhost:3002'),
   RESEND_API_KEY: z.string().min(1, 'RESEND_API_KEY is required'),
   UPSTASH_REDIS_REST_URL: z.string().url('UPSTASH_REDIS_REST_URL must be a valid URL'),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1, 'UPSTASH_REDIS_REST_TOKEN is required'),

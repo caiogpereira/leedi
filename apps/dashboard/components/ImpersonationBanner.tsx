@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
 interface ImpersonationBannerProps {
   tenantName: string;
+  /** Super-admin app origin to return to on exit (the dashboard root would show
+   *  "Nenhum workspace" since the impersonating super_admin has no membership). */
+  adminUrl: string;
 }
 
 /**
@@ -18,20 +20,21 @@ interface ImpersonationBannerProps {
  *
  * "Sair do modo suporte" POSTs to /api/admin/stop-impersonation, which logs
  * `impersonate_end` and clears the impersonation + active-tenant cookies, then
- * forces a full server re-render so the layout drops the banner and the tenant
- * scope (AC#3).
+ * navigates back to the super-admin app (AC#3). It must NOT land on the dashboard
+ * root: the real super_admin has no membership there, so they'd hit the
+ * "Nenhum workspace" empty state instead of their admin context.
  */
-export function ImpersonationBanner({ tenantName }: ImpersonationBannerProps) {
+export function ImpersonationBanner({ tenantName, adminUrl }: ImpersonationBannerProps) {
   const t = useTranslations('impersonation');
   const [isExiting, setIsExiting] = useState(false);
-  const router = useRouter();
 
   async function handleExit() {
     setIsExiting(true);
     try {
+      // Await the POST so the cookie-clearing Set-Cookie headers are applied
+      // before we leave; then a full cross-origin navigation to the admin app.
       await fetch('/api/admin/stop-impersonation', { method: 'POST' });
-      router.push('/');
-      router.refresh();
+      window.location.assign(adminUrl);
     } finally {
       setIsExiting(false);
     }

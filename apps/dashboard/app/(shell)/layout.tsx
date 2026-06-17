@@ -7,6 +7,7 @@ import { SidebarProvider } from "../../components/shell/sidebar-context";
 import { Sidebar } from "../../components/shell/Sidebar";
 import { Header } from "../../components/shell/Header";
 import { checkUsageBlock } from "@leedi/usage";
+import { env } from "@leedi/config";
 import { PushRegistrationInit } from "../../components/PushRegistrationInit";
 import { withTenant, schema, eq } from "@leedi/db";
 import type { OnboardingConfig } from "@leedi/db";
@@ -93,7 +94,9 @@ export default async function ShellLayout({
   return (
     <SidebarProvider>
       {currentTenantId && <PushRegistrationInit tenantId={currentTenantId} />}
-      {impersonation && <ImpersonationBanner tenantName={impersonation.tenantName} />}
+      {impersonation && (
+        <ImpersonationBanner tenantName={impersonation.tenantName} adminUrl={env.ADMIN_URL} />
+      )}
       {showBlockBanner && (
         <div
           role="alert"
