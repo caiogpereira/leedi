@@ -1,23 +1,14 @@
-import { headers } from 'next/headers';
-import { getSession } from '@leedi/auth';
-import { listUserTenants } from '@leedi/tenancy';
+import { getCurrentTenantContext } from '../../../lib/tenant-context';
 import { UsageHistoryClient } from './usage-history-client';
 
 export default async function UsagePage() {
-  const requestHeaders = await headers();
-  const session = await getSession(requestHeaders);
+  const ctx = await getCurrentTenantContext();
 
-  if (!session) {
-    return <div className="p-8 text-muted-foreground">Sessão expirada.</div>;
-  }
-
-  const tenants = await listUserTenants(session.user.id);
-  const headerTenantId = requestHeaders.get('x-leedi-tenant-id');
-  const currentTenant = tenants.find((t) => t.tenantId === headerTenantId) ?? tenants[0];
-
-  if (!currentTenant) {
+  if (!ctx) {
     return <div className="p-8 text-muted-foreground">Nenhum workspace encontrado.</div>;
   }
+
+  const currentTenant = ctx.tenant;
 
   return <UsageHistoryClient tenantId={currentTenant.tenantId} />;
 }
