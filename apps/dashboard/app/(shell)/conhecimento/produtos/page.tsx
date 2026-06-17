@@ -1,8 +1,6 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { Plus, Archive, Package } from "lucide-react";
-import { getSession } from "@leedi/auth";
-import { listUserTenants } from "@leedi/tenancy";
+import { getCurrentTenantContext } from "../../../../lib/tenant-context";
 import { listProducts } from "@leedi/knowledge";
 
 const TIPO_LABEL: Record<string, string> = {
@@ -40,20 +38,13 @@ export default async function ProdutosPage({
 }) {
   const params = await searchParams;
   const archived = params.archived === "true";
-  const requestHeaders = await headers();
-  const session = await getSession(requestHeaders);
+  const ctx = await getCurrentTenantContext();
 
-  if (!session) {
-    return <div className="p-8 text-muted-foreground">Sessão expirada.</div>;
-  }
-
-  const tenants = await listUserTenants(session.user.id);
-  const headerTenantId = requestHeaders.get("x-leedi-tenant-id");
-  const currentTenant = tenants.find((t) => t.tenantId === headerTenantId) ?? tenants[0];
-
-  if (!currentTenant) {
+  if (!ctx) {
     return <div className="p-8 text-muted-foreground">Nenhum workspace encontrado.</div>;
   }
+
+  const currentTenant = ctx.tenant;
 
   const products = await listProducts({ tenantId: currentTenant.tenantId, archived });
 
