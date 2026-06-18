@@ -8,6 +8,7 @@
 import { withTenant, schema, eq, and } from '@leedi/db';
 import { Client } from '@upstash/qstash';
 import { env } from '@leedi/config';
+import { apiPublicUrl } from '../../utils/api-public-url.js';
 import {
   tierIntervalMs,
   type MessagingTier,
@@ -39,9 +40,6 @@ function qstashClient(): Client {
   return new Client({ token: env.QSTASH_TOKEN });
 }
 
-function apiBaseUrl(): string {
-  return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
-}
 
 export async function createDispatchJob(
   tenantId: string,
@@ -121,7 +119,7 @@ export async function createDispatchJob(
   });
 
   const { messageId } = await qstashClient().publishJSON({
-    url: `${apiBaseUrl()}/api/internal/dispatch/run-job`,
+    url: `${apiPublicUrl()}/api/internal/dispatch/run-job`,
     delay: delaySeconds,
     body: { dispatchJobId: created.id, tenantId },
   });

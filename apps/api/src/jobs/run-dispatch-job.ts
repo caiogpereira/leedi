@@ -7,6 +7,7 @@
 import { withTenant, schema, eq, and, sql, inArray } from '@leedi/db';
 import { Client } from '@upstash/qstash';
 import { env } from '@leedi/config';
+import { apiPublicUrl } from '../utils/api-public-url.js';
 import { resolveSegmentLeadIds, type SegmentFilters } from '../use-cases/segments/evaluate-segment.js';
 import { BATCH_SIZE } from '../use-cases/dispatch/throttle.js';
 
@@ -16,10 +17,6 @@ export interface RunDispatchJobPayload {
 }
 
 const TARGET_INSERT_CHUNK = 500;
-
-function apiBaseUrl(): string {
-  return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
-}
 
 interface ExcludableLead {
   id: string;
@@ -212,7 +209,7 @@ export async function runDispatchJob(
   // Schedule the first batch immediately.
   const qstash = new Client({ token: env.QSTASH_TOKEN });
   await qstash.publishJSON({
-    url: `${apiBaseUrl()}/api/internal/dispatch/process-batch`,
+    url: `${apiPublicUrl()}/api/internal/dispatch/process-batch`,
     delay: 0,
     body: { dispatchJobId, tenantId, offset: 0, batchSize: BATCH_SIZE },
   });

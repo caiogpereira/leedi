@@ -7,14 +7,11 @@
 import { withTenant, schema, eq, and } from '@leedi/db';
 import { Client } from '@upstash/qstash';
 import { env } from '@leedi/config';
+import { apiPublicUrl } from './api-url.js';
 import type { ToolContext } from './types.js';
 
 export interface SolicitarReengajamentoInput {
   motivo: string;
-}
-
-function apiBaseUrl(): string {
-  return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
 }
 
 export async function solicitarReengajamento(
@@ -42,7 +39,7 @@ export async function solicitarReengajamento(
 
   const qstash = new Client({ token: env.QSTASH_TOKEN });
   await qstash.publishJSON({
-    url: `${apiBaseUrl()}/api/internal/gateway/dispatch-recovery-target`,
+    url: `${apiPublicUrl()}/api/internal/gateway/dispatch-recovery-target`,
     delay: 0,
     body: { leadId: ctx.leadId, dispatchRuleId: rule.id, tenantId: ctx.tenantId },
   });

@@ -18,16 +18,13 @@
 import { withTenant, schema, eq, and, sql } from '@leedi/db';
 import { Client } from '@upstash/qstash';
 import { env } from '@leedi/config';
+import { apiPublicUrl } from '../../utils/api-public-url.js';
 import { DispatchValidationError } from './create-dispatch-job.js';
 import { BATCH_SIZE } from './throttle.js';
 
 export interface ResumeDispatchJobResult {
   id: string;
   status: string;
-}
-
-function apiBaseUrl(): string {
-  return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
 }
 
 export async function resumeDispatchJob(
@@ -90,7 +87,7 @@ export async function resumeDispatchJob(
         .where(and(eq(schema.dispatchJobs.tenantId, tenantId), eq(schema.dispatchJobs.id, jobId)));
     });
     await qstash.publishJSON({
-      url: `${apiBaseUrl()}/api/internal/dispatch/process-batch`,
+      url: `${apiPublicUrl()}/api/internal/dispatch/process-batch`,
       delay: 0,
       body: { dispatchJobId: jobId, tenantId, offset: 0, batchSize: BATCH_SIZE },
     });
@@ -106,7 +103,7 @@ export async function resumeDispatchJob(
       .where(and(eq(schema.dispatchJobs.tenantId, tenantId), eq(schema.dispatchJobs.id, jobId)));
   });
   await qstash.publishJSON({
-    url: `${apiBaseUrl()}/api/internal/dispatch/run-job`,
+    url: `${apiPublicUrl()}/api/internal/dispatch/run-job`,
     delay: 0,
     body: { dispatchJobId: jobId, tenantId },
   });

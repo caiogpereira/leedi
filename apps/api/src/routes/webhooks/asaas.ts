@@ -2,11 +2,8 @@ import { Hono } from 'hono';
 import { Redis } from '@upstash/redis';
 import { Client } from '@upstash/qstash';
 import { env } from '@leedi/config';
+import { apiPublicUrl } from '../../utils/api-public-url.js';
 import { AsaasProvider } from '@leedi/billing';
-
-function apiBaseUrl(): string {
-  return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
-}
 
 function redisClient(): Redis {
   return new Redis({
@@ -62,7 +59,7 @@ export function createAsaasWebhookRouter() {
     // dedup key would block reprocessing for 24h and the payment event is lost.
     try {
       await qstashClient().publishJSON({
-        url: `${apiBaseUrl()}/api/internal/billing/process-asaas-event`,
+        url: `${apiPublicUrl()}/api/internal/billing/process-asaas-event`,
         retries: 5,
         body: payload,
       });

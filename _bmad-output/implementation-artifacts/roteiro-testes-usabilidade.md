@@ -243,8 +243,86 @@ Status per journey: `todo` → `in-progress` → `done` / `blocked`.
 3. **Account for onboarding (J-02):** a newly registered account's tenant defaults to `trial` → it redirects into `/onboarding`. The seeded account is `active` and **skips** onboarding, so use a *fresh* registration (needs step 1 working) to test the wizard.
 4. **Local services:** Postgres (Supabase) `DATABASE_URL`, Anthropic API key, Upstash Redis — confirm all set in `.env`.
 
-### Setup runbook 1 — Meta + QStash + tunnel *(to expand at Tier 1)*
-Outline: (1) start a tunnel (ngrok/cloudflared) exposing the API port; (2) Meta Developer App → WhatsApp → get test number, `WHATSAPP_APP_SECRET`, set `WHATSAPP_WEBHOOK_VERIFY_TOKEN`, point the webhook callback at `${tunnel}/api/webhooks/meta`; (3) QStash → `QSTASH_TOKEN` + signing keys, ensure the flush callback URL resolves to the tunnel. See `project_meta_whatsapp_setup` memory for the existing notes. **PL-2.**
+### Setup runbook 1 — Meta + QStash + tunnel (Tier 1)
+
+> **Goal:** a public, STABLE URL forwarding to the local API (`:3003`), plus a Meta test
+> number and QStash credentials, so inbound WhatsApp → agent reply (J-14) can run locally.
+>
+> **Why a tunnel at all:** Meta delivers webhooks and QStash delivers scheduled/delayed jobs
+> from the cloud — neither can reach `localhost`. Both the Meta webhook (`/webhook/meta`) and
+> the QStash callbacks (`/api/internal/*`) must resolve to the tunnel host that forwards to
+> `:3003`. **PL-2.**
+>
+> **⚠️ The PL-14 prerequisite (now fixed in code):** the API used to derive its own callback
+> base URL from `BETTER_AUTH_URL` (swapping `:3000`→`:3003`) — a same-host assumption a tunnel
+> breaks, so QStash callbacks went to `localhost` and the agent never replied. There is now an
+> explicit `API_PUBLIC_URL` env var (`packages/config` schema + a self-contained resolver in
+> `apps/api/src/utils/api-public-url.ts` and `packages/agent/src/tools/api-url.ts`), routed through
+> all 14 external-callback sites (12 in apps/api + the 2 agent tools `agendar_followup` /
+> `solicitar_reengajamento`; tracker item PL-14a). **Set `API_PUBLIC_URL` to the tunnel origin** and
+> every callback resolves correctly. Leaving it unset keeps the old local-only behavior. (The ~50
+> dashboard→API BFF proxies are a *separate* server-to-server concern, PL-14b — not needed for local
+> Tier-1.)
+
+**Step 1 — cloudflared named tunnel (stable URL).** A *named* tunnel keeps the same hostname
+across restarts, so you register the Meta webhook + QStash schedules once. It requires a domain
+whose DNS is managed by Cloudflare (e.g. point `leedi.digital`'s nameservers at Cloudflare, or
+use a spare domain). If you'd rather not move DNS, the quick tunnel
+`cloudflared tunnel --url http://localhost:3003` works but gives a *random* `*.trycloudflare.com`
+URL that rotates every run (then you must re-register the webhook/schedules each session).
+
+1. Install: `winget install --id Cloudflare.cloudflared` (or `choco install cloudflared`).
+2. Authenticate: `cloudflared tunnel login` → pick the Cloudflare-managed zone in the browser.
+3. Create the tunnel: `cloudflared tunnel create leedi-dev` (writes a credentials JSON + a tunnel UUID).
+4. Route a stable hostname to it: `cloudflared tunnel route dns leedi-dev leedi-dev.<your-domain>`.
+5. Create `~/.cloudflared/config.yml`:
+   ```yaml
+   tunnel: leedi-dev
+   credentials-file: C:\Users\<you>\.cloudflared\<tunnel-uuid>.json
+   ingress:
+     - hostname: leedi-dev.<your-domain>
+       service: http://localhost:3003
+     - service: http_status:404
+   ```
+6. Run it (keep it up while testing): `cloudflared tunnel run leedi-dev`.
+7. Set `API_PUBLIC_URL=https://leedi-dev.<your-domain>` in `.env`. This is the base for BOTH
+   the Meta webhook and the QStash callbacks.
+
+**Step 2 — Meta Developer App + test number.** (Platform-level, one-time. See the
+`project_meta_whatsapp_setup` memory for prior notes.)
+
+1. `developers.facebook.com` → create an app, type **Business** → add the **WhatsApp** product.
+2. **App Settings → Basic** → copy the **App Secret** → `WHATSAPP_APP_SECRET` in `.env`.
+3. Keep (or change) `WHATSAPP_WEBHOOK_VERIFY_TOKEN` (currently `leedi-webhook-verify-dev`).
+4. **WhatsApp → Configuration → Webhook → Edit:**
+   - **Callback URL:** `https://leedi-dev.<your-domain>/webhook/meta`  *(note: `/webhook/meta`,
+     NOT `/api/webhooks/meta` — the route is mounted at `app.route('/webhook/meta', …)` in
+     `apps/api/src/app.ts:53`; the GET handshake checks `hub.verify_token` against
+     `WHATSAPP_WEBHOOK_VERIFY_TOKEN`).*
+   - **Verify token:** the same `WHATSAPP_WEBHOOK_VERIFY_TOKEN`.
+   - After it verifies, **Subscribe** to the `messages` field (and `message_template_status_update`
+     for J-16).
+5. **WhatsApp → API Setup:** note the **test number** and its **phone_number_id**, and generate
+   an **access token** with `whatsapp_business_messaging` (+ `whatsapp_business_management` for
+   templates/J-16). These per-tenant values are entered in the dashboard WhatsApp-connect flow
+   (J-13), **not** in `.env`. Add your own WhatsApp number as an allowed **recipient** on the test
+   number so it can message you back.
+
+**Step 3 — QStash (Upstash).**
+
+1. `console.upstash.com` → **QStash** → copy `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`,
+   `QSTASH_NEXT_SIGNING_KEY` → `.env`.
+2. No schedule is needed for the core loop (J-14): the API calls `qstash.publishJSON({ url:
+   `${API_PUBLIC_URL}/api/internal/agent-flush`, delay: 6 })` dynamically per inbound message.
+   Just ensure `API_PUBLIC_URL` (Step 1.7) points at the tunnel so the delivered callback reaches
+   the API. The signing-key check (`Receiver.verify`) does **not** pin the URL, so a changing
+   tunnel host won't 401 the callback.
+3. Optional schedules (later journeys): health-check (`*/15 * * * *` →
+   `${API_PUBLIC_URL}/api/internal/whatsapp/health-check-all`, J-19) and daily billing
+   (`0 12 * * *` → `${API_PUBLIC_URL}/api/internal/billing/daily-check`, J-21).
+
+**Step 4 — restart + smoke.** Restart `pnpm dev` so the API picks up the new `.env`. Verify:
+the tunnel hostname `GET /health` returns 200; `GET https://leedi-dev.<your-domain>/webhook/meta?hub.mode=subscribe&hub.verify_token=<token>&hub.challenge=ping` echoes `ping`. Then proceed to J-13.
 
 ### Setup runbook 2 — Asaas sandbox *(to expand at Tier 2)*
 Outline: Asaas sandbox account → API key + webhook token, `ASAAS_SANDBOX=true`, webhook URL → `${tunnel}/api/webhooks/asaas`.

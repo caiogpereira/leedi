@@ -1,6 +1,7 @@
 import { withTenant, withServiceRole, schema, eq, and, sql } from '@leedi/db';
 import { Client } from '@upstash/qstash';
 import { env } from '@leedi/config';
+import { apiPublicUrl } from '../../utils/api-public-url.js';
 import { captureException } from '@leedi/observability';
 
 const RECOVERY_TIPOS: Record<string, string> = {
@@ -8,10 +9,6 @@ const RECOVERY_TIPOS: Record<string, string> = {
   boleto_gerado: 'boleto_gerado',
   pix_gerado: 'pix_gerado',
 };
-
-function apiBaseUrl(): string {
-  return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
-}
 
 function normalizePhone(raw: string): string {
   if (!raw) return raw;
@@ -154,7 +151,7 @@ export async function handleRecoveryEvent(input: HandleRecoveryEventInput): Prom
 
       const qstash = new Client({ token: env.QSTASH_TOKEN });
       await qstash.publishJSON({
-        url: `${apiBaseUrl()}/api/internal/gateway/dispatch-recovery-target`,
+        url: `${apiPublicUrl()}/api/internal/gateway/dispatch-recovery-target`,
         delay: delayMinutes * 60,
         body: { leadId, dispatchRuleId: rule.id, tenantId, gatewayEventId },
       });

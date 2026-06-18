@@ -8,6 +8,7 @@
 import { withTenant, schema, eq, and, sql } from '@leedi/db';
 import { Client } from '@upstash/qstash';
 import { env } from '@leedi/config';
+import { apiPublicUrl } from '../utils/api-public-url.js';
 import { MetaCloudProvider } from '@leedi/connection';
 import { captureException } from '@leedi/observability';
 
@@ -18,10 +19,6 @@ export interface SendFollowupPayload {
 
 const DEFAULT_FOLLOWUP_MESSAGE =
   'Oi! Passando para retomar nossa conversa. Posso te ajudar com mais alguma coisa?';
-
-function apiBaseUrl(): string {
-  return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
-}
 
 export async function sendFollowup(
   payload: SendFollowupPayload
@@ -144,7 +141,7 @@ export async function sendFollowup(
     const qstash = new Client({ token: env.QSTASH_TOKEN });
     await qstash
       .publishJSON({
-        url: `${apiBaseUrl()}/api/internal/gateway/dispatch-recovery-target`,
+        url: `${apiPublicUrl()}/api/internal/gateway/dispatch-recovery-target`,
         delay: 0,
         body: { leadId: ctx.followup.leadId, dispatchRuleId: rules[0].id, tenantId },
       })

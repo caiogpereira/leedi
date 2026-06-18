@@ -8,6 +8,7 @@
 import { withTenant, schema, eq, and, sql, inArray } from '@leedi/db';
 import { Client } from '@upstash/qstash';
 import { env } from '@leedi/config';
+import { apiPublicUrl } from '../utils/api-public-url.js';
 import { MetaCloudProvider } from '@leedi/connection';
 import { captureException } from '@leedi/observability';
 import { sendNotificationToTenantRole } from '@leedi/notification';
@@ -25,10 +26,6 @@ export interface ProcessDispatchBatchPayload {
   tenantId: string;
   offset?: number;
   batchSize?: number;
-}
-
-function apiBaseUrl(): string {
-  return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
 }
 
 export async function processDispatchBatch(
@@ -214,7 +211,7 @@ export async function processDispatchBatch(
   const lastTargetId = targets[targets.length - 1]?.id ?? 'none';
   const qstash = new Client({ token: env.QSTASH_TOKEN });
   await qstash.publishJSON({
-    url: `${apiBaseUrl()}/api/internal/dispatch/process-batch`,
+    url: `${apiPublicUrl()}/api/internal/dispatch/process-batch`,
     delay: delaySeconds,
     deduplicationId: `dispatch-batch:${dispatchJobId}:${lastTargetId}`,
     body: { dispatchJobId, tenantId, offset: 0, batchSize },

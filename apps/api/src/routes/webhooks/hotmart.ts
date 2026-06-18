@@ -4,13 +4,10 @@ import { HotmartNormalizer } from '@leedi/gateway';
 import { captureException } from '@leedi/observability';
 import { Client } from '@upstash/qstash';
 import { env } from '@leedi/config';
+import { apiPublicUrl } from '../../utils/api-public-url.js';
 
 function qstashClient(): Client {
   return new Client({ token: env.QSTASH_TOKEN });
-}
-
-function apiBaseUrl(): string {
-  return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
 }
 
 export function createHotmartWebhookRouter() {
@@ -145,7 +142,7 @@ async function processHotmartWebhookAsync(
   if (normalized.eventoCanonical) {
     await qstashClient()
       .publishJSON({
-        url: `${apiBaseUrl()}/api/internal/gateway/process-event`,
+        url: `${apiPublicUrl()}/api/internal/gateway/process-event`,
         body: { gatewayEventId, tenantId },
       })
       .catch(captureException);

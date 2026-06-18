@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { withTenant, schema } from '@leedi/db';
-import { env } from '@leedi/config';
+import { apiPublicUrl } from '../../utils/api-public-url.js';
 
 export interface CreateGatewayIntegrationInput {
   tenantId: string;
@@ -12,10 +12,6 @@ export interface CreateGatewayIntegrationResult {
   gateway: string;
   webhookUrlPath: string;
   webhookUrl: string;
-}
-
-function apiBaseUrl(): string {
-  return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
 }
 
 export async function createGatewayIntegration(
@@ -51,6 +47,6 @@ export async function createGatewayIntegration(
     id: integration.id,
     gateway: integration.gateway,
     webhookUrlPath: integration.webhookUrlPath,
-    webhookUrl: `${apiBaseUrl()}/webhooks/hotmart/${integration.webhookUrlPath}`,
+    webhookUrl: `${apiPublicUrl()}/webhooks/hotmart/${integration.webhookUrlPath}`,
   };
 }

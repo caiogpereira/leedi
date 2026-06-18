@@ -9,6 +9,7 @@
 
 import { Client } from '@upstash/qstash';
 import { env } from '@leedi/config';
+import { apiPublicUrl } from '../utils/api-public-url.js';
 import { withTenant, schema, eq, and } from '@leedi/db';
 import type { CampaignConfig } from '../use-cases/campaigns/update-campaign.js';
 import { transitionCampaignPhase } from '../use-cases/campaigns/transition-campaign-phase.js';
@@ -22,10 +23,6 @@ export interface CampaignPhaseTransitionPayload {
 
 function qstashClient(): Client {
   return new Client({ token: env.QSTASH_TOKEN });
-}
-
-function apiBaseUrl(): string {
-  return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
 }
 
 /**
@@ -58,7 +55,7 @@ export async function schedulePhaseTransitionJob(params: {
   }
 
   const { messageId } = await qstash.publishJSON({
-    url: `${apiBaseUrl()}/api/internal/campaign-phase-transition`,
+    url: `${apiPublicUrl()}/api/internal/campaign-phase-transition`,
     delay: Math.ceil(delayMs / 1000),
     body: { tenantId, campaignId, targetPhase } satisfies CampaignPhaseTransitionPayload,
   });

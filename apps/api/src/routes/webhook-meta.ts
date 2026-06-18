@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Redis } from '@upstash/redis';
 import { Client } from '@upstash/qstash';
 import { env } from '@leedi/config';
+import { apiPublicUrl } from '../utils/api-public-url.js';
 import { withServiceRole, schema, eq } from '@leedi/db';
 import { resolveConversationWindow, saveMessage, hasOpenConversationWindow } from '@leedi/messaging';
 import { findOrCreateLeadByPhone } from '@leedi/lead';
@@ -345,9 +346,8 @@ async function processMessage(
   // We pass leadId/connectionId/conversationWindowId so the agent loop (Epic 7) does NOT
   // re-resolve the conversation window — re-calling resolveConversationWindow would
   // double-bump message_count.
-  const apiBaseUrl = env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
   await qstash.publishJSON({
-    url: `${apiBaseUrl}/api/internal/agent-flush`,
+    url: `${apiPublicUrl()}/api/internal/agent-flush`,
     delay: 6,
     body: {
       tenantId,

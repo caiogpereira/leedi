@@ -14,6 +14,7 @@
 import { withTenant, schema, eq, and, sql } from '@leedi/db';
 import { Client } from '@upstash/qstash';
 import { env } from '@leedi/config';
+import { apiPublicUrl } from './api-url.js';
 import type { ToolContext } from './types.js';
 
 export interface AgendarFollowupInput {
@@ -26,10 +27,6 @@ export interface AgendarFollowupInput {
 /** Hard limit: must land inside the active 24h window (kept at 23h for safety margin). */
 const MAX_WINDOW_MS = 23 * 3600 * 1000;
 const WINDOW_ERROR = 'O follow-up deve ser agendado dentro da janela de 24 horas ativa.';
-
-function apiBaseUrl(): string {
-  return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
-}
 
 export async function agendarFollowup(
   input: AgendarFollowupInput,
@@ -87,7 +84,7 @@ export async function agendarFollowup(
   // Schedule the QStash send-followup job.
   const qstash = new Client({ token: env.QSTASH_TOKEN });
   await qstash.publishJSON({
-    url: `${apiBaseUrl()}/api/internal/dispatch/send-followup`,
+    url: `${apiPublicUrl()}/api/internal/dispatch/send-followup`,
     delay: Math.ceil(delayMs / 1000),
     deduplicationId: `followup-${followup!.id}`,
     body: { followupId: followup!.id, tenantId: ctx.tenantId },

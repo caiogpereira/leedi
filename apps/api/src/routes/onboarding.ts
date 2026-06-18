@@ -4,7 +4,7 @@ import { db, withTenant, schema, eq, sql } from '@leedi/db';
 import type { OnboardingConfig } from '@leedi/db';
 import { requireTenantSession } from '../middleware/tenant-session.js';
 import { rateLimitTenant } from '../middleware/rate-limit.js';
-import { env } from '@leedi/config';
+import { apiPublicUrl } from '../utils/api-public-url.js';
 
 const progressPatchSchema = z.object({
   step: z.number().int().min(1).max(5),
@@ -176,10 +176,9 @@ export function createOnboardingRouter() {
     );
 
     const integration = rows[0];
-    const apiBase = env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
 
     if (integration?.webhookUrlPath) {
-      return c.json({ url: `${apiBase}/webhooks/hotmart/${integration.webhookUrlPath}` });
+      return c.json({ url: `${apiPublicUrl()}/webhooks/hotmart/${integration.webhookUrlPath}` });
     }
 
     // No gateway integration yet — return a placeholder URL fragment

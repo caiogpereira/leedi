@@ -158,18 +158,43 @@
   integration), 4.4 (6s debounce flush — needs Redis). Run these on staging once PL-3/PL-4 land.
   *Exit:* cross-tenant reads verified empty under the `leedi_app` role; integration paths exercised.
 
-- [ ] **PL-14 · [Epic 4 → cross-cutting] Internal API URL derivation breaks in production
-  (Finding 5, deferred).** Internal/job/webhook URLs are derived via
-  `env.BETTER_AUTH_URL.replace(':3000', \`:${env.API_PORT}\`)` in ~40 sites (originated in
-  `webhook-meta.ts`). In a production `BETTER_AUTH_URL` with no `:3000` port (e.g.
-  `https://app.leedi.com`), the replace is a **no-op** → the derived URL points at the wrong host,
-  silently breaking QStash callbacks / inter-service calls (inbound debounce flush, dispatch jobs,
-  campaign transitions, billing/followup jobs). **Fix before the first production client:** introduce
-  a dedicated `INTERNAL_API_URL` (or `API_BASE_URL`) env var in `@leedi/config` and replace the
-  string-hack at all call sites (use a dynamic/explicit port, not a hardcoded `:3000`→`:PORT`
-  substitution). Source: `epic-4-code-review-report.md` Finding 5 + `deferred-work.md`.
-  *Exit:* every internal URL resolves correctly under the real production `BETTER_AUTH_URL`
-  (verified in staging), with no reliance on the `:3000` substring being present.
+> **PL-14 split (2026-06-17).** The original PL-14 (`BETTER_AUTH_URL.replace(':3000', …)` breaks
+> in prod) spans ~64 sites across two *different* concerns; conflating them under one checkbox
+> hid that half remains. Split into **PL-14a** (external callbacks — fixed) and **PL-14b**
+> (dashboard→API server-to-server — open, needs its OWN var). The discriminating audit was a
+> repo-wide `publishJSON` grep: the external-callback set is closed at {12 api + 2 agent}.
+
+- [x] **PL-14a · [Epic 4 → cross-cutting] External-callback URL derivation (Meta/QStash).**
+  ✅ **FIXED IN CODE 2026-06-17** (Tier-1 enablement). The 14 sites that build a URL an EXTERNAL
+  service calls back into (QStash job callbacks + the Hotmart webhook URL shown to the tenant)
+  derived it via `env.BETTER_AUTH_URL.replace(':3000', \`:${env.API_PORT}\`)` — a no-op in a prod
+  `BETTER_AUTH_URL` with no `:3000` port → wrong host → silently broken QStash callbacks (inbound
+  flush, dispatch, campaign transitions, billing/followup, gateway recovery, agent-tool followup +
+  reengagement). **Set, verified closed via `publishJSON` grep:** 12 in apps/api (`webhook-meta`,
+  `onboarding`, `webhooks/{hotmart,asaas}`, jobs `{campaign-phase-transition,send-followup,
+  run-dispatch-job,process-dispatch-batch}`, use-cases `dispatch/{create,resume}-dispatch-job` +
+  `gateway/{create-gateway-integration,handle-recovery-event}`) + 2 in packages/agent
+  (`tools/{agendar-followup,solicitar-reengajamento}`). **Fix:** new optional `API_PUBLIC_URL` env
+  var (`packages/config/src/schema.ts`) + a pure, unit-tested resolver `resolveApiPublicUrl` and a
+  singleton `apiPublicUrl()`. Set → wins (trailing slash stripped); unset → legacy derivation
+  (back-compat, local single-host). **Deliberate duplication:** the resolver is a self-contained
+  copy per package (`apps/api/src/utils/api-public-url.ts` + `packages/agent/src/tools/api-url.ts`)
+  reading ONLY `env`, because a shared `@leedi/config` export would break the ~15 suites that
+  `vi.mock('@leedi/config', () => ({ env }))` — kept byte-identical, drift-guarded by a test in
+  each package. api 226/226 + agent 124/124 + config 5/5 green, typecheck clean. *Exit (met in
+  code; verify in staging):* set `API_PUBLIC_URL` to the real API public origin and confirm every
+  callback resolves there.
+
+- [ ] **PL-14b · [cross-cutting] Dashboard→API BFF proxy URL derivation (server-to-server).**
+  ~50 Next route handlers under `apps/dashboard/app/api/tenants/[tenantId]/…/route.ts` forward
+  dashboard requests to the Hono API using the SAME `BETTER_AUTH_URL.replace(':3000', \`:${env.API_PORT}\`)`
+  hack → same no-op-in-prod break. **NOT a Tier-1 blocker** (local single-host works) and **NOT
+  fixable with `API_PUBLIC_URL`:** this is a server-to-server call from the dashboard process to the
+  API, whose prod origin is plausibly an INTERNAL service URL, not the public tunnel — routing it
+  through `API_PUBLIC_URL` would hairpin the dashboard out through the public origin. **Fix:**
+  introduce a distinct `INTERNAL_API_URL` / `API_ORIGIN` env var and route the ~50 proxies through
+  it (a dashboard-side helper, mirroring PL-14a's pattern). Pre-launch, before the first real
+  multi-origin deploy.
 
 - [ ] **PL-16 · [Epic 8 / Stories 8.1 & 8.2] End-to-end playground smoke test.** The review fixed
   a HIGH bug where the playground 500'd on every message (`leadId: 'playground-lead'` → uuid
