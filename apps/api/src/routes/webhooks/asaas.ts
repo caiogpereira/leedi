@@ -44,11 +44,16 @@ export function createAsaasWebhookRouter() {
     if (typeof paymentId !== 'string') {
       return c.text('OK', 200);
     }
+    const event = typeof payload['event'] === 'string' ? (payload['event'] as string) : 'unknown';
 
     // Idempotency optimization: Redis SET NX TTL 24h (AC: #7). This only avoids
     // re-enqueuing concurrent duplicates — the durable idempotency guard is the
     // UNIQUE index on invoices.asaas_payment_id enforced in processBillingEvent.
-    const dedupKey = `webhook:asaas:${paymentId}`;
+    // The key is scoped by (paymentId + event): a payment-id-only key dropped the
+    // 2nd lifecycle event for the same payment within 24h, so for PIX/card (where
+    // PAYMENT_CREATED + PAYMENT_RECEIVED arrive seconds apart) the RECEIVED was
+    // silently dropped → invoice never marked pago / tenant never unblocked (F-38).
+    const dedupKey = `webhook:asaas:${paymentId}:${event}`;
     const redis = redisClient();
     const set = await redis.set(dedupKey, '1', { nx: true, ex: 86400 });
     if (!set) {

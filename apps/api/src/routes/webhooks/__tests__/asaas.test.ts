@@ -106,6 +106,23 @@ describe('POST /webhooks/asaas', () => {
     const res = await post(VALID_BODY, { 'asaas-access-token': WEBHOOK_TOKEN });
     expect(res.status).toBe(500);
     // Dedup key must be released so the retried webhook is reprocessed (no lost payment).
-    expect(redisMock.del).toHaveBeenCalledWith('webhook:asaas:pay-001');
+    expect(redisMock.del).toHaveBeenCalledWith('webhook:asaas:pay-001:PAYMENT_RECEIVED');
+  });
+
+  it('scopes the dedup key by (paymentId + event) so distinct events for the same payment both enqueue (F-38)', async () => {
+    // PIX/card: PAYMENT_CREATED then PAYMENT_RECEIVED for the SAME payment, seconds
+    // apart. A payment-id-only key would drop the RECEIVED; the event-scoped key
+    // lets each through (distinct NX keys).
+    await post(
+      JSON.stringify({ event: 'PAYMENT_CREATED', payment: { id: 'pay-001' } }),
+      { 'asaas-access-token': WEBHOOK_TOKEN }
+    );
+    await post(
+      JSON.stringify({ event: 'PAYMENT_RECEIVED', payment: { id: 'pay-001' } }),
+      { 'asaas-access-token': WEBHOOK_TOKEN }
+    );
+    expect(redisMock.set).toHaveBeenNthCalledWith(1, 'webhook:asaas:pay-001:PAYMENT_CREATED', '1', expect.anything());
+    expect(redisMock.set).toHaveBeenNthCalledWith(2, 'webhook:asaas:pay-001:PAYMENT_RECEIVED', '1', expect.anything());
+    expect(qstashMock.publishJSON).toHaveBeenCalledTimes(2);
   });
 });
