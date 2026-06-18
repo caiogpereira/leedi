@@ -51,7 +51,7 @@ vi.mock('@leedi/db', () => ({
       update: vi.fn().mockReturnValue({
         set: () => ({ where: () => Promise.resolve() }),
       }),
-      execute: vi.fn().mockResolvedValue({ rows: [] }),
+      execute: vi.fn().mockResolvedValue([]),
     });
   }),
   schema: {
@@ -139,7 +139,7 @@ describe('handleRecoveryEvent', () => {
         update: vi.fn().mockReturnValue({
           set: () => ({ where: () => Promise.resolve() }),
         }),
-        execute: vi.fn().mockResolvedValue({ rows: [] }),
+        execute: vi.fn().mockResolvedValue([]),
       } as unknown as Parameters<typeof fn>[0]);
     });
 

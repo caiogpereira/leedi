@@ -22,7 +22,10 @@ const { mockPublishJSON } = vi.hoisted(() => {
 
 vi.mock('@leedi/db', () => {
   const makeTx = (integrationResult: object | null, dupeCount: number) => ({
-    execute: vi.fn().mockResolvedValue({ rows: dupeCount > 0 ? [{}] : [] }),
+    // drizzle-orm/postgres-js resolves query rows DIRECTLY as an array (a RowList),
+    // not a { rows } object — mirror the real driver shape so the mock can't mask
+    // the row-read bug fixed in F-39.
+    execute: vi.fn().mockResolvedValue(dupeCount > 0 ? [{}] : []),
     select: () => ({
       from: () => ({
         where: () => ({

@@ -30,6 +30,9 @@ export function createAsaasWebhookRouter() {
     // Token validation (AC: #6). Asaas sends the auth token in the
     // `asaas-access-token` HTTP header (NOT the JSON body — see Asaas webhook docs).
     // Constant-time comparison guards against timing-based token enumeration.
+    // NOTE: this requires the Asaas webhook to be configured with apiVersion 3
+    // (JSON body + asaas-access-token header). apiVersion 2 sends form-urlencoded
+    // `data=<json>` with no header token and will 400 here. See roteiro F-37.
     const incomingToken = c.req.header('asaas-access-token');
     const provider = new AsaasProvider(env.ASAAS_API_KEY, env.ASAAS_SANDBOX);
     if (!provider.verificarWebhook(incomingToken, env.ASAAS_WEBHOOK_TOKEN)) {

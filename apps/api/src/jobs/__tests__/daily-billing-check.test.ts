@@ -15,12 +15,15 @@ vi.mock('@leedi/db', () => ({
     fn({
       execute: vi.fn().mockImplementation((sqlTag: unknown) => {
         const s = String(sqlTag);
+        // drizzle-orm/postgres-js resolves query rows DIRECTLY as an array (a
+        // RowList) — NOT a { rows } object. The mock must mirror the real driver
+        // shape, otherwise it masks the row-read bug fixed in F-39.
         // The overdue lookup is the only SELECT; everything else is an UPDATE.
         if (s.includes('SELECT')) {
-          return Promise.resolve({ rows: state.overdueRows });
+          return Promise.resolve(state.overdueRows);
         }
         state.sqlExecuted.push(s);
-        return Promise.resolve({ rows: [] });
+        return Promise.resolve([]);
       }),
     })
   ),

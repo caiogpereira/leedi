@@ -143,7 +143,12 @@ export async function handleRecoveryEvent(input: HandleRecoveryEventInput): Prom
       )
     );
 
-    const ruleRows = (rules as unknown as { rows: Array<{ id: string; janela_tempo: unknown }> }).rows;
+    // drizzle-orm/postgres-js returns query rows directly as an array (a RowList),
+    // NOT a { rows } object. The original `.rows` read resolved to `undefined`, so
+    // `.length` threw and the recovery dispatch silently never fired (roteiro F-39).
+    const ruleRows: Array<{ id: string; janela_tempo: unknown }> = Array.isArray(rules)
+      ? (rules as unknown as Array<{ id: string; janela_tempo: unknown }>)
+      : ((rules as unknown as { rows?: Array<{ id: string; janela_tempo: unknown }> }).rows ?? []);
     if (ruleRows.length > 0) {
       const rule = ruleRows[0]!;
       const janelaTempo = rule.janela_tempo as { delay_minutes?: number } | null;

@@ -193,15 +193,14 @@ Status per journey: `todo` → `in-progress` → `done` / `blocked`.
 > Setup runbook 2: Asaas sandbox account, API key, webhook token, `ASAAS_SANDBOX=true`. **PL-2.**
 
 ### J-20 · Subscription & billing
-- **Tier:** 2 · **Driver:** Claude+Caio · **Status:** todo
+- **Tier:** 2 · **Driver:** Claude+Caio · **Status:** **done** — full lifecycle PROVEN end-to-end. Verified: admin "Criar tenant" (CPF `111.444.777-35`, Starter) → Asaas customer+subscription (`cus_000008200852`/`sub_4483bi953549tpzr`, R$697); `asaas-access-token` header gate (401 wrong / 200 right); **real Asaas `PAYMENT_RECEIVED` (apiVersion 3) → QStash(US) → signed callback → invoice `pago` + subscription `ativa`** (DB-confirmed). **This session (2026-06-18) closed the rest:** overdue→**lock** via the real signed QStash daily-check (tenant `active`→`blocked`, surfacing+fixing **F-39 CRITICAL**); pay→**unlock** via a real signed QStash `PAYMENT_RECEIVED` while blocked → invoice `pago` + sub `ativa` + tenant `blocked`→`active` (the `wasBlocked` branch fired the `conta_reativada` stub); **overage toggle** ("Bloquear ao atingir limite") round-tripped via the UI under impersonation (config `false`→`true`→`false`, +2 `impersonation_write` audit rows); **`/configuracoes/cobranca` view** verified in all 3 states (Ativa+Pago / red "Conta suspensa" banner+Atrasada+Atrasado / recovered Ativa+Pago — screenshots in `evidence/j20-cobranca-{blocked,active}.png`). DB restored to the clean proof state afterward. Fixed en route earlier: F-35 (DB pooler), F-36 (QStash US region), F-37 (webhook apiVersion 2→3). Surfaced F-38 (dedup payment-id-only, open PL candidate).
 - **Steps:** create subscription (admin form, with `cpfCnpj`) → Asaas `PAYMENT_CREATED` webhook → invoice created → confirm header is `asaas-access-token` (Epic 17 CRITICAL fixes) → simulate overdue → lock → pay → unlock; toggle overage; view `/configuracoes/cobranca`.
 - **Observe:** invoice `UNIQUE asaas_payment_id` (migration 0019) dedup; lock/unlock idempotency; overage toggle actually turns metering on/off (Epic 16 fix).
 - **Risks to confirm:** webhook dedup (Redis before enqueue); `cpfCnpj` sent to Asaas (was missing → 400 in prod).
 
 ### J-21 · Daily billing check job
-- **Tier:** 2 · **Driver:** Claude · **Status:** todo
-- **Steps:** seed an overdue invoice → run/await the daily-billing-check QStash job → confirm tenant blocked.
-- **Observe:** block respects open conversation windows (Epic 16 — `hasOpenConversationWindow` read-only guard, doesn't kill live chats).
+- **Tier:** 2 · **Driver:** Claude · **Status:** **done** — seeded an overdue invoice (status `atrasado`, vencimento −8d, sub `atrasada`) → fired the **real signed QStash** `POST /api/internal/billing/daily-check` (`verifyQStash`-gated, message DELIVERED 200) → tenant flipped `active`→`blocked`. **Caught + fixed F-39 (CRITICAL):** the job had been blocking **nobody** in prod — it read `.rows` off a `postgres-js` result that's a bare array, so `checked:0` every run; pre-fix the live call returned 200 with no effect, post-fix it blocked. Fix is live-proven for the daily-check and applied to 2 sibling `.rows` misreads (gateway recovery + Hotmart dedup, Tier-3, live-verify at J-22).
+- **Observe:** the block sets `tenants.status='blocked'` unconditionally; the `hasOpenConversationWindow` guard is enforced at **send-time** (read-only), not in this job, so live chats aren't killed by the status flip (Epic 16). The job is also global — it blocks every tenant with an `atrasado`+past-due invoice (verified none other existed before running).
 
 ---
 
@@ -324,8 +323,88 @@ URL that rotates every run (then you must re-register the webhook/schedules each
 **Step 4 — restart + smoke.** Restart `pnpm dev` so the API picks up the new `.env`. Verify:
 the tunnel hostname `GET /health` returns 200; `GET https://leedi-dev.<your-domain>/webhook/meta?hub.mode=subscribe&hub.verify_token=<token>&hub.challenge=ping` echoes `ping`. Then proceed to J-13.
 
-### Setup runbook 2 — Asaas sandbox *(to expand at Tier 2)*
-Outline: Asaas sandbox account → API key + webhook token, `ASAAS_SANDBOX=true`, webhook URL → `${tunnel}/api/webhooks/asaas`.
+### Setup runbook 2 — Asaas sandbox (Tier 2)
+
+> **Goal:** the Asaas sandbox firing real payment webhooks at the local API through the
+> existing tunnel, so subscription → invoice → overdue → lock → pay → unlock (J-20) and the
+> daily billing-check (J-21) can run locally. **PL-2.**
+>
+> **Independent of Meta.** Tier 2 reuses only the shared infra that's already standing from
+> Tier 1 — the cloudflared tunnel (`leedi-dev.leedi.digital`), QStash (token + signing keys),
+> and Redis. The Facebook BM reverification blocks **only** the inbound-WhatsApp journeys
+> (J-13/J-14); it does not touch billing.
+>
+> **Two QStash hops (don't confuse them):** the public Asaas webhook (`/webhooks/asaas`) is
+> validated by the `asaas-access-token` header only and **enqueues** to QStash; QStash then
+> delivers the event **signed** to the internal worker (`/api/internal/billing/process-asaas-event`,
+> verified by the QStash signing keys). So both the `ASAAS_*` vars **and** the QStash keys must
+> be set — the latter already are.
+
+**Step 0 — env vars (already set, just confirm).** In `.env`:
+- `ASAAS_API_KEY` — sandbox API key (`$aact_…` from the sandbox account).
+- `ASAAS_WEBHOOK_TOKEN` — a token **you choose**; you'll paste the same value into the Asaas
+  webhook config in Step 2. The webhook handler rejects any request whose `asaas-access-token`
+  header ≠ this value (`apps/api/src/routes/webhooks/asaas.ts:33-37`).
+- `ASAAS_SANDBOX=true` — points `AsaasProvider` at the sandbox base URL.
+
+All three are required by the config schema (`packages/config/src/schema.ts:67-69`), so the API
+won't boot without them — Caio reports they're already in `.env`.
+
+**Step 1 — confirm the tunnel forwards to the API.** The named tunnel from runbook 1 already
+maps `https://leedi-dev.leedi.digital` → `http://localhost:3003`. Keep `cloudflared tunnel run
+leedi-dev` up. Asaas (cloud) can only reach the local API through this host.
+
+**Step 2 — register the webhook in the Asaas sandbox console.**
+1. Log into the **sandbox** dashboard: `https://sandbox.asaas.com`.
+2. **Configurações da conta → Integrações → Webhooks** (or "Notificações via webhook") → **Adicionar webhook**.
+3. Fill:
+   - **URL:** `https://leedi-dev.leedi.digital/webhooks/asaas`
+     *(⚠️ root path `/webhooks/asaas` — **NOT** `/api/webhooks/asaas`. Mounted at
+     `app.route('/webhooks/asaas', …)` in `apps/api/src/app.ts:69`; the internal `/api/internal/*`
+     callbacks are a separate QStash hop.)*
+   - **Token de autenticação:** the exact value of `ASAAS_WEBHOOK_TOKEN`. Asaas sends it back in
+     the `asaas-access-token` header on every delivery; a mismatch → 401.
+   - **Email** for delivery-failure alerts: your address.
+   - **Versão da API:** v3 (default).
+   - **Tipo de sincronização:** *Sequencial* (keeps event order — fine for testing).
+   - **Eventos:** enable the **Cobranças (payments)** events. The worker handles
+     `PAYMENT_CREATED`, `PAYMENT_CONFIRMED`, `PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`,
+     `PAYMENT_DELETED`, `PAYMENT_REFUNDED` (`apps/api/src/jobs/process-billing-event.ts:242-262`);
+     unknown events are logged and ignored, so subscribing to all payment events is safe.
+   - **Ativo:** enabled.
+4. Save. Asaas does **not** do a GET handshake (unlike Meta) — the webhook goes live immediately.
+
+**Step 3 — QStash schedule for the daily billing-check (J-21).** The daily job is **not** a
+per-event callback; it's a cron. Two ways to test it:
+- **Manual (recommended for testing):** publish a one-off signed job from the QStash console (or
+  `curl` via the QStash publish API) to `https://leedi-dev.leedi.digital/api/internal/billing/daily-check`.
+  It's `verifyQStash`-gated (`internal.ts:372-373`), so it must come **through** QStash, not a raw
+  POST. This lets J-21 run on demand instead of waiting for the cron.
+- **Scheduled (mirrors prod):** in `console.upstash.com → QStash → Schedules`, add
+  `0 12 * * *` → `https://leedi-dev.leedi.digital/api/internal/billing/daily-check`
+  (12:00 UTC = 09:00 BRT; comment at `internal.ts:365-370`).
+
+**Step 4 — restart + smoke.** Restart `pnpm dev` so the API picks up any `.env` change, and keep
+the tunnel up. Smoke the wiring **before** the full journey:
+1. `GET https://leedi-dev.leedi.digital/health` → 200 (tunnel reaches the API).
+2. End-to-end smoke = the first half of J-20: in the **admin app** (`:3002`) → **Clientes** →
+   create a client with a **valid sandbox CPF/CNPJ** (`createTenantAction` validates the check
+   digits via `isValidCpfCnpj` before calling Asaas — `clientes/actions.ts:41-44`). That call
+   creates the Asaas customer + subscription (`createBillingForTenant`), which makes Asaas
+   generate a payment and fire **`PAYMENT_CREATED`** at the webhook → the worker inserts an
+   `invoices` row (`status: 'pendente'`). **Confirm via Supabase MCP**: a new `subscriptions` row
+   (with `asaas_customer_id`/`asaas_subscription_id`) and an `invoices` row keyed by
+   `asaas_payment_id`. If billing init fails, the tenant is still created but flagged
+   `billing_status: 'pendente_configuracao'` and the form reports `billingFailed` — check the API
+   logs for the Asaas error (most likely a sandbox CPF/key issue).
+
+> **Driving the sandbox:** the `asaas` MCP is available this session (`mcp__asaas__*`) — it can
+> create customers/payments and **simulate** payment state transitions (confirm/overdue) against
+> the sandbox API, which is how J-20 forces `PAYMENT_RECEIVED` / `PAYMENT_OVERDUE` without waiting
+> for real due dates. For J-21, seed an `invoices` row with a past `vencimento` (status
+> `atrasado`) + the subscription `atrasada`, then run the daily-check (Step 3) and confirm the
+> tenant flips to `blocked` — the block honors open conversation windows
+> (`hasOpenConversationWindow`, Epic 16).
 
 ### Setup runbook 3 — Hotmart sandbox *(to expand at Tier 3)*
 Outline: Hotmart sandbox + webhook secret → `${tunnel}/api/webhooks/hotmart`.
@@ -374,6 +453,12 @@ Outline: Hotmart sandbox + webhook secret → `${tunnel}/api/webhooks/hotmart`.
 | F-34 | J-02 | **Bug (MED)** | **The onboarding WhatsApp step (step 2) has no skip — it hard-blocks the whole wizard for any user without Meta credentials ready.** "Próximo" stays disabled until a successful `connectResult`; there is no "Pular por enquanto" (which step 3 Gateway *does* have). So a fresh Tier-0/self-serve user who hasn't set up Meta Cloud API cannot finish onboarding or reach the app at all. (Tested steps 3–5 by advancing `progress` via the API past step 2.) Either add a skip ("conectar depois") or make WhatsApp non-blocking in onboarding. | **FIXED (commit `3c3dc98`, 2026-06-16).** Added a "Pular por enquanto" link to step 2, mirroring the Gateway step (`handleSkip` PATCHes progress `{skipped:true}` → `onAdvance(3, 2)`). A self-serve user without Meta credentials can now finish onboarding and connect the number later in `/settings/whatsapp`. (UI — confirm in browser post dev-env restart.) |
 | F-32 | J-01 | Confirmed OK (real email) | **Auth flow works end-to-end with the verified Resend domain.** Register → real verification email from **`noreply@leedi.digital`** (rendered cleanly; link is a self-contained JWT, `callbackURL=/login`) → `email_verified=true` → login OK. Forgot-password shows a privacy-preserving message ("Se este e-mail estiver cadastrado…"), sends a real reset email (60-min link) → reset form → **new password works** (re-login confirmed). PL-19 redirect verified at session start (F-02). Emails read via Gmail MCP on `caiog.pereira+leedi-j01@gmail.com`. **Gaps:** logout broken (F-29), forbidden→/403 actually lands on /login (F-28), and the account has no tenant (F-31). | J-01 closed (with F-29/F-28/F-31 caveats). |
 | F-06 | J-03 | **Bug (MED)** | **10-digit BR landline normalizes to a `+1` (NANP) number — silent corruption.** Confirms deferred Epic 5 F5 but sharper: `normalizeToE164` (`apps/api/src/utils/parse-leads-csv.ts:65`) has branches for 11-digit (→`+55`), 12/13-digit-starting-55 (→`+`), and a catch-all `else { +${digits} }`. A 10-digit landline `1133334444` hits the catch-all → `+1133334444`, passes `E164_RE /^\+\d{10,15}$/`, and reads as **+1 (US/Canada) 133334444** — wrong country, could dispatch to the wrong destination. Verified in DB: Carla's lead stored as `+1133334444` while `2199…`/`1198…` correctly became `+55…`. **Fix candidate:** add `if (digits.length === 10 && !digits.startsWith('55')) candidate = '+55'+digits;` (BR DDD+8 landline) **or** reject 10-digit as ambiguous — product policy call. Not fixed inline (touches dispatch correctness + policy). | **FIXED (commit `3ccd839`, 2026-06-16).** Caio chose accept-as-`+55`: added a 10-digit branch (`digits.length===10 && !startsWith('55')` → `+55${digits}`) before the catch-all in `normalizeToE164`. `1133334444` → `+551133334444` (BR), no longer `+1…`. +unit test. |
+
+| F-35 | T-2 setup / infra | **Blocker (env) — FIXED** | **Local DB unreachable: Supabase direct connection is IPv6-only.** `DATABASE_URL` pointed at `db.<ref>.supabase.co:5432`, which resolves to **only an AAAA (IPv6) record**; this machine has no IPv6 route (`ping -6` fails) → `connect ETIMEDOUT` on every DB query (admin `getSession` 500, API `/api/sales-methods` 500). Supabase MCP was unaffected (it goes via the API, not the DB socket), masking it. **Fix:** switched `DATABASE_URL` to the **Supavisor Session pooler** (IPv4): `postgresql://postgres.<ref>:<pw>@aws-1-us-west-2.pooler.supabase.com:5432/postgres` (note `aws-1`, not the stale `aws-0` in the old commented `APP_DATABASE_URL`; user `postgres.<ref>`; port 5432 = session mode, drop-in for prepared statements). After restart, DB-backed routes → 200. **Prod note:** the deployed app must also use the pooler (or have IPv6) — direct host won't work from IPv4-only hosts. | Fixed + verified (200). |
+| F-36 | T-2 setup / J-20 | **Blocker (config) — FIXED** | **QStash publish failed for every site: token is in the US region, SDK defaulted to EU.** `new Client({ token })` (~13 sites) with no `baseUrl` hits `https://qstash.upstash.io` → routes to `eu-central-1` → `404 {"error":"user (…) not found in this region (eu-central-1)"}`. Never caught before because J-14 (the only prior QStash exerciser) is Meta-blocked, so no publish had ever run. Verified the token works against `https://qstash-us-east-1.upstash.io` (→ 201). **Fix:** set `QSTASH_URL=https://qstash-us-east-1.upstash.io` in `.env` — the `@upstash/qstash` Client reads `QSTASH_URL` from `process.env` when no `baseUrl` is passed (SDK chunk-LB3C5PJP line 1027: `config?.baseUrl ?? defaultCreds.QSTASH_URL ?? DEFAULT_QSTASH_URL`), so **no code change** across the 13 sites. ⚠️ **Corrects a prior assumption** (`project_tier1_pl14_fix` note "QSTASH_URL não é necessário") — it IS necessary for a US-region token. Signing keys in `.env` are the US ones (callback `Receiver.verify` passed). | Fixed + verified (synthetic flow created invoice end-to-end). |
+| F-37 | J-20 | **Bug (config) — FIXED** | **Real Asaas webhooks 400'd because the webhook was created as apiVersion 2.** Asaas apiVersion **2** (UA `Asaas_Hmlg/2.0`) delivers `application/x-www-form-urlencoded; charset=UTF-8` with the event JSON wrapped in a `data=<urlencoded-json>` field **and sends NO `asaas-access-token` header**. The handler (`asaas.ts`, built for apiVersion **3** per Epic 17 = `application/json` body + token in `asaas-access-token` header) ran `c.req.json()` on the form body → **400** → Asaas counted it failed (`penalizedRequestsCount++`). Synthetic POSTs passed because they mimicked v3 (JSON + header). **Root-caused by top-of-handler instrumentation** logging raw body + headers (reverted after). **Fix:** recreated the Asaas sandbox webhook with **apiVersion 3** + `authToken` (Asaas API `POST /webhooks`, then deleted the v2 one). Verified end-to-end: real `PAYMENT_RECEIVED` (UA `Asaas_Hmlg/3.0`, `application/json`, header `asaas-access-token=…`) → token OK → QStash(US) → callback → **invoice `pago` + subscription `ativa`** (DB-confirmed). **⚠️ RED HERRING corrected:** earlier I diagnosed a Cloudflare edge 403 — WRONG. The 403 was Cloudflare's **"Manage AI bots"** managed rule blocking only my **WebFetch** probe (UA `Claude-User`, an AI crawler); it never touched Asaas (whose deliveries don't appear in the CF security-events log at all). The `cf-warp-tag-id` header is the cloudflared tunnel's own tag added to every proxied request, **not** a WARP-vs-public path difference. Cloudflare was never blocking the webhook. **Prod note:** the production Asaas webhook MUST be apiVersion 3, or the handler must be hardened to also accept the v2 form-urlencoded `data=` format (defense-in-depth — candidate PL). | **FIXED + verified** (real delivery → invoice `pago`). |
+| **F-39** | **J-21 (+J-22 Tier-3)** | **Bug (CRITICAL) — FIXED + live-proven** | **The daily billing lockdown never blocked anyone — `.rows` read off a `postgres-js` result that is a bare array.** `@leedi/db` uses `drizzle-orm/postgres-js` (`client.ts:2`), whose `tx.execute(sql\`SELECT…\`)` resolves the rows **directly as an array** (a `RowList`), NOT a `{ rows }` object (that's the node-postgres shape). `daily-billing-check.ts:40` did `const rows = (overdueRows as …{ rows }).rows ?? []` → `.rows` is `undefined` → `rows = []` → `checked:0, blocked:0` for **every** run, so an overdue tenant was **never** suspended (Story 17.2 AC#4/#5 dead in prod). **Proven empirically, not by reasoning:** seeded the test tenant overdue (invoice `atrasado`, vencimento −8d, sub `atrasada`) and fired the **real** signed QStash daily-check → endpoint returned **200 but the tenant stayed `active`**; after the fix the same live QStash call flipped it to `blocked` (the 200-but-no-effect → blocked transition is the decisive evidence, and it also proves the bare-array driver shape). **Fake-green root cause** (same class as F-01/F-18/F-26): the unit test mocked `execute` returning `{ rows: state.overdueRows }` — a shape the real driver never produces — so 4 green tests masked a dead money-path. **Repo-wide grep for the same misread found 2 siblings**, both reading `.rows` off a `tx.execute` SELECT (also fake-greened by `{rows}` mocks), both Tier-3 (not yet live-tested): `gateway/handle-recovery-event.ts:146` (`.rows.length` threw → caught by the best-effort try/catch → **recovery dispatch silently never fired**, Story 13.3) and `webhooks/hotmart.ts:110` (`.rows.length` **threw** → Hotmart dedup check crashed). **Fix:** defensive `Array.isArray(r) ? r : (r.rows ?? [])` read in all 3 + corrected the 3 test mocks to the real array shape (so they now genuinely guard). api 226/226, typecheck clean. daily-check **live-verified**; the 2 Tier-3 siblings are fixed by the identical pattern the live run validated, but await browser/live verification at **J-22** (Hotmart) / gateway recovery. | **FIXED.** daily-check live-proven (overdue → `blocked`); siblings fixed, Tier-3 live-verify deferred to J-22. |
+| F-38 | J-20 | **Bug (MED) → PL candidate** | **Asaas webhook dedup key is payment-id-only, not (payment-id + event).** `webhook:asaas:${paymentId}` with 24h TTL (`asaas.ts:48`): the first event for a payment sets it; any **distinct** later lifecycle event for the **same** payment within 24h hits `!set` → returns 200 **without enqueuing** → silently dropped. For BOLETO (CREATED→RECEIVED days apart) the TTL expires first, so low impact; but for **PIX/credit-card**, `PAYMENT_CREATED` and `PAYMENT_RECEIVED` land seconds apart → the RECEIVED is dropped → invoice never marked `pago`, tenant never unblocked. The durable idempotency (UNIQUE `asaas_payment_id` + ON CONFLICT) is invoice-creation only; it does not cover the dropped status transition. Surfaced during testing (my synthetic CREATED masked a real RECEIVED). **Fix candidate:** key the dedup on `${paymentId}:${event}` (or drop the Redis dedup and rely on the durable guard + idempotent handlers). | Open — log as PL item; not the headline blocker (that's F-37). |
 
 ### Pre-identified to confirm (found while writing this roadmap)
 - **`/relatorios` sidebar link** (J-10): `Sidebar.tsx:40` links to `/relatorios` but no `app/(shell)/relatorios/page.tsx` exists — suspected dead link. Confirm + fix or repoint.

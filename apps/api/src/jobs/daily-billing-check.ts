@@ -37,7 +37,13 @@ export async function runDailyBillingCheck(): Promise<{
     )
   );
 
-  const rows = (overdueRows as unknown as { rows: OverdueRow[] }).rows ?? [];
+  // drizzle-orm/postgres-js returns query rows directly as an array (a RowList),
+  // NOT a { rows } object — that's the node-postgres shape. The original `.rows`
+  // read therefore resolved to `undefined → []`, so the lockdown blocked NOBODY
+  // in production (roteiro F-39). Read defensively against either driver shape.
+  const rows: OverdueRow[] = Array.isArray(overdueRows)
+    ? (overdueRows as unknown as OverdueRow[])
+    : ((overdueRows as unknown as { rows?: OverdueRow[] }).rows ?? []);
 
   for (const row of rows) {
     try {

@@ -107,7 +107,13 @@ async function isDuplicate(tenantId: string, dedupId: string): Promise<boolean> 
           LIMIT 1`
     );
   });
-  return (result as unknown as { rows: unknown[] }).rows.length > 0;
+  // drizzle-orm/postgres-js returns query rows directly as an array (a RowList),
+  // NOT a { rows } object. The original `.rows.length` read threw on the bare
+  // array, crashing the dedup check (roteiro F-39). Read defensively.
+  const rows = Array.isArray(result)
+    ? (result as unknown as unknown[])
+    : ((result as unknown as { rows?: unknown[] }).rows ?? []);
+  return rows.length > 0;
 }
 
 async function processHotmartWebhookAsync(
