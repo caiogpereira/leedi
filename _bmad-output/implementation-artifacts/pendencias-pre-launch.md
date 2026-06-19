@@ -259,6 +259,24 @@
   unauthenticated request to a protected route redirects to `${BETTER_AUTH_URL}/login`; no
   `localhost:3000` literal remains in dashboard source (only the local-dev fallback).
 
+- [ ] **PL-20 · [Epic 11 / Story 19.3 — Hotmart gateway] No UI to capture the client's Hotmart
+  HOTTOK; the webhook can't authenticate real client deliveries.** Surfaced at **J-22** (2026-06-18)
+  against 16 real Hotmart 2.0 deliveries. The webhook validates `hottok === gateway_integrations.
+  webhookSecret`, but `apps/api/src/use-cases/gateway/create-gateway-integration.ts:22` sets
+  `webhookSecret = randomUUID()` — a value Leedi invents, while Hotmart sends the **account's own
+  fixed HOTTOK** in the `X-HOTMART-HOTTOK` header. The onboarding gateway step (`/onboarding`
+  step 3) shows the generated webhook **URL** but has **no input** for the client to paste their
+  HOTTOK. So even with the F-40 header fix live, every real client's deliveries 401 → **Hotmart
+  gateway non-functional in prod for any real tenant** (the F-40 fix is necessary but not
+  sufficient). Local J-22 was unblocked by manually setting `webhookSecret` = the account HOTTOK
+  in the DB. **Companion finding (F-43):** the `PURCHASE_PIX_GENERATED` event name (PIX recovery
+  trigger) is **unverified** — never appeared in the test batch; if wrong, PIX recovery is silently
+  dead. Plus a full Hotmart 2.0 event-taxonomy reconciliation (`PURCHASE_DELAYED`/`_EXPIRED`/
+  `SUBSCRIPTION_*` names) is outstanding. Source: roteiro F-41/F-43, J-22. *Exit:* add a HOTTOK
+  field to the onboarding gateway step, store it as `webhookSecret`; verify a real (non-test)
+  Hotmart purchase authenticates + creates a lead with a valid phone (F-42 real-phone e2e); verify
+  the PIX event name against a real PIX purchase or the Hotmart event reference.
+
 ---
 
 ## C. P2 — V2 / post-launch (descoped from V1 — listed for memory)
