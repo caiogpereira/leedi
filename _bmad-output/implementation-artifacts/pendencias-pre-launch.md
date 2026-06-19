@@ -269,13 +269,26 @@
   HOTTOK. So even with the F-40 header fix live, every real client's deliveries 401 → **Hotmart
   gateway non-functional in prod for any real tenant** (the F-40 fix is necessary but not
   sufficient). Local J-22 was unblocked by manually setting `webhookSecret` = the account HOTTOK
-  in the DB. **Companion finding (F-43):** the `PURCHASE_PIX_GENERATED` event name (PIX recovery
-  trigger) is **unverified** — never appeared in the test batch; if wrong, PIX recovery is silently
-  dead. Plus a full Hotmart 2.0 event-taxonomy reconciliation (`PURCHASE_DELAYED`/`_EXPIRED`/
-  `SUBSCRIPTION_*` names) is outstanding. Source: roteiro F-41/F-43, J-22. *Exit:* add a HOTTOK
-  field to the onboarding gateway step, store it as `webhookSecret`; verify a real (non-test)
-  Hotmart purchase authenticates + creates a lead with a valid phone (F-42 real-phone e2e); verify
-  the PIX event name against a real PIX purchase or the Hotmart event reference.
+  in the DB. **Where the field must live:** both the **onboarding gateway step** (`/onboarding`
+  step 3) AND a persistent **Configurações → Integrações (Hotmart)** screen in the client area, so
+  an existing client can add/rotate their HOTTOK after onboarding (today there is no settings
+  surface for gateway credentials at all). Store the entered HOTTOK as `gateway_integrations.
+  webhook_secret`.
+  **Companion finding (F-43) — PIX recovery is structurally dead, not just mis-named.** Grounded
+  in Hotmart's official 2.0 docs: **PIX is a `purchase.payment.type` value** (alongside BILLET,
+  CREDIT_CARD, …), and PIX-pending uses `purchase.status = WAITING_PAYMENT` — there is **no
+  confirmed `PURCHASE_PIX_GENERATED` event** (it never appeared in Hotmart's 16-event test-fire
+  catalog, which *does* include the billet event `PURCHASE_BILLET_PRINTED`). So the `pix_gerado`
+  dispatch trigger can never fire from the current `EVENT_MAP` guess. **Fix needs the authoritative
+  event list from the tenant's Hotmart webhook config (the subscribable-events checklist) or a real
+  PIX checkout** — then either map the real PIX event name, or (more likely) key `pix_gerado` off
+  `purchase.payment.type === 'PIX'` (+ `WAITING_PAYMENT`) on whichever event carries a freshly
+  generated PIX. Plus a full event-taxonomy reconciliation (`PURCHASE_DELAYED`/`_EXPIRED`/
+  `SUBSCRIPTION_STARTED`/`_OVERDUE`/`PURCHASE_REFUSED` are unverified guesses). Source: roteiro
+  F-41/F-43, J-22. *Exit:* add the HOTTOK field (onboarding + Configurações), store as
+  `webhook_secret`; reconcile `EVENT_MAP` against the authoritative Hotmart event list; make
+  `pix_gerado` actually triggerable; verify a real (non-test) Hotmart purchase authenticates +
+  creates a lead with a valid phone (F-42 real-phone e2e).
 
 ---
 
