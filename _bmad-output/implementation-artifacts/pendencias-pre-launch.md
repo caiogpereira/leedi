@@ -274,21 +274,17 @@
   an existing client can add/rotate their HOTTOK after onboarding (today there is no settings
   surface for gateway credentials at all). Store the entered HOTTOK as `gateway_integrations.
   webhook_secret`.
-  **Companion finding (F-43) — PIX recovery is structurally dead, not just mis-named.** Grounded
-  in Hotmart's official 2.0 docs: **PIX is a `purchase.payment.type` value** (alongside BILLET,
-  CREDIT_CARD, …), and PIX-pending uses `purchase.status = WAITING_PAYMENT` — there is **no
-  confirmed `PURCHASE_PIX_GENERATED` event** (it never appeared in Hotmart's 16-event test-fire
-  catalog, which *does* include the billet event `PURCHASE_BILLET_PRINTED`). So the `pix_gerado`
-  dispatch trigger can never fire from the current `EVENT_MAP` guess. **Fix needs the authoritative
-  event list from the tenant's Hotmart webhook config (the subscribable-events checklist) or a real
-  PIX checkout** — then either map the real PIX event name, or (more likely) key `pix_gerado` off
-  `purchase.payment.type === 'PIX'` (+ `WAITING_PAYMENT`) on whichever event carries a freshly
-  generated PIX. Plus a full event-taxonomy reconciliation (`PURCHASE_DELAYED`/`_EXPIRED`/
-  `SUBSCRIPTION_STARTED`/`_OVERDUE`/`PURCHASE_REFUSED` are unverified guesses). Source: roteiro
-  F-41/F-43, J-22. *Exit:* add the HOTTOK field (onboarding + Configurações), store as
-  `webhook_secret`; reconcile `EVENT_MAP` against the authoritative Hotmart event list; make
-  `pix_gerado` actually triggerable; verify a real (non-test) Hotmart purchase authenticates +
-  creates a lead with a valid phone (F-42 real-phone e2e).
+  **Companion finding (F-43) — PIX recovery: RESOLVED in code (was structurally dead).** Hotmart
+  support + a real PIX checkout confirmed there is **no dedicated PIX event** — Hotmart reuses
+  **`PURCHASE_BILLET_PRINTED` with `purchase.payment.type='PIX'`** (real delivery status was
+  `BILLET_PRINTED`, not `WAITING_PAYMENT`). The normalizer now reclassifies it to `pix_gerado`
+  (content-based); **live-proven** (PIX generated → `pix_gerado`; PIX paid → `compra_aprovada`).
+  F-42 real-phone also **live-proven** (`+5535999731201`/`+5535991923321`). **Remaining audit
+  (lower priority):** the long event tail is still unverified — `PURCHASE_DELAYED`/`PURCHASE_EXPIRED`
+  (no canonical) and `SUBSCRIPTION_STARTED`/`SUBSCRIPTION_OVERDUE`/`PURCHASE_REFUSED` (guessed
+  names). Source: roteiro F-41/F-43, J-22. *Exit:* **(primary)** add the HOTTOK field (onboarding +
+  Configurações), store as `webhook_secret`, so real clients authenticate; **(secondary)** reconcile
+  the remaining `EVENT_MAP` tail against the authoritative Hotmart event list.
 
 ---
 

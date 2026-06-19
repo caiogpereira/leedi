@@ -139,4 +139,40 @@ describe('HotmartNormalizer.normalize', () => {
     });
     expect(result.phoneNumber).toBe('31999998888');
   });
+
+  // roteiro F-42 (real-data correction): a real Hotmart checkout sends
+  // checkout_phone ALREADY including the DDD ('35999731201' with code '35') —
+  // must NOT double the DDD into '3535999731201'.
+  it('uses checkout_phone as-is when it already includes the DDD (>=10 digits)', () => {
+    const result = HotmartNormalizer.normalize({
+      event: 'PURCHASE_APPROVED',
+      data: {
+        purchase: { transaction: 'HP1', payment: { type: 'CREDIT_CARD' } },
+        buyer: { name: 'Caio', checkout_phone: '35999731201', checkout_phone_code: '35' },
+      },
+    });
+    expect(result.phoneNumber).toBe('35999731201');
+  });
+
+  // roteiro F-43 (PIX): Hotmart has no dedicated PIX event — it reuses
+  // PURCHASE_BILLET_PRINTED with payment.type=PIX (verified against a real PIX
+  // checkout). Reclassify to pix_gerado so the recovery trigger can fire.
+  it('reclassifies PURCHASE_BILLET_PRINTED with payment.type=PIX to pix_gerado', () => {
+    const result = HotmartNormalizer.normalize({
+      event: 'PURCHASE_BILLET_PRINTED',
+      data: {
+        purchase: { transaction: 'HP0530924253', status: 'BILLET_PRINTED', payment: { type: 'PIX' } },
+        buyer: { checkout_phone: '35999731201', checkout_phone_code: '35' },
+      },
+    });
+    expect(result.eventoCanonical).toBe('pix_gerado');
+  });
+
+  it('keeps PURCHASE_BILLET_PRINTED as boleto_gerado when payment.type is not PIX', () => {
+    const result = HotmartNormalizer.normalize({
+      event: 'PURCHASE_BILLET_PRINTED',
+      data: { purchase: { transaction: 'HP2', status: 'BILLET_PRINTED', payment: { type: 'BILLET' } } },
+    });
+    expect(result.eventoCanonical).toBe('boleto_gerado');
+  });
 });

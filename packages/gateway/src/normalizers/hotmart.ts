@@ -60,27 +60,46 @@ export class HotmartNormalizer {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static normalize(payload: Record<string, any>): GatewayEvent {
     const event = safeString(payload.event);
-    const eventoCanonical = event ? (EVENT_MAP[event] ?? null) : null;
+    let eventoCanonical = event ? (EVENT_MAP[event] ?? null) : null;
 
     const data = payload.data ?? {};
     const purchase = data.purchase ?? {};
     const buyer = data.buyer ?? {};
     const product = data.product ?? {};
     const price = purchase.price ?? {};
+    const payment = purchase.payment ?? {};
+    const paymentType = safeString(payment.type);
+
+    // PIX generation has NO dedicated event (Hotmart support + verified against a
+    // real PIX checkout, roteiro F-43): Hotmart reuses `PURCHASE_BILLET_PRINTED`
+    // for both billet AND PIX, differentiated only by `purchase.payment.type`
+    // (the real PIX delivery carried `status: 'BILLET_PRINTED'`, NOT
+    // 'WAITING_PAYMENT'). Reclassify a PIX-typed billet-printed event so the
+    // `pix_gerado` recovery trigger can actually fire.
+    if (eventoCanonical === 'boleto_gerado' && paymentType === 'PIX') {
+      eventoCanonical = 'pix_gerado';
+    }
 
     // Dedup key: transaction id from purchase, fallback to top-level data.id
     const hotmartTransactionId =
       safeString(purchase.transaction) ?? safeString(data.id);
 
     // Phone extraction (roteiro F-42). Hotmart 2.0 purchase events carry the
-    // buyer phone as `checkout_phone` (the number) + `checkout_phone_code` (the
-    // DDD/area code, e.g. "31") — NOT a single `phone` field; cart-abandonment
-    // events use `phone`. Build the national number (DDD + number) and let the
-    // downstream E.164 normalizer prepend +55. Fall back to `phone`.
+    // buyer phone in `checkout_phone` + `checkout_phone_code` (DDD), NOT a single
+    // `phone` field; cart-abandonment events use `phone`. Verified against a real
+    // checkout: `checkout_phone` ALREADY includes the DDD (e.g. '35999731201'
+    // with code '35'), so use it as-is; only prepend the DDD code when the number
+    // arrives DDD-less (<10 digits, the shape in Hotmart's docs example). The
+    // downstream E.164 normalizer prepends +55. Fall back to `phone`.
     const checkoutPhone = safeString(buyer.checkout_phone);
-    const phoneNumber = checkoutPhone
-      ? `${safeString(buyer.checkout_phone_code) ?? ''}${checkoutPhone}`
-      : safeString(buyer.phone);
+    let phoneNumber: string | null;
+    if (checkoutPhone) {
+      const code = safeString(buyer.checkout_phone_code);
+      const digits = checkoutPhone.replace(/\D/g, '');
+      phoneNumber = code && digits.length < 10 ? `${code}${checkoutPhone}` : checkoutPhone;
+    } else {
+      phoneNumber = safeString(buyer.phone);
+    }
 
     return {
       eventoCanonical,
