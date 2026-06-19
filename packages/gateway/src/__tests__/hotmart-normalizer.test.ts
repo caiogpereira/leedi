@@ -103,4 +103,40 @@ describe('HotmartNormalizer.normalize', () => {
     const result = HotmartNormalizer.normalize({ data: {} });
     expect(result.eventoCanonical).toBeNull();
   });
+
+  // roteiro F-43: real Hotmart 2.0 event names verified against the official
+  // event reference + a live capture.
+  it('maps PURCHASE_OUT_OF_SHOPPING_CART (real cart-abandonment event) to carrinho_abandonado', () => {
+    const result = HotmartNormalizer.normalize({
+      event: 'PURCHASE_OUT_OF_SHOPPING_CART',
+      data: { buyer: { phone: '31999998888' } },
+    });
+    expect(result.eventoCanonical).toBe('carrinho_abandonado');
+  });
+
+  it('maps SUBSCRIPTION_CANCELLATION (real event name) to assinatura_cancelada', () => {
+    const result = HotmartNormalizer.normalize({ event: 'SUBSCRIPTION_CANCELLATION', data: {} });
+    expect(result.eventoCanonical).toBe('assinatura_cancelada');
+  });
+
+  // roteiro F-42: purchase events carry buyer.checkout_phone (number) +
+  // checkout_phone_code (DDD); there is no buyer.phone on those events.
+  it('builds phone from checkout_phone_code (DDD) + checkout_phone on purchase events', () => {
+    const result = HotmartNormalizer.normalize({
+      event: 'PURCHASE_APPROVED',
+      data: {
+        purchase: { transaction: 'HP1', price: { value: 297 } },
+        buyer: { name: 'Comprador', checkout_phone: '999998888', checkout_phone_code: '31' },
+      },
+    });
+    expect(result.phoneNumber).toBe('31999998888');
+  });
+
+  it('falls back to buyer.phone when checkout_phone is absent (cart-abandonment events)', () => {
+    const result = HotmartNormalizer.normalize({
+      event: 'PURCHASE_OUT_OF_SHOPPING_CART',
+      data: { buyer: { phone: '31999998888' } },
+    });
+    expect(result.phoneNumber).toBe('31999998888');
+  });
 });

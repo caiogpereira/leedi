@@ -31,6 +31,13 @@ const EVENT_MAP: Record<string, GatewayEventoCanonical> = {
   PURCHASE_BILLET_PRINTED: 'boleto_gerado',
   PURCHASE_PIX_GENERATED: 'pix_gerado',
   CART_ABANDONED: 'carrinho_abandonado',
+  // Real Hotmart 2.0 deliveries (verified against the official event reference +
+  // a live capture, roteiro F-43) use these names — the prior keys above/below
+  // are unverified guesses kept for safety. The cart-abandonment event (the
+  // recovery trigger) is PURCHASE_OUT_OF_SHOPPING_CART, and the subscription
+  // cancellation event is SUBSCRIPTION_CANCELLATION (NOT *_CANCELED).
+  PURCHASE_OUT_OF_SHOPPING_CART: 'carrinho_abandonado',
+  SUBSCRIPTION_CANCELLATION: 'assinatura_cancelada',
   SUBSCRIPTION_STARTED: 'assinatura_iniciada',
   SUBSCRIPTION_CANCELED: 'assinatura_cancelada',
   SUBSCRIPTION_OVERDUE: 'assinatura_atrasada',
@@ -65,10 +72,20 @@ export class HotmartNormalizer {
     const hotmartTransactionId =
       safeString(purchase.transaction) ?? safeString(data.id);
 
+    // Phone extraction (roteiro F-42). Hotmart 2.0 purchase events carry the
+    // buyer phone as `checkout_phone` (the number) + `checkout_phone_code` (the
+    // DDD/area code, e.g. "31") — NOT a single `phone` field; cart-abandonment
+    // events use `phone`. Build the national number (DDD + number) and let the
+    // downstream E.164 normalizer prepend +55. Fall back to `phone`.
+    const checkoutPhone = safeString(buyer.checkout_phone);
+    const phoneNumber = checkoutPhone
+      ? `${safeString(buyer.checkout_phone_code) ?? ''}${checkoutPhone}`
+      : safeString(buyer.phone);
+
     return {
       eventoCanonical,
       hotmartTransactionId,
-      phoneNumber: safeString(buyer.phone),
+      phoneNumber,
       buyerName: safeString(buyer.name),
       productId: safeString(product.id) ?? safeString(String(product.id ?? '')),
       productName: safeString(product.name),

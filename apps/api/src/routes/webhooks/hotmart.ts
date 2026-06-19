@@ -15,7 +15,12 @@ export function createHotmartWebhookRouter() {
 
   router.post('/:webhookUrlPath', async (c) => {
     const webhookUrlPath = c.req.param('webhookUrlPath');
-    const hottok = c.req.query('hottok');
+    // Hotmart 2.0 delivers the hottok in the `X-HOTMART-HOTTOK` header (verified
+    // 16/16 against real deliveries — roteiro F-40); it is NOT a query param, and
+    // the top-level body `hottok` field only appears on a minority of event types.
+    // Read the header first, falling back to a query param so an operator can still
+    // bake `?hottok=` into the URL if needed.
+    const hottok = c.req.header('x-hotmart-hottok') ?? c.req.query('hottok');
 
     // Resolve integration (bypass RLS — no tenant session on public endpoint)
     const integrations = await db.transaction(async (tx) => {

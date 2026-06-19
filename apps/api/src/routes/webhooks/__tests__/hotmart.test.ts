@@ -157,4 +157,27 @@ describe('POST /webhooks/hotmart/:webhookUrlPath', () => {
     const text = await res.text();
     expect(text).toBe('OK');
   });
+
+  // roteiro F-40: real Hotmart 2.0 deliveries send the hottok in the
+  // `X-HOTMART-HOTTOK` header (verified 16/16 against live deliveries), NOT as a
+  // query param. The handler must accept the header — pin it so a revert to
+  // query-only fails here.
+  it('returns 200 OK with valid hottok in the X-HOTMART-HOTTOK header (real Hotmart delivery)', async () => {
+    const res = await app.request(`/webhooks/hotmart/${WEBHOOK_URL_PATH}`, {
+      method: 'POST',
+      body: validPayload,
+      headers: { 'Content-Type': 'application/json', 'X-HOTMART-HOTTOK': WEBHOOK_SECRET },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('OK');
+  });
+
+  it('returns 401 when the X-HOTMART-HOTTOK header is wrong (no query fallback)', async () => {
+    const res = await app.request(`/webhooks/hotmart/${WEBHOOK_URL_PATH}`, {
+      method: 'POST',
+      body: validPayload,
+      headers: { 'Content-Type': 'application/json', 'X-HOTMART-HOTTOK': 'wrong-token' },
+    });
+    expect(res.status).toBe(401);
+  });
 });
