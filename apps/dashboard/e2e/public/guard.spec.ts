@@ -13,7 +13,7 @@ import { test, expect } from '@playwright/test';
  * the Phase 2 authenticated shell/keyboard/axe sweeps (e2e/auth/*, seeded).
  */
 
-const PROTECTED_PATHS = ['/', '/leads', '/agente', '/settings/team'];
+const PROTECTED_PATHS = ['/', '/leads', '/agente', '/configuracoes/equipe'];
 
 test.describe('dashboard auth guard (unauthenticated)', () => {
   for (const path of PROTECTED_PATHS) {

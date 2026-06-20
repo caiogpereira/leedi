@@ -58,16 +58,15 @@ export function hasPermission(role: TenantRole, permission: Permission): boolean
 /**
  * Route-to-required-roles map for dashboard middleware enforcement.
  *
- * Matched by prefix (see `getRequiredRoles`), so `/settings/billing/details`
- * inherits `/settings/billing`'s requirement. ORDER MATTERS: more specific
- * prefixes must precede the broader `/settings` fallback.
+ * Matched by prefix (see `getRequiredRoles`), so `/configuracoes/whatsapp/details`
+ * inherits `/configuracoes/whatsapp`'s requirement. The remaining `/configuracoes/*`
+ * tabs (uso/cobranca/notificacoes) have no entry here and stay unrestricted.
  */
 export const ROUTE_PERMISSION_MAP: Record<string, readonly TenantRole[]> = {
-  '/settings/billing': ['owner'],
-  '/settings/whatsapp': ['owner'],
-  '/settings/agent': ['owner', 'admin'],
-  '/settings/team': ['owner', 'admin'],
-  '/settings': ['owner', 'admin'],
+  '/configuracoes/whatsapp': ['owner'],
+  '/configuracoes/gateway': ['owner'],
+  '/configuracoes/empresa': ['owner', 'admin'],
+  '/configuracoes/equipe': ['owner', 'admin'],
 } as const;
 
 export function getRequiredRoles(pathname: string): readonly TenantRole[] | null {

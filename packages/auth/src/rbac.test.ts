@@ -52,20 +52,20 @@ describe('hasPermission', () => {
 });
 
 describe('getRequiredRoles', () => {
-  it('billing requires owner only', () => {
-    const roles = getRequiredRoles('/settings/billing');
+  it('whatsapp settings requires owner only', () => {
+    const roles = getRequiredRoles('/configuracoes/whatsapp');
     expect(roles).toContain('owner');
     expect(roles?.length).toBe(1);
   });
 
-  it('billing sub-routes inherit the owner-only requirement (prefix match)', () => {
-    const roles = getRequiredRoles('/settings/billing/details');
+  it('whatsapp sub-routes inherit the owner-only requirement (prefix match)', () => {
+    const roles = getRequiredRoles('/configuracoes/whatsapp/details');
     expect(roles).toContain('owner');
     expect(roles?.length).toBe(1);
   });
 
-  it('agent config requires owner or admin', () => {
-    const roles = getRequiredRoles('/settings/agent');
+  it('team settings requires owner or admin', () => {
+    const roles = getRequiredRoles('/configuracoes/equipe');
     expect(roles).toContain('owner');
     expect(roles).toContain('admin');
     expect(roles?.includes('operator')).toBe(false);
@@ -73,6 +73,10 @@ describe('getRequiredRoles', () => {
 
   it('unrestricted route returns null', () => {
     expect(getRequiredRoles('/dashboard')).toBeNull();
+  });
+
+  it('unrestricted /configuracoes sub-route returns null', () => {
+    expect(getRequiredRoles('/configuracoes/uso')).toBeNull();
   });
 });
 

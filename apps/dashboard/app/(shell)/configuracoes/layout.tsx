@@ -8,6 +8,8 @@ const SETTINGS_NAV = [
   { href: '/configuracoes/uso', label: 'Uso' },
   { href: '/configuracoes/cobranca', label: 'Cobrança' },
   { href: '/configuracoes/notificacoes', label: 'Notificações' },
+  { href: '/configuracoes/whatsapp', label: 'WhatsApp' },
+  { href: '/configuracoes/equipe', label: 'Equipe' },
 ];
 
 export default function ConfiguracoesLayout({

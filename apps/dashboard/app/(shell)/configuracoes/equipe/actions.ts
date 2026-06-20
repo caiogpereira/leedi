@@ -44,6 +44,6 @@ export async function inviteAction(
     return { error: result.error };
   }
   // Refresh the team page so the new invite shows up in the "Pendente" list.
-  revalidatePath("/settings/team");
+  revalidatePath("/configuracoes/equipe");
   return { success: true };
 }

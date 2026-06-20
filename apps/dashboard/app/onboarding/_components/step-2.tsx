@@ -62,7 +62,7 @@ export function Step2({ tenantId, stepData, onAdvance }: Props) {
   async function handleSkip() {
     // F-34: WhatsApp connection requires Meta credentials the user may not have
     // ready. Mirror the Gateway step's skip so onboarding is never hard-blocked —
-    // the number can be connected later in /settings/whatsapp.
+    // the number can be connected later in /configuracoes/whatsapp.
     setSubmitting(true);
     try {
       await fetch(`/api/tenants/${tenantId}/onboarding/progress`, {

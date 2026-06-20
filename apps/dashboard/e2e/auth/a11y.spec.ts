@@ -53,7 +53,7 @@ test.describe('Keyboard navigation (Story 3.4)', () => {
 
 test.describe('axe sweep — zero serious/critical (Story 3.4)', () => {
   // One internal page per shell area kept small to bound cold-compile cost.
-  for (const path of ['/', '/leads', '/settings/team']) {
+  for (const path of ['/', '/leads', '/configuracoes/equipe']) {
     test(`no serious/critical axe violations on ${path}`, async ({ page }) => {
       await page.goto(path);
       // Wait for the shell to be interactive before scanning.

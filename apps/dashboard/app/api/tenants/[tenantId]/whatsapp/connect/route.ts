@@ -6,7 +6,7 @@ import { env } from '@leedi/config';
 /**
  * Same-origin proxy for connecting a WhatsApp (Meta Cloud API) number.
  *
- * Used by the onboarding step-2 and the /settings/whatsapp connect form. The API
+ * Used by the onboarding step-2 and the /configuracoes/whatsapp connect form. The API
  * route requires the `owner` role; this proxy only forwards the cookie + JSON
  * body — the API does the real authorization + credential validation.
  */

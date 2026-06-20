@@ -6,10 +6,10 @@ import { requireTenantRouteAccess } from "../../../../lib/tenant-context";
 export default async function TeamSettingsPage() {
   const t = await getTranslations("team");
 
-  // RBAC enforcement (Story 2.5/2.7): /settings/team is owner/admin only. The
+  // RBAC enforcement (Story 2.5/2.7): /configuracoes/equipe is owner/admin only. The
   // membership-backed role is resolved here (the Edge middleware can't), and a
   // viewer/operator is redirected to /403 before any content renders.
-  const ctx = await requireTenantRouteAccess("/settings/team");
+  const ctx = await requireTenantRouteAccess("/configuracoes/equipe");
 
   const [members, pending] = await Promise.all([
     listTenantMembers(ctx.tenant.tenantId),

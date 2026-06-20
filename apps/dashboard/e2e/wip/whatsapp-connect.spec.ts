@@ -14,7 +14,7 @@ import { test, expect } from '@playwright/test';
 test.describe('WhatsApp Settings Page', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the WhatsApp settings page (assumes auth is handled)
-    await page.goto('/settings/whatsapp');
+    await page.goto('/configuracoes/whatsapp');
   });
 
   test('shows connect form for owner with no existing connection', async ({ page }) => {

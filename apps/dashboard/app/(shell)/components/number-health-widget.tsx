@@ -81,7 +81,7 @@ export function NumberHealthWidget({
         <p className="mb-2 text-sm font-semibold">Saúde do número</p>
         <p className="mb-3 text-sm text-muted-foreground">Número não conectado.</p>
         <Link
-          href="/settings/whatsapp"
+          href="/configuracoes/whatsapp"
           className="inline-block rounded bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
         >
           Conectar número
@@ -120,7 +120,7 @@ export function NumberHealthWidget({
       {hasWarning && (
         <p className="mt-3 text-xs text-amber-700">
           Qualidade do número em queda.{' '}
-          <Link href="/settings/whatsapp" className="underline">
+          <Link href="/configuracoes/whatsapp" className="underline">
             Verifique em Configurações → WhatsApp.
           </Link>
         </p>

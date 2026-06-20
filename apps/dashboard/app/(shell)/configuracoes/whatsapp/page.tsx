@@ -23,10 +23,10 @@ async function getExistingConnection(tenantId: string) {
 }
 
 export default async function WhatsAppSettingsPage() {
-  // RBAC enforcement (Story 2.5/2.7): /settings/whatsapp is owner-only. A
+  // RBAC enforcement (Story 2.5/2.7): /configuracoes/whatsapp is owner-only. A
   // non-owner is redirected to /403 before any content renders; the route role
   // is resolved from membership data here (the Edge middleware can't).
-  const ctx = await requireTenantRouteAccess('/settings/whatsapp');
+  const ctx = await requireTenantRouteAccess('/configuracoes/whatsapp');
   const currentTenant = ctx.tenant;
 
   const isOwner = currentTenant.role === 'owner';
