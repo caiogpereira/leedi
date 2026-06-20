@@ -53,11 +53,10 @@ Quando não há campanha ativa (e sem `campaignId` de playground), `consultar_of
 **P0-4 — Campo de material de lançamento (texto longo) por produto.**
 Nova coluna (ex.: `material_lancamento text`) em `products` (migração) + nova aba na página de edição do produto.
 
-**Fork de design (decisão do usuário) — como o agente consome o material:**
-- **Sempre no contexto:** injetar o material no system prompt / `EffectiveProduto` sempre. Simples, mas material longo (milhares de palavras) × vários produtos = custo/latência/orçamento de contexto altos (mesmo risco da "venda passiva sempre completa").
-- **Sob demanda (recomendado):** o material fica acessível via uma tool (ex.: o agente "abre o dossiê do produto" quando precisa de scripts/gatilhos), seguindo o padrão `consultar_*` existente. Controla custo e pré-encaminha a base de conhecimento por-produto da Fase 2.
+**Consumo pelo agente — DECISÃO: sob demanda via tool.**
+O material **não** vai sempre no system prompt (material longo × vários produtos = custo/latência altos). Em vez disso, fica acessível por uma tool (ex.: o agente "abre o dossiê do produto" — scripts/gatilhos — quando precisa), seguindo o padrão `consultar_*` existente. Isso controla custo e pré-encaminha a base de conhecimento por-produto da Fase 2.
 
-*ACs:* usuário cola CPL/VSL/gatilhos e salva; conteúdo persiste e volta na edição; agente acessa o material conforme a estratégia escolhida; campo opcional (vazio não quebra nada).
+*ACs:* usuário cola CPL/VSL/gatilhos e salva; conteúdo persiste e volta na edição; existe uma tool que entrega o material do produto sob demanda e o agente a usa quando relevante; campo opcional (vazio não quebra nada / tool retorna estado vazio sem erro).
 
 ### 🟠 P1 — Contexto do disparo
 
