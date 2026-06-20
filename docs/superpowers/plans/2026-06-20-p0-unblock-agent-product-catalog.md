@@ -29,6 +29,9 @@
 | 2 | `apps/dashboard/app/(shell)/campanhas/page.tsx` (modificar) | Carrega produtos ativos e passa como prop |
 | 2 | `apps/dashboard/app/(shell)/campanhas/campaign-list-client.tsx` (modificar) | Seletor de produto no diálogo "Nova campanha" |
 | 2 | `apps/dashboard/app/(shell)/campanhas/__tests__/campaign-list-client.test.tsx` (criar) | Testa seletor + POST com produtoId |
+| 2b | `apps/dashboard/app/(shell)/campanhas/[id]/page.tsx` (modificar) | Carrega produtos e passa ao detalhe |
+| 2b | `apps/dashboard/app/(shell)/campanhas/[id]/campaign-detail-client.tsx` (modificar) | Seletor de produto de downsell (`config.downsell.produto_id`) |
+| 2b | `apps/dashboard/app/(shell)/campanhas/[id]/__tests__/campaign-detail-client.test.tsx` (criar) | Testa seleção do produto de downsell |
 | 3 | `packages/agent/src/tools/consultar-ofertas-ativas.ts` (modificar) | Sem campanha → retorna todos os produtos ativos |
 | 3 | `packages/agent/src/tools/__tests__/consultar-ofertas-ativas.test.ts` (modificar) | Atualiza caso "sem campanha" + venda passiva |
 | 4 | `packages/db/src/schema/knowledge.ts` (modificar) | Coluna `material_lancamento` em `products` |
@@ -333,6 +336,212 @@ Expected: 0 erros.
 ```bash
 git add "apps/dashboard/app/(shell)/campanhas/page.tsx" "apps/dashboard/app/(shell)/campanhas/campaign-list-client.tsx" "apps/dashboard/app/(shell)/campanhas/__tests__/campaign-list-client.test.tsx"
 git commit -m "feat(dashboard): product selector in campaign create dialog (P0-2)"
+```
+
+---
+
+## Task 2b: Seletor do produto de downsell na campanha (P0-2, fase downsell)
+
+Contexto: o agente já lê `config.downsell.produto_id` na fase de downsell (`consultar-ofertas-ativas.ts`), mas **não há UI** para defini-lo — o `PhaseConfigEditor` (compartilhado pelas 3 fases) edita só urgência/mensagens/transição e **descarta** `produto_id`. Sem isto, uma campanha de lançamento (ex.: Libras A2 Club) oferece o produto principal na fase de downsell, em vez do downsell real (Box de Êxodo).
+
+**Files:**
+- Modify: `apps/dashboard/app/(shell)/campanhas/[id]/page.tsx`
+- Modify: `apps/dashboard/app/(shell)/campanhas/[id]/campaign-detail-client.tsx`
+- Test: `apps/dashboard/app/(shell)/campanhas/[id]/__tests__/campaign-detail-client.test.tsx`
+
+**Interfaces:**
+- Consumes: `listProducts` (`@leedi/knowledge`); GET/PATCH `/api/tenants/:tenantId/campaigns/:id` (já existentes; PATCH aceita `{ config }`).
+- Produces: na aba "Downsell", um `<select>` de produto cujo valor é salvo em `config.downsell.produto_id` (preservando urgência/mensagens/transição).
+
+- [ ] **Step 1: Write the failing test**
+
+Create `apps/dashboard/app/(shell)/campanhas/[id]/__tests__/campaign-detail-client.test.tsx`:
+
+```tsx
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { CampaignDetailClient } from '../campaign-detail-client';
+
+const CAMPAIGN = {
+  id: 'c1', nome: 'Lançamento Club', tipo: 'lancamento', fase: 'aquecimento',
+  status: 'rascunho', produtoNome: 'Libras A2 Club', config: {},
+};
+const PRODUCTS = [
+  { id: 'p-club', nome: 'Libras A2 Club' },
+  { id: 'p-box', nome: 'Box de Êxodo' },
+];
+
+beforeEach(() => {
+  vi.restoreAllMocks();
+  vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => {
+    if (init?.method === 'PATCH') {
+      return { ok: true, json: async () => ({ ...CAMPAIGN, config: JSON.parse(init.body as string).config }) } as Response;
+    }
+    return { ok: true, json: async () => CAMPAIGN } as Response; // GET on mount
+  }));
+});
+
+describe('CampaignDetailClient — downsell product (P0-2b)', () => {
+  it('saves config.downsell.produto_id from the downsell tab selector', async () => {
+    render(<CampaignDetailClient tenantId="t1" campaignId="c1" products={PRODUCTS} />);
+
+    await screen.findByText('Lançamento Club');
+    fireEvent.click(screen.getByRole('button', { name: 'Downsell' }));
+    fireEvent.change(await screen.findByLabelText('Produto de downsell'), { target: { value: 'p-box' } });
+    fireEvent.click(screen.getByRole('button', { name: /Salvar fase/ }));
+
+    await waitFor(() => {
+      const fetchMock = global.fetch as unknown as ReturnType<typeof vi.fn>;
+      const patch = fetchMock.mock.calls.find((c) => c[1]?.method === 'PATCH');
+      expect(patch).toBeTruthy();
+      expect(JSON.parse(patch![1]!.body as string).config.downsell.produto_id).toBe('p-box');
+    });
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `pnpm --filter @leedi/dashboard test "app/(shell)/campanhas/[id]/__tests__/campaign-detail-client.test.tsx"`
+Expected: FAIL — `CampaignDetailClient` não aceita `products`; não há campo "Produto de downsell".
+
+- [ ] **Step 3: Add a ProductOption type and thread products through the editor**
+
+Em `apps/dashboard/app/(shell)/campanhas/[id]/campaign-detail-client.tsx`:
+
+3a. Após a interface `CampaignConfig` (linha ~18), adicione:
+
+```tsx
+interface ProductOption {
+  id: string;
+  nome: string;
+}
+```
+
+3b. Estenda as props do `PhaseConfigEditor` (objeto de parâmetros, após `saving: boolean;`):
+
+```tsx
+  products?: ProductOption[];
+```
+
+3c. Dentro de `PhaseConfigEditor`, adicione estado do produto (após `const [transicaoData, setTransicaoData] = useState(...)`):
+
+```tsx
+  const [produtoId, setProdutoId] = useState((config as { produto_id?: string }).produto_id ?? '');
+```
+
+3d. Em `handleSave`, troque o tipo de `cfg` e preserve `produto_id` na fase downsell. Substitua:
+
+```tsx
+    const cfg: PhaseConfig = { transicao: { tipo: transicaoTipo } };
+```
+por:
+```tsx
+    const cfg: PhaseConfig & { produto_id?: string } = { transicao: { tipo: transicaoTipo } };
+```
+e, logo antes de `await onSave(phaseKey, cfg);`, adicione:
+```tsx
+    if (phaseKey === 'downsell' && produtoId) cfg.produto_id = produtoId;
+```
+
+3e. Renderize o seletor só na fase downsell. Logo após o bloco `</div>` do campo "Mensagem de urgência" (antes do bloco "Mensagens-chave"), adicione:
+
+```tsx
+      {phaseKey === 'downsell' && products && (
+        <div className="space-y-1">
+          <Label htmlFor="downsell-produto">Produto de downsell</Label>
+          <select
+            id="downsell-produto"
+            value={produtoId}
+            onChange={(e) => setProdutoId(e.target.value)}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">Usar o produto principal da campanha</option>
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>{p.nome}</option>
+            ))}
+          </select>
+        </div>
+      )}
+```
+
+3f. Adicione `products` à assinatura do `CampaignDetailClient`:
+
+```tsx
+export function CampaignDetailClient({
+  tenantId,
+  campaignId,
+  products,
+}: {
+  tenantId: string;
+  campaignId: string;
+  products: ProductOption[];
+}) {
+```
+
+3g. Passe `products` ao editor por-fase (a instância em ~linha 314, dentro do ramo não-perpétuo):
+
+```tsx
+              <PhaseConfigEditor
+                phaseKey={activeTab}
+                config={campaign.config[activeTab] ?? {}}
+                onSave={handlePhaseConfigSave}
+                saving={savingPhase}
+                products={products}
+              />
+```
+
+(O editor do ramo perpétuo NÃO recebe `products` — perpétuo não tem fase de downsell.)
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `pnpm --filter @leedi/dashboard test "app/(shell)/campanhas/[id]/__tests__/campaign-detail-client.test.tsx"`
+Expected: PASS.
+
+- [ ] **Step 5: Wire products from the server page**
+
+Replace the body of `apps/dashboard/app/(shell)/campanhas/[id]/page.tsx`:
+
+```tsx
+import { getCurrentTenantContext } from '../../../../lib/tenant-context';
+import { listProducts } from '@leedi/knowledge';
+import { CampaignDetailClient } from './campaign-detail-client';
+
+export default async function CampaignDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const ctx = await getCurrentTenantContext();
+
+  if (!ctx) {
+    return <div className="p-8 text-muted-foreground">Nenhum workspace encontrado.</div>;
+  }
+
+  const currentTenant = ctx.tenant;
+  const products = await listProducts({ tenantId: currentTenant.tenantId, archived: false });
+
+  return (
+    <CampaignDetailClient
+      tenantId={currentTenant.tenantId}
+      campaignId={id}
+      products={products.map((p) => ({ id: p.id, nome: p.nome }))}
+    />
+  );
+}
+```
+
+- [ ] **Step 6: Typecheck**
+
+Run: `pnpm --filter @leedi/dashboard typecheck`
+Expected: 0 erros.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add "apps/dashboard/app/(shell)/campanhas/[id]/page.tsx" "apps/dashboard/app/(shell)/campanhas/[id]/campaign-detail-client.tsx" "apps/dashboard/app/(shell)/campanhas/[id]/__tests__/campaign-detail-client.test.tsx"
+git commit -m "feat(dashboard): downsell product selector on campaign detail (P0-2b)"
 ```
 
 ---
@@ -914,9 +1123,9 @@ git commit -m "feat(agent): on-demand consultar_material_produto tool (P0-4b)"
 
 **Spec coverage (faixa P0):**
 - P0-1 (expor Produtos) → Task 1. ✓
-- P0-2 (seletor de produto na campanha) → Task 2. ✓ (API/proxy já aceitam `produtoId`.)
+- P0-2 (seletor de produto na campanha) → Task 2 (produto principal na criação) + Task 2b (produto de downsell por fase). ✓ (API/proxy já aceitam `produtoId`; PATCH aceita `config`.)
 - P0-3 (venda passiva = catálogo completo) → Task 3. ✓
-- P0-4 (material de lançamento, consumo sob demanda) → Task 4 (campo + UI) + Task 5 (tool). ✓
+- P0-4 (material de lançamento, consumo sob demanda) → Task 4 (campo + UI) + Task 5 (tool). ✓ (`getProduct` usa `.select()` sem projeção → a nova coluna volta no reload; verificado.)
 - P1-5 (contexto do disparo) e P2-6/7/8 (abas de Configurações) → **fora deste plano**; receberão planos próprios após as verificações de plano-fase (caminho disparo→conversa→prompt; home do `cpfCnpj` para CNPJ/endereço).
 
 **Placeholder scan:** sem TBD/TODO; todo passo com código real e comandos com saída esperada.
