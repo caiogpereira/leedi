@@ -339,6 +339,7 @@ export function CampaignDetailClient({
                 ))}
               </div>
               <PhaseConfigEditor
+                key={activeTab}
                 phaseKey={activeTab}
                 config={campaign.config[activeTab] ?? {}}
                 onSave={handlePhaseConfigSave}

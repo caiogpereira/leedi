@@ -37,4 +37,35 @@ describe('CampaignDetailClient — downsell product (P0-2b)', () => {
       expect(JSON.parse(patch![1]!.body as string).config.downsell.produto_id).toBe('p-box');
     });
   });
+
+  it('preserves existing downsell fields when saving produto_id from the tab (no stale-instance clobber)', async () => {
+    const campaignWithDownsell = {
+      ...CAMPAIGN,
+      config: {
+        downsell: { urgencia: 'Última chance', transicao: { tipo: 'manual' } },
+      },
+    };
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'PATCH') {
+        return { ok: true, json: async () => ({ ...campaignWithDownsell, config: JSON.parse(init.body as string).config }) } as Response;
+      }
+      return { ok: true, json: async () => campaignWithDownsell } as Response; // GET on mount
+    }));
+
+    render(<CampaignDetailClient tenantId="t1" campaignId="c1" products={PRODUCTS} />);
+
+    await screen.findByText('Lançamento Club');
+    fireEvent.click(screen.getByRole('button', { name: 'Downsell' }));
+    fireEvent.change(await screen.findByLabelText('Produto de downsell'), { target: { value: 'p-box' } });
+    fireEvent.click(screen.getByRole('button', { name: /Salvar fase/ }));
+
+    await waitFor(() => {
+      const fetchMock = global.fetch as unknown as ReturnType<typeof vi.fn>;
+      const patch = fetchMock.mock.calls.find((c) => c[1]?.method === 'PATCH');
+      expect(patch).toBeTruthy();
+      const downsell = JSON.parse(patch![1]!.body as string).config.downsell;
+      expect(downsell.produto_id).toBe('p-box');
+      expect(downsell.urgencia).toBe('Última chance');
+    });
+  });
 });
