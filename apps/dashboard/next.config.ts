@@ -2,6 +2,17 @@ import { fileURLToPath } from 'node:url';
 import createNextIntlPlugin from 'next-intl/plugin';
 import type { NextConfig } from 'next';
 
+// Load the monorepo-root .env into process.env BEFORE Next compiles. Next only
+// auto-loads .env from this app's own directory, so root-level NEXT_PUBLIC_* vars
+// (e.g. NEXT_PUBLIC_VAPID_PUBLIC_KEY) would otherwise be undefined at the point
+// Next inlines them into the client bundle — silently breaking push registration.
+// next.config is evaluated before client compilation, so this is the right hook.
+try {
+  process.loadEnvFile(fileURLToPath(new URL('../../.env', import.meta.url)));
+} catch {
+  // .env absent in production/CI — NEXT_PUBLIC_* come from the host environment.
+}
+
 const withNextIntl = createNextIntlPlugin('./i18n.ts');
 
 const nextConfig: NextConfig = {
