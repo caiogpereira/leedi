@@ -24,7 +24,7 @@
 > - **P2 — V2 / post-launch.** Explicitly descoped from V1. Listed so nothing is forgotten,
 >   not expected before launch.
 >
-> Last updated: 2026-06-11.
+> Last updated: 2026-06-20.
 
 ---
 
@@ -41,7 +41,11 @@
   `.env.example` ships placeholders for `WHATSAPP_APP_SECRET`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN`,
   `QSTASH_TOKEN`/`QSTASH_*_SIGNING_KEY`, `ASAAS_API_KEY`/`ASAAS_WEBHOOK_TOKEN`,
   `VAPID_*`, `ENCRYPTION_MASTER_KEY`, Supabase `DATABASE_URL`. Production must use real,
-  rotated values (and `ASAAS_SANDBOX=false`). See the `project_meta_whatsapp_setup` memory
+  rotated values (and `ASAAS_SANDBOX=false`). **Added 2026-06-20 (J-23/F-44):** the dashboard
+  also requires **`NEXT_PUBLIC_VAPID_PUBLIC_KEY`** set **= `VAPID_PUBLIC_KEY`** in the *build/runtime*
+  env of `apps/dashboard` — it is inlined into the client bundle at compile time; if unset, push
+  subscription registration silently no-ops (no error). Also confirm `API_PUBLIC_URL` is set (PL-14a).
+  See the `project_meta_whatsapp_setup` memory
   for the Meta Developer App + QStash manual steps. *Exit:* prod env has every required
   `@leedi/config` var set to a real value; no placeholder strings.
 
@@ -196,7 +200,14 @@
   it (a dashboard-side helper, mirroring PL-14a's pattern). Pre-launch, before the first real
   multi-origin deploy.
 
-- [ ] **PL-16 · [Epic 8 / Stories 8.1 & 8.2] End-to-end playground smoke test.** The review fixed
+- [x] **PL-16 · [Epic 8 / Stories 8.1 & 8.2] End-to-end playground smoke test.** ✅ **VERIFIED END-TO-END
+  2026 at J-06 (roteiro F-16).** A live local run (real `agent_config` + Anthropic call + Upstash Redis
+  session, NOT mocked) exercised all 3 scenarios: multi-tool agent turns fired (`buscar_historico_lead`
+  + `consultar_base_conhecimento`), row counts across leads/lead_journey_events/conversation_windows/
+  usage_counters/agent_threads/agent_messages/agent_tool_calls/messages stayed **identical to baseline**
+  (zero sandbox rows), `lead_com_objecao` engaged the price objection (AC#2), and "Reiniciar conversa"
+  cleared the session. **Residual (optional):** re-confirm on a deployed staging env per the original
+  exit wording — substance is met locally. The review fixed
   a HIGH bug where the playground 500'd on every message (`leadId: 'playground-lead'` → uuid
   `22P02`) and a sandbox side-effect (`consultar_base_conhecimento` writing `lead_journey_events`).
   The uuid fix is proven at the DB level and the side-effect is locked by a unit test, BUT the
