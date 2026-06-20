@@ -17,6 +17,11 @@ interface CampaignConfig {
   downsell?: PhaseConfig & { produto_id?: string };
 }
 
+interface ProductOption {
+  id: string;
+  nome: string;
+}
+
 interface Campaign {
   id: string;
   nome: string;
@@ -69,11 +74,13 @@ function PhaseConfigEditor({
   config,
   onSave,
   saving,
+  products,
 }: {
   phaseKey: PhaseKey;
   config: PhaseConfig;
   onSave: (key: PhaseKey, cfg: PhaseConfig) => Promise<void>;
   saving: boolean;
+  products?: ProductOption[];
 }) {
   const [urgencia, setUrgencia] = useState(config.urgencia ?? '');
   const [mensagens, setMensagens] = useState((config.mensagens_chave ?? []).join('\n'));
@@ -81,15 +88,17 @@ function PhaseConfigEditor({
     config.transicao?.tipo ?? 'manual'
   );
   const [transicaoData, setTransicaoData] = useState(config.transicao?.data ?? '');
+  const [produtoId, setProdutoId] = useState((config as { produto_id?: string }).produto_id ?? '');
 
   async function handleSave() {
-    const cfg: PhaseConfig = { transicao: { tipo: transicaoTipo } };
+    const cfg: PhaseConfig & { produto_id?: string } = { transicao: { tipo: transicaoTipo } };
     if (urgencia) cfg.urgencia = urgencia;
     const lines = mensagens ? mensagens.split('\n').filter(Boolean) : [];
     if (lines.length > 0) cfg.mensagens_chave = lines;
     if (transicaoTipo === 'data' && transicaoData) {
       cfg.transicao = { tipo: 'data', data: transicaoData };
     }
+    if (phaseKey === 'downsell' && produtoId) cfg.produto_id = produtoId;
     await onSave(phaseKey, cfg);
   }
 
@@ -103,6 +112,22 @@ function PhaseConfigEditor({
           placeholder="Ex: Últimas vagas! Oferta encerra amanhã."
         />
       </div>
+      {phaseKey === 'downsell' && products && (
+        <div className="space-y-1">
+          <Label htmlFor="downsell-produto">Produto de downsell</Label>
+          <select
+            id="downsell-produto"
+            value={produtoId}
+            onChange={(e) => setProdutoId(e.target.value)}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">Usar o produto principal da campanha</option>
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>{p.nome}</option>
+            ))}
+          </select>
+        </div>
+      )}
       <div className="space-y-1">
         <Label>Mensagens-chave (uma por linha)</Label>
         <textarea
@@ -149,9 +174,11 @@ function PhaseConfigEditor({
 export function CampaignDetailClient({
   tenantId,
   campaignId,
+  products,
 }: {
   tenantId: string;
   campaignId: string;
+  products: ProductOption[];
 }) {
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(true);
@@ -316,6 +343,7 @@ export function CampaignDetailClient({
                 config={campaign.config[activeTab] ?? {}}
                 onSave={handlePhaseConfigSave}
                 saving={savingPhase}
+                products={products}
               />
             </div>
           )}
