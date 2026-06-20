@@ -11,6 +11,7 @@ const SETTINGS_NAV = [
   { href: '/configuracoes/notificacoes', label: 'Notificações' },
   { href: '/configuracoes/whatsapp', label: 'WhatsApp' },
   { href: '/configuracoes/equipe', label: 'Equipe' },
+  { href: '/configuracoes/gateway', label: 'Gateway (Hottok)' },
 ];
 
 export default function ConfiguracoesLayout({

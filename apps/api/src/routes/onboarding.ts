@@ -5,6 +5,7 @@ import type { OnboardingConfig } from '@leedi/db';
 import { requireTenantSession } from '../middleware/tenant-session.js';
 import { rateLimitTenant } from '../middleware/rate-limit.js';
 import { apiPublicUrl } from '../utils/api-public-url.js';
+import { upsertGatewayHottok } from '../use-cases/gateway/upsert-gateway-hottok.js';
 
 const progressPatchSchema = z.object({
   step: z.number().int().min(1).max(5),
@@ -206,6 +207,39 @@ export function createOnboardingRouter() {
 
     const cfg = parseOnboardingConfig(tenant.config ?? {});
     return c.json({ confirmed: cfg.gateway_webhook_received === true });
+  });
+
+  // GET /api/tenants/:tenantId/onboarding/hottok — owner only (P2-3)
+  router.get('/hottok', requireTenantSession('owner'), async (c) => {
+    const tenantId = c.get('resolvedTenantId');
+    const rows = await withTenant(tenantId, async (tx) =>
+      tx
+        .select({
+          gateway: schema.gatewayIntegrations.gateway,
+          webhookUrlPath: schema.gatewayIntegrations.webhookUrlPath,
+          webhookSecret: schema.gatewayIntegrations.webhookSecret,
+        })
+        .from(schema.gatewayIntegrations)
+        .where(eq(schema.gatewayIntegrations.tenantId, tenantId))
+        .limit(1)
+    );
+    const r = rows[0];
+    return c.json({
+      hottokSet: !!r?.webhookSecret,
+      gateway: r?.gateway ?? null,
+      webhookUrl: r?.webhookUrlPath ? `${apiPublicUrl()}/webhooks/hotmart/${r.webhookUrlPath}` : null,
+    });
+  });
+
+  // PUT /api/tenants/:tenantId/onboarding/hottok — owner only (P2-3)
+  router.put('/hottok', requireTenantSession('owner'), async (c) => {
+    const tenantId = c.get('resolvedTenantId');
+    let body: unknown;
+    try { body = await c.req.json(); } catch { return c.json({ error: 'Invalid JSON body.' }, 400); }
+    const parsed = z.object({ hottok: z.string().min(1), gateway: z.enum(['hotmart', 'eduzz', 'kiwify']).optional() }).safeParse(body);
+    if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
+    const result = await upsertGatewayHottok({ tenantId, hottok: parsed.data.hottok, ...(parsed.data.gateway ? { gateway: parsed.data.gateway } : {}) });
+    return c.json(result);
   });
 
   // POST /api/tenants/:tenantId/onboarding/complete — owner only (19.4 AC#3)
