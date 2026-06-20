@@ -28,7 +28,7 @@ export async function upsertGatewayHottok(
     if (existing[0]) {
       await tx
         .update(schema.gatewayIntegrations)
-        .set({ webhookSecret: hottok, gateway, ativo: true })
+        .set({ webhookSecret: hottok, ...(input.gateway ? { gateway: input.gateway } : {}), ativo: true })
         .where(eq(schema.gatewayIntegrations.tenantId, tenantId));
       return existing[0].webhookUrlPath;
     }

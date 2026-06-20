@@ -81,7 +81,7 @@ describe('upsertGatewayHottok', () => {
     expect(result.webhookUrl).toContain('/webhooks/hotmart/');
   });
 
-  it('updates webhookSecret = hottok on the existing integration', async () => {
+  it('updates webhookSecret = hottok on the existing integration without touching gateway', async () => {
     existingRow = { webhookUrlPath: 'existing-path-456' };
     insertedValues = undefined;
     updatedSet = undefined;
@@ -91,10 +91,29 @@ describe('upsertGatewayHottok', () => {
 
     expect(updatedSet).toMatchObject({
       webhookSecret: 'new-hottok-789',
-      gateway: 'hotmart',
       ativo: true,
     });
+    // No-clobber: when caller omits `gateway`, the update payload must NOT
+    // include a `gateway` key at all — overwriting an existing eduzz/kiwify
+    // integration's gateway with the 'hotmart' default would silently
+    // corrupt that tenant's integration row.
+    expect(updatedSet).not.toHaveProperty('gateway');
     expect(insertedValues).toBeUndefined();
     expect(result.webhookUrl).toContain('existing-path-456');
+  });
+
+  it('updates gateway on the existing integration when caller explicitly provides it', async () => {
+    existingRow = { webhookUrlPath: 'existing-path-456' };
+    insertedValues = undefined;
+    updatedSet = undefined;
+
+    const { upsertGatewayHottok } = await import('../upsert-gateway-hottok.js');
+    await upsertGatewayHottok({ tenantId: TENANT_ID, hottok: 'new-hottok-789', gateway: 'eduzz' });
+
+    expect(updatedSet).toMatchObject({
+      webhookSecret: 'new-hottok-789',
+      gateway: 'eduzz',
+      ativo: true,
+    });
   });
 });
