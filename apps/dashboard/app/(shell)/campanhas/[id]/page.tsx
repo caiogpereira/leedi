@@ -21,7 +21,9 @@ export default async function CampaignDetailPage({
     <CampaignDetailClient
       tenantId={currentTenant.tenantId}
       campaignId={id}
-      products={products.map((p) => ({ id: p.id, nome: p.nome }))}
+      products={products
+        .map((p) => ({ id: p.id, nome: p.nome }))
+        .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))}
     />
   );
 }

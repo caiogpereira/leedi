@@ -15,7 +15,9 @@ export default async function CampanhasPage() {
   return (
     <CampaignListClient
       tenantId={currentTenant.tenantId}
-      products={products.map((p) => ({ id: p.id, nome: p.nome }))}
+      products={products
+        .map((p) => ({ id: p.id, nome: p.nome }))
+        .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))}
     />
   );
 }
