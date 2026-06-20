@@ -143,6 +143,13 @@ Status per journey: `todo` → `in-progress` → `done` / `blocked`.
 
 > Setup runbook 1 covers: tunnel (ngrok/cloudflared), Meta Developer App (app secret, webhook
 > verify token, test number), QStash (token + signing keys pointed at the tunnel). **PL-2.**
+>
+> ⛔ **BLOCKED on Meta company/Business-Manager verification (2026-06-19).** Meta requires
+> business verification **even to use the test number** — not just the production number (this
+> corrects the earlier assumption that the test number was usable in dev mode without it). A
+> re-verification ticket is open with Meta; **all of Tier 1 (J-13…J-19) waits on Meta approving
+> it.** Nothing on our side unblocks this — it is an external gate. QStash + tunnel are already
+> set; the only missing piece is Meta verification. Resume Tier 1 once Meta clears the BM.
 
 ### J-13 · Connect WhatsApp
 - **Tier:** 1 · **Driver:** Claude+Caio · **Status:** todo
