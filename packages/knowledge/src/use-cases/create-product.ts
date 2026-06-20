@@ -39,6 +39,7 @@ export interface ProductRow {
   garantia: string | null;
   bonus: string[];
   gatewayProductId: string | null;
+  materialLancamento: string | null;
   ativo: boolean;
   createdAt: Date;
   updatedAt: Date;

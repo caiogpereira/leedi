@@ -15,6 +15,7 @@ export const updateProductSchema = z.object({
   tipo: z.enum(['principal', 'downsell', 'upsell', 'orderbump']).optional(),
   gatewayProductId: z.string().optional().nullable(),
   garantia: z.string().optional().nullable(),
+  materialLancamento: z.string().optional().nullable(),
 });
 
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;

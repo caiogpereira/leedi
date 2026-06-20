@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArgumentList } from "../../../../../components/knowledge/ArgumentList";
 import type { ProductRow } from "@leedi/knowledge";
 
-type Tab = "basico" | "argumentos" | "diferenciais" | "provas" | "garantia" | "bonus";
+type Tab = "basico" | "argumentos" | "diferenciais" | "provas" | "garantia" | "bonus" | "material";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "basico", label: "Dados básicos" },
@@ -14,6 +14,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "provas", label: "Provas sociais" },
   { id: "garantia", label: "Garantia" },
   { id: "bonus", label: "Bônus" },
+  { id: "material", label: "Material de lançamento" },
 ];
 
 const TIPOS = [
@@ -42,6 +43,7 @@ export function ProductDetailClient({ product, tenantId }: Props) {
   const [provasSociais, setProvasSociais] = useState<string[]>(product.provasSociais ?? []);
   const [garantia, setGarantia] = useState(product.garantia ?? "");
   const [bonus, setBonus] = useState<string[]>(product.bonus ?? []);
+  const [material, setMaterial] = useState(product.materialLancamento ?? "");
 
   async function saveMaterial(
     field: "argumentos" | "diferenciais" | "provasSociais" | "bonus",
@@ -89,6 +91,31 @@ export function ProductDetailClient({ product, tenantId }: Props) {
         setError(data.error ?? "Erro ao salvar.");
       } else {
         setSuccess("Garantia salva com sucesso.");
+        setTimeout(() => setSuccess(null), 2000);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveMaterial2() {
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch(
+        `/api/tenants/${tenantId}/knowledge/products/${product.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ materialLancamento: material }),
+        }
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error ?? "Erro ao salvar.");
+      } else {
+        setSuccess("Material salvo com sucesso.");
         setTimeout(() => setSuccess(null), 2000);
       }
     } finally {
@@ -427,6 +454,31 @@ export function ProductDetailClient({ product, tenantId }: Props) {
             className="self-start inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             {saving ? "Salvando..." : "Salvar bônus"}
+          </button>
+        </div>
+      )}
+
+      {/* Material de lançamento tab */}
+      {activeTab === "material" && (
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">
+            Cole aqui o material de lançamento: scripts de CPL, roteiro do vídeo de vendas,
+            gatilhos e contexto da oferta. O agente consulta este material sob demanda.
+          </p>
+          <textarea
+            value={material}
+            onChange={(e) => setMaterial(e.target.value)}
+            rows={16}
+            placeholder="Ex: CPL 1 — A grande oportunidade...\nGatilhos: escassez (turma fecha sexta), prova social..."
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+          />
+          <button
+            type="button"
+            onClick={saveMaterial2}
+            disabled={saving}
+            className="self-start inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            {saving ? "Salvando..." : "Salvar material"}
           </button>
         </div>
       )}

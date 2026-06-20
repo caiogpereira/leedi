@@ -36,6 +36,7 @@ export const products = pgTable('products', {
   garantia: text('garantia'),
   bonus: jsonb('bonus').$type<string[]>().default([]).notNull(),
   gatewayProductId: text('gateway_product_id'),
+  materialLancamento: text('material_lancamento'),
   ativo: boolean('ativo').default(true).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
