@@ -63,9 +63,28 @@ function getInstrucaoComercial(tipo: CampaignTipo, fase: CampaignFase): string {
   }
 }
 
+function toEffectiveProduto(product: Record<string, unknown>): EffectiveProduto {
+  return {
+    id: product.id as string,
+    nome: product.nome as string,
+    preco: product.preco as string,
+    precoParcelado: product.precoParcelado as string | null,
+    parcelas: product.parcelas as number | null,
+    linkCheckout: product.linkCheckout as string,
+    tipo: product.tipo as string,
+    argumentos: (product.argumentos as string[]) ?? [],
+    diferenciais: (product.diferenciais as string[]) ?? [],
+    provasSociais: (product.provasSociais as string[]) ?? [],
+    garantia: product.garantia as string | null,
+    bonus: (product.bonus as string[]) ?? [],
+    gatewayProductId: product.gatewayProductId as string | null,
+  };
+}
+
 /**
- * Returns the active campaign's effective product and sales context, or an
- * empty result when no campaign is running. Never throws on empty state (AC#3).
+ * Returns the active campaign's effective product and sales context. When no
+ * campaign is running, returns the full active catalog (passive selling) with
+ * campanha: null. Never throws on empty state.
  */
 export async function consultarOfertasAtivas(
   ctx: Pick<ToolContext, 'tenantId' | 'campaignId'>
@@ -98,7 +117,21 @@ export async function consultarOfertasAtivas(
     const [campaign] = await campaignQuery;
 
     if (!campaign) {
-      return { produtos: [], campanha: null };
+      // Venda passiva: sem campanha ativa, o agente enxerga TODO o catálogo
+      // ativo e escolhe o produto que atende ao lead percorrendo o funil.
+      const activeProducts = await tx
+        .select()
+        .from(schema.products)
+        .where(
+          and(
+            eq(schema.products.tenantId, ctx.tenantId),
+            eq(schema.products.ativo, true)
+          )
+        );
+      return {
+        produtos: activeProducts.map((p) => toEffectiveProduto(p as Record<string, unknown>)),
+        campanha: null,
+      };
     }
 
     const tipo = campaign.tipo as CampaignTipo;
@@ -163,21 +196,7 @@ export async function consultarOfertasAtivas(
       return { produtos: [], campanha };
     }
 
-    const effectiveProduto: EffectiveProduto = {
-      id: product.id as string,
-      nome: product.nome as string,
-      preco: product.preco as string,
-      precoParcelado: product.precoParcelado as string | null,
-      parcelas: product.parcelas as number | null,
-      linkCheckout: product.linkCheckout as string,
-      tipo: product.tipo as string,
-      argumentos: (product.argumentos as string[]) ?? [],
-      diferenciais: (product.diferenciais as string[]) ?? [],
-      provasSociais: (product.provasSociais as string[]) ?? [],
-      garantia: product.garantia as string | null,
-      bonus: (product.bonus as string[]) ?? [],
-      gatewayProductId: product.gatewayProductId as string | null,
-    };
+    const effectiveProduto = toEffectiveProduto(product as Record<string, unknown>);
 
     return { produtos: [effectiveProduto], campanha };
   });

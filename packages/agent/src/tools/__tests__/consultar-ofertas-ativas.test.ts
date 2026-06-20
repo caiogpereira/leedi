@@ -59,20 +59,18 @@ vi.mock('@leedi/db', () => {
   const makeTx = () => ({
     select: () => ({
       from(table: { __name: string }) {
+        const rows = () =>
+          table.__name === 'campaigns' ? mockCampaigns
+          : table.__name === 'products' ? mockProducts
+          : [];
         return {
           where(cond: unknown) {
             void cond;
-            return {
-              limit(_n: number) {
-                if (table.__name === 'campaigns') {
-                  return Promise.resolve(mockCampaigns.slice(0, 1));
-                }
-                if (table.__name === 'products') {
-                  return Promise.resolve(mockProducts.slice(0, 1));
-                }
-                return Promise.resolve([]);
-              },
-            };
+            const all = rows();
+            const p = Promise.resolve(all);
+            return Object.assign(p, {
+              limit: (_n: number) => Promise.resolve(all.slice(0, _n)),
+            });
           },
         };
       },
@@ -99,8 +97,19 @@ beforeEach(() => {
 });
 
 describe('consultarOfertasAtivas — Story 10.3', () => {
-  it('AC#3: returns { produtos: [], campanha: null } when no active campaign', async () => {
+  it('passive sell: returns ALL active products with campanha null when no campaign', async () => {
     mockCampaigns = [];
+    mockProducts = [basePrincipalProduct, baseDownsellProduct];
+    const { consultarOfertasAtivas } = await import('../consultar-ofertas-ativas.js');
+    const res = await consultarOfertasAtivas({ tenantId: TENANT_ID });
+    expect(res.campanha).toBeNull();
+    expect(res.produtos.map((p) => p.id)).toEqual([PRODUCT_ID, DOWNSELL_PRODUCT_ID]);
+    expect(res.produtos[0]?.argumentos).toEqual(['arg']);
+  });
+
+  it('passive sell: returns empty produtos when there are no active products', async () => {
+    mockCampaigns = [];
+    mockProducts = [];
     const { consultarOfertasAtivas } = await import('../consultar-ofertas-ativas.js');
     const res = await consultarOfertasAtivas({ tenantId: TENANT_ID });
     expect(res.produtos).toEqual([]);
