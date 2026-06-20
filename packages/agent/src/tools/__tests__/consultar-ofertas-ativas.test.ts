@@ -70,6 +70,7 @@ vi.mock('@leedi/db', () => {
             const p = Promise.resolve(all);
             return Object.assign(p, {
               limit: (_n: number) => Promise.resolve(all.slice(0, _n)),
+              orderBy: (..._cols: unknown[]) => Promise.resolve(all),
             });
           },
         };

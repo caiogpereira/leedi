@@ -127,7 +127,8 @@ export async function consultarOfertasAtivas(
             eq(schema.products.tenantId, ctx.tenantId),
             eq(schema.products.ativo, true)
           )
-        );
+        )
+        .orderBy(schema.products.createdAt);
       return {
         produtos: activeProducts.map((p) => toEffectiveProduto(p as Record<string, unknown>)),
         campanha: null,
