@@ -15,6 +15,8 @@ const profilePatchSchema = z.object({
   name: z.string().min(1).optional(),
   logo_url: z.string().url().optional(),
   segmento: z.string().optional(),
+  cnpj: z.string().optional(),
+  endereco: z.string().optional(),
 });
 
 function parseOnboardingConfig(config: Record<string, unknown>): OnboardingConfig {
@@ -134,16 +136,18 @@ export function createOnboardingRouter() {
     if (!parsed.success) {
       return c.json({ error: parsed.error.flatten() }, 400);
     }
-    const { name, logo_url, segmento } = parsed.data;
+    const { name, logo_url, segmento, cnpj, endereco } = parsed.data;
 
-    // Update tenant name / logoUrl directly on the tenants row
-    if (name || logo_url) {
+    // Update tenant name / logoUrl / cnpj / endereco directly on the tenants row
+    if (name || logo_url || cnpj !== undefined || endereco !== undefined) {
       await withTenant(tenantId, async (tx) =>
         tx
           .update(schema.tenants)
           .set({
             ...(name ? { name } : {}),
             ...(logo_url ? { logoUrl: logo_url } : {}),
+            ...(cnpj !== undefined ? { cnpj } : {}),
+            ...(endereco !== undefined ? { endereco } : {}),
           })
           .where(eq(schema.tenants.id, tenantId))
       );

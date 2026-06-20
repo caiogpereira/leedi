@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@leedi/ui';
 
 const SETTINGS_NAV = [
+  { href: '/configuracoes/empresa', label: 'Dados da empresa' },
   { href: '/configuracoes/uso', label: 'Uso' },
   { href: '/configuracoes/cobranca', label: 'Cobrança' },
   { href: '/configuracoes/notificacoes', label: 'Notificações' },

@@ -32,6 +32,8 @@ export const tenants = pgTable('tenants', {
   plan: tenantPlanEnum('plan').default('starter').notNull(),
   logoUrl: text('logo_url'),
   colors: jsonb('colors'),
+  cnpj: text('cnpj'),
+  endereco: text('endereco'),
   // Generic tenant preference bag. Used by Story 6.4 for tenant_sales_method_preference
   // until Story 7.1 wires it into agent_configs.sales_method_id.
   config: jsonb('config').$type<Record<string, unknown>>().default({}).notNull(),

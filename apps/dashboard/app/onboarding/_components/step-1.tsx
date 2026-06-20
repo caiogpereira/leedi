@@ -26,6 +26,8 @@ export function Step1({ tenantId, stepData, onAdvance }: Props) {
   const [nome, setNome] = useState((saved['nome'] as string) ?? '');
   const [logoUrl, setLogoUrl] = useState((saved['logo_url'] as string) ?? '');
   const [segmento, setSegmento] = useState((saved['segmento'] as string) ?? '');
+  const [cnpj, setCnpj] = useState((saved['cnpj'] as string) ?? '');
+  const [endereco, setEndereco] = useState((saved['endereco'] as string) ?? '');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -42,12 +44,12 @@ export function Step1({ tenantId, stepData, onAdvance }: Props) {
         fetch(`/api/tenants/${tenantId}/onboarding/profile`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: nome.trim(), logo_url: logoUrl || undefined, segmento: segmento || undefined }),
+          body: JSON.stringify({ name: nome.trim(), logo_url: logoUrl || undefined, segmento: segmento || undefined, cnpj: cnpj || undefined, endereco: endereco || undefined }),
         }),
         fetch(`/api/tenants/${tenantId}/onboarding/progress`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ step: 1, data: { nome: nome.trim(), logo_url: logoUrl, segmento } }),
+          body: JSON.stringify({ step: 1, data: { nome: nome.trim(), logo_url: logoUrl, segmento, cnpj, endereco } }),
         }),
       ]);
 
@@ -110,6 +112,15 @@ export function Step1({ tenantId, stepData, onAdvance }: Props) {
               </option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <Label htmlFor="cnpj">CNPJ (opcional)</Label>
+          <Input id="cnpj" value={cnpj} onChange={(e) => setCnpj(e.target.value)} placeholder="00.000.000/0000-00" className="mt-1" />
+        </div>
+        <div>
+          <Label htmlFor="endereco">Endereço (opcional)</Label>
+          <Input id="endereco" value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder="Rua, número, cidade - UF" className="mt-1" />
         </div>
       </div>
 
