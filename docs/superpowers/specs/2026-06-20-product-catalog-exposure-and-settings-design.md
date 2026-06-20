@@ -51,8 +51,13 @@ Quando não há campanha ativa (e sem `campaignId` de playground), `consultar_of
 *ACs:* sem campanha, a tool retorna o catálogo ativo completo; com campanha, comportamento atual preservado (produto efetivo + contexto); testes cobrindo ambos os caminhos; nenhum erro em estado vazio (sem produtos).
 
 **P0-4 — Campo de material de lançamento (texto longo) por produto.**
-Nova coluna (ex.: `material_lancamento text`) em `products` (migração), nova aba na página de edição do produto, e inclusão do conteúdo no contexto do agente (no retorno de `consultar_ofertas_ativas` / `EffectiveProduto` e/ou no system prompt).
-*ACs:* usuário cola CPL/VSL/gatilhos e salva; conteúdo persiste e volta na edição; agente recebe o material quando o produto é a oferta efetiva; campo opcional (vazio não quebra nada).
+Nova coluna (ex.: `material_lancamento text`) em `products` (migração) + nova aba na página de edição do produto.
+
+**Fork de design (decisão do usuário) — como o agente consome o material:**
+- **Sempre no contexto:** injetar o material no system prompt / `EffectiveProduto` sempre. Simples, mas material longo (milhares de palavras) × vários produtos = custo/latência/orçamento de contexto altos (mesmo risco da "venda passiva sempre completa").
+- **Sob demanda (recomendado):** o material fica acessível via uma tool (ex.: o agente "abre o dossiê do produto" quando precisa de scripts/gatilhos), seguindo o padrão `consultar_*` existente. Controla custo e pré-encaminha a base de conhecimento por-produto da Fase 2.
+
+*ACs:* usuário cola CPL/VSL/gatilhos e salva; conteúdo persiste e volta na edição; agente acessa o material conforme a estratégia escolhida; campo opcional (vazio não quebra nada).
 
 ### 🟠 P1 — Contexto do disparo
 

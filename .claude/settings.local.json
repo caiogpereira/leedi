@@ -12,7 +12,10 @@
       "Bash(git checkout *)",
       "Bash(node -e \"const p=require\\('./packages/ui/package.json'\\); console.log\\(JSON.stringify\\(p.scripts,null,2\\)\\); console.log\\('deps:', JSON.stringify\\(Object.keys\\(p.dependencies||{}\\)\\)\\)\")",
       "Bash(node -e ' *)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "PowerShell($ports = 3000,3001,3002,3003; foreach \\($p in $ports\\) { $conns = Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue; if \\($conns\\) { foreach \\($c in $conns\\) { $proc = Get-Process -Id $c.OwningProcess -ErrorAction SilentlyContinue; Write-Output \\(\"Porta {0} -> PID {1} \\({2}\\)\" -f $p, $c.OwningProcess, $proc.ProcessName\\) } } else { Write-Output \\(\"Porta {0} -> livre\" -f $p\\) } })",
+      "PowerShell($pids = 10456,4884,1392,14632; foreach \\($id in $pids\\) { try { Stop-Process -Id $id -Force -ErrorAction Stop; Write-Output \\(\"PID {0} encerrado\" -f $id\\) } catch { Write-Output \\(\"PID {0} -> {1}\" -f $id, $_.Exception.Message\\) } })",
+      "PowerShell($ports = 3000,3001,3002,3003; foreach \\($p in $ports\\) { $conns = Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue; if \\($conns\\) { Write-Output \\(\"Porta {0} -> AINDA OCUPADA \\(PID {1}\\)\" -f $p, $conns.OwningProcess\\) } else { Write-Output \\(\"Porta {0} -> livre\" -f $p\\) } })"
     ]
   },
   "enabledMcpjsonServers": [
