@@ -16,6 +16,7 @@ import {
 import type { ToolContext, ToolDefinition, ToolsHabilitadas } from './types.js';
 import { buscarHistoricoLead } from './buscar-historico-lead.js';
 import { consultarOfertasAtivas } from './consultar-ofertas-ativas.js';
+import { consultarMaterialProduto } from './consultar-material-produto.js';
 import { verificarElegibilidade } from './verificar-eligibilidade.js';
 import { enviarLinkCheckout } from './enviar-link-checkout.js';
 import { marcarIntencaoCompra } from './marcar-intencao-compra.js';
@@ -83,6 +84,21 @@ const TOOL_DEFINITIONS: Record<ToolName, ToolDefinition> = {
           description: 'Opcional: ID do produto/oferta de interesse do lead.',
         },
       },
+    },
+  },
+  consultar_material_produto: {
+    name: 'consultar_material_produto',
+    description:
+      'Consulta o material de lançamento detalhado de um produto específico (scripts de CPL, roteiro do vídeo de vendas, gatilhos e contexto da oferta). Use quando precisar de contexto aprofundado para vender um produto. Informe o productId obtido em consultar_ofertas_ativas.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        productId: {
+          type: 'string',
+          description: 'ID do produto cujo material de lançamento será consultado.',
+        },
+      },
+      required: ['productId'],
     },
   },
 
@@ -294,6 +310,8 @@ export async function routeToolCall(
           : { productId: String(input.productId) },
         ctx
       );
+    case 'consultar_material_produto':
+      return consultarMaterialProduto({ productId: String(input.productId ?? '') }, ctx);
     case 'adicionar_tag':
       return adicionarTag(
         {

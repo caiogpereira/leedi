@@ -13,6 +13,9 @@ export { archiveProduct } from './use-cases/archive-product.js';
 
 export { getProduct } from './use-cases/get-product.js';
 
+export { getProductMaterial } from './use-cases/get-product-material.js';
+export type { ProductMaterial } from './use-cases/get-product-material.js';
+
 export { getActiveOffers } from './use-cases/get-active-offers.js';
 export type { ActiveOffer } from './use-cases/get-active-offers.js';
 

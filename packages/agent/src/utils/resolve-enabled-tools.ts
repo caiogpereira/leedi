@@ -22,6 +22,7 @@ export const ALWAYS_ON_TOOLS = [
   'verificar_elegibilidade',
   'enviar_link_checkout',
   'marcar_intencao_compra',
+  'consultar_material_produto',
 ] as const;
 
 export type AlwaysOnTool = (typeof ALWAYS_ON_TOOLS)[number];
