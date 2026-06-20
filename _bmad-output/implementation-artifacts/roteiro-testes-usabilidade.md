@@ -75,7 +75,7 @@ Status per journey: `todo` → `in-progress` → `done` / `blocked`.
 - **Risks to confirm:** PL-19 fix is live (no `localhost:3000` literal in the redirect).
 
 ### J-02 · Onboarding wizard
-- **Tier:** 0 (steps 1, 3–5; step 2 = WhatsApp connect is **Tier 1**, see J-13) · **Driver:** Claude+Caio · **Status:** done — F-31 fixed (auto-provision on verify); full wizard verified → trial→active (F-33); F-34 (WhatsApp step no-skip) logged; step 2 skipped via API (Tier 1); PL-14 url null (revisit). Onboarding+sales-methods proxies committed.
+- **Tier:** 0 (steps 1, 3–5; step 2 = WhatsApp connect is **Tier 1**, see J-13) · **Driver:** Claude+Caio · **Status:** done — F-31 fixed (auto-provision on verify); full wizard verified → trial→active (F-33); F-34 (WhatsApp step no-skip) logged; step 2 skipped via API (Tier 1); PL-14a url null — **now fixed in code** (`API_PUBLIC_URL`). Onboarding+sales-methods proxies committed.
 - **Preconditions:** a **fresh** tenant in `trial` status (newly registered account redirects here). Steps that call `/onboarding/gateway-webhook-url` show a URL derived via the `:3000`→port replace — see **PL-14** (wrong host in prod; cosmetic locally).
 - **Steps:** complete profile (step 1) → [step 2 WhatsApp = J-13] → gateway webhook step (step 3) → sales method/agent (step 4) → complete (step 5) → confirm full reload lands on an `active`-tenant dashboard.
 - **Observe:** wizard progress persists across reloads (`/onboarding/progress`); skipping/returning behaves; final redirect works.

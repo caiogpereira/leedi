@@ -9,12 +9,10 @@
 > (`epic-{1,2,3}-code-review-report.md`), `epic-1-test-ci-backlog.md`, and the
 > embedded deferral notes inside individual story files.
 >
-> **Living document.** **Epics 1–19** have had a formal code review (each with a
-> `project_epic{N}_code_review` record); **Epic 20** is still pending. Section D below carries
-> each epic's findings; a few Section-D lines for the mid-epics (5–7, 11, 12, 15–18) still read
-> "*Not yet reviewed*" from before their reviews landed and are **stale** — the authoritative
-> per-epic detail is in the `project_epic{N}_code_review` memories until those lines are
-> reconciled. Re-run the review per epic and fold new findings in here.
+> **Living document.** **All 20 epics** have had a formal code review (each with a
+> `project_epic{N}_code_review` memory record). Section D below carries each epic's findings,
+> **reconciled against those review records on 2026-06-20**. Re-run the review per epic and fold
+> any new findings in here.
 >
 > **Severity legend**
 > - **P0 — Launch blocker.** Security, tenant-data isolation, money/billing, or data
@@ -336,14 +334,21 @@
 - **Epic 3 — Design System & UI Shell:** PL-9 (nightly E2E/axe CI gate, P1). All 4 stories
   `done`; 3.4 done **with documented caveat** (local-green axe accepted; CI enforcement = PL-9).
 - **Epic 4 — WhatsApp Connection:** PL-11 (webhook rate limiting, P1), PL-13 (4.3/4.4
-  integration tests, P1), PL-14 (internal API URL derivation, P1). 4.5 multi-message dispatcher was
-  deferred → **wired in Epic 7** (closed). **Formally code-reviewed 2026-06-10** (`epic-4-code-review-report.md`):
-  all 5 stories `done`; HIGH enum-mapping bug (Meta `GREEN`/`TIER_1K` → pt-BR pgEnums, `22P02`) fixed
-  + 3 minor patches; Finding 5 deferred → PL-14.
-- **Epic 5 — Lead Management:** no deferred ACs surfaced yet. *Not yet formally code-reviewed.*
-- **Epic 6 — Knowledge Base:** PL-6 (typecheck), PL-13 (6.1 RLS tests); P2: pgvector. *Not yet reviewed.*
+  integration tests, P1), PL-14a (✅ fixed) + PL-14b (dashboard→API internal URL derivation, P1, open).
+  4.5 multi-message dispatcher was deferred → **wired in Epic 7** (closed). **Formally code-reviewed
+  2026-06-10** (`epic-4-code-review-report.md`): all 5 stories `done`; HIGH enum-mapping bug (Meta
+  `GREEN`/`TIER_1K` → pt-BR pgEnums, `22P02`) fixed + 3 minor patches; Finding 5 deferred → PL-14
+  (later split into PL-14a/14b on 2026-06-17).
+- **Epic 5 — Lead Management:** PL-15 (messages-partition maintenance, P0). **Reviewed 2026-06-10**
+  (stories 5.1–5.5 + epic-5 `done`): fixed `conversationCount` (5.2) + webhook stale-mocks (5.5); the
+  partition-window finding (F4) → PL-15.
+- **Epic 6 — Knowledge Base:** PL-6 (typecheck), PL-13 (6.1 RLS tests); P2: pgvector. **Reviewed
+  2026-06-10** (stories 6.1–6.4 + epic-6 `done`): HIGH build bug (`@/` alias → `ArgumentList`) + a
+  vacuous `toThrow(undefined)` test + 4 `tsc` errors fixed (resolved the pending-typecheck-epic6 item).
 - **Epic 7 — Sales Agent:** PL-6 (typecheck: `@leedi/notification`), PL-12 (tag-dedup race);
-  P2: 7.7 Deepgram/provider config. *Not yet reviewed.*
+  P2: 7.7 Deepgram/provider config. **Reviewed 2026-06-10** (stories 7.1–7.8 + epic-7 `done`): HIGH
+  missing `@leedi/notification` dep in `@leedi/agent` (+jsx tsconfig); MEDIUM stale `MODEL_PRICING`
+  (haiku/opus 4.x) corrected; agent 119/119 + agent-memory 13/13 green.
 - **Epic 8 — Playground:** PL-16 (e2e playground smoke test, P1). Reviewed 2026-06-10; stories
   8.1 & 8.2 `done`. Two HIGH bugs fixed (uuid `22P02` on every message; sandbox `lead_journey_events`
   write) + AC#1a campaign selector added. Live end-to-end run deferred → PL-16.
@@ -354,9 +359,16 @@
   transition endpoint returned 500 instead of 400 (case-sensitive `.includes('transição')` vs
   `"Transição…"` message → switched to `instanceof` mapping); LOW — pre-existing tsc error in the
   10.2 job test. Epic 10 files now type-clean; repo-wide PL-6 still RED from Epic 17 debt.
-- **Epic 11 — Hotmart Gateway:** lint debt only so far (→ PL-7). *Not yet reviewed.* **⚠ Money path
-  — prioritize its formal review** (webhook → purchase → lead status; idempotency, signature verification).
-- **Epic 12 — Meta Templates:** PL-6 (typecheck), PL-7 (⚠ `no-use-before-define`). *Not yet reviewed.*
+- **Epic 11 — Hotmart Gateway:** PL-7 (lint), PL-20 (HOTTOK capture UI — also Story 19.3). **Reviewed
+  2026-06-10** (stories 11.1–11.3 + epic-11 `done`): MEDIUM latent — `handle-recovery-event` did the
+  dispatch-rule lookup + QStash publish INSIDE the tx → a DB error silently rolled back journey+processed
+  (moved past commit); +idempotent notif. gateway 19/19 + api 15/15. **Real-delivery hardening landed
+  later at J-22** (F-40 hottok-in-header, F-42 phone, F-43 PIX/event-map; F-41 → PL-20).
+- **Epic 12 — Meta Templates:** PL-6 (typecheck), PL-7 (⚠ `no-use-before-define`). **Reviewed
+  2026-06-10** (stories 12.1/12.2 + epic-12 `done`): 3 HIGH — `/library` route shadowed by `/:id`
+  (Hono registration order); `DELETE` always 204 (return inside `withTenant`); `?status=` enum →
+  `22P02`/500 — + AC#2 approval notif + AC#7 `[id]` edit page (fixed a dead link); RLS `WITH CHECK`
+  absence noted as systemic → deferred.
 - **Epic 13 — Smart Dispatch:** PL-17 (residual duplicate-send window, P1, needs enum migration);
   lint debt (→ PL-7). Reviewed 2026-06-11; stories 13.1–13.5 `done` (13.2 done **with documented
   caveat** = PL-17). 5 HIGH + multiple MEDIUM/LOW patches applied (dup-send guards, `bloqueado`
@@ -369,26 +381,45 @@
   real adapter** (`meta-cloud-provider.ts` discarded the Meta error code → enriched it); AC#7 kept
   the real Epic-18 notification (dep on Epic 18, still `review`); `22P02`→500 hardening
   (enum/cursor/limit). 2 defers (UNIQUE `inbox_assignments`, reply cross-tx) in `deferred-work.md`.
-- **Epic 15 — Analytics:** lint debt (→ PL-7). *Not yet reviewed.*
-- **Epic 16 — Usage Metering:** lint debt (→ PL-7). *Not yet reviewed.* **⚠ Billing-adjacent
-  (usage counts feed overage/billing) — prioritize its formal review.**
-- **Epic 17 — Billing (Asaas):** PL-2 (real Asaas keys + `ASAAS_SANDBOX=false`), PL-6 (typecheck),
-  PL-7 (lint). *Not yet reviewed.* **⚠ Money path — prioritize its formal review** (subscription
-  creation, webhook lock/unlock idempotency, signature verification).
-- **Epic 18 — Notifications:** PL-2 (real VAPID keys), PL-6 (typecheck), PL-7 (⚠ `no-process-env`
-  exception). *Not yet reviewed.*
+- **Epic 15 — Analytics:** PL-7 (lint). **Reviewed 2026-06-11** (stories 15.1–15.3 `done`): 7 patches
+  (date-range guard + off-by-one, numeric-cast `22P02`, `to_char` UTC, objection events-vs-labels,
+  `daysRemaining` NaN, +2 vacuous→real tests); defers (tenant RLS systemic, partition perf, BFF `:3000`,
+  polling).
+- **Epic 16 — Usage Metering:** PL-7 (lint). **Reviewed 2026-06-11** (stories 16.1–16.3 + epic-16
+  `done`): 1 HIGH — the block killed open conversations → new read-only `hasOpenConversationWindow` —
+  + 3 MEDIUM (overage toggle didn't disable; 2 dead `/settings`→`/configuracoes` links; notification
+  dedup race gated on `RETURNING`). Deviation noted: `tenants.plan` vs `subscriptions.plano` (Epic 17).
+- **Epic 17 — Billing (Asaas):** PL-2 (real Asaas keys + `ASAAS_SANDBOX=false`), PL-7 (lint).
+  **Reviewed 2026-06-11** (money path; stories 17.1–17.3 + epic-17 `done`, commit `41b244f`): 2
+  CRITICAL — webhook read `body.accessToken` vs the `asaas-access-token` header (401 on everything);
+  `PAYMENT_CREATED` unhandled → invoices never created (all no-op) — + 2 HIGH (`cpfCnpj` required by
+  Asaas never sent → 400 in prod, now collected in the admin form; Redis dedup before enqueue +
+  swallowed failure → lost payment). UNIQUE index `invoices.asaas_payment_id` (migration `0019`)
+  smoke-validated; `daily-billing-check` typecheck fixed (closed PL-6's Epic-17 line). **F-39 (daily
+  lockdown never blocked — `.rows` misread on the postgres-js array) found + fixed live at J-21.**
+- **Epic 18 — Notifications:** PL-2 (real VAPID keys **+ `NEXT_PUBLIC_VAPID_PUBLIC_KEY`**, see the PL-2
+  note), PL-7 (⚠ `no-process-env` exception). **Reviewed 2026-06-11** (stories 18.1/18.2 + epic-18
+  `done`, commit `a45e51c`): 3 patches — VAPID `setVapidDetails` at module-load crashed import/boot +
+  health suite (made lazy); `push-registration` `Uint8Array`→`BufferSource` TS2322; `quality_caindo`
+  toggle was dead (handler emitted `quality_vermelho`, violating AC#2/#3). Closed PL-6/PL-9 sub-items
+  (health VAPID + push-registration typecheck). **Push wiring later proven end-to-end at J-23 (F-44):
+  the root-`.env` inlining fix for `NEXT_PUBLIC_VAPID_PUBLIC_KEY`.**
 - **Epic 19 — Onboarding Wizard:** ~~PL-19 (hardcoded `localhost:3000` login origin)~~ ✅ **FIXED
-  2026-06-11** (derive from `BETTER_AUTH_URL`; runtime-verified). PL-14 (the `gateway-webhook-url` endpoint derives the
-  webhook URL shown to the user via the same `:3000`→`API_PORT` replace → wrong host in prod);
-  P2: 19.2 logo upload (V1.5), 19.4 PostHog tracking deferred. **Reviewed 2026-06-11** (Opus 4.8,
+  2026-06-11** (derive from `BETTER_AUTH_URL`; runtime-verified). PL-14a (✅ **fixed** — the
+  `gateway-webhook-url` endpoint, which showed the user a webhook URL via the same `:3000`→`API_PORT`
+  replace, now derives via `API_PUBLIC_URL`); P2: 19.2 logo upload (V1.5), 19.4 PostHog tracking deferred. **Reviewed 2026-06-11** (Opus 4.8,
   commit `197ce4f`); stories 19.1–19.4 + epic-19 `done`. **No production-code defects** — all
   cross-epic contracts verified (`/whatsapp/connect`, `/playground/message`, `/agent-config`,
   `/sales-methods`); tenant default `trial` → AC#1 redirect works. Findings were **test-only**:
   HIGH 2 vacuous hotmart-gateway tests (`toBeGreaterThanOrEqual(0)` always-true + `sql` mock
   discarded args → filters never matched) and MEDIUM the `complete` test asserted only
   `success:true` — both fixed + mutation-proven. `audit_logs` `db.insert` confirmed = convention.
-- **Epic 20 — Super-Admin Dashboard:** P2: 20.3 live FX, CRM CTA, days-at-risk precision; 20.1
-  row-click → 20.2. `epic-20: backlog` in sprint-status though stories are `review`. *Not yet reviewed.*
+- **Epic 20 — Super-Admin Dashboard:** P2: 20.3 live FX, CRM CTA, days-at-risk precision. **Reviewed
+  2026-06-12** (stories 20.1–20.3 + epic-20 `done`, commit `b3914ae`): **first epic with zero
+  production-code defects** (dev applied advisor catches in the build); 2 test patches (sql-mock
+  discarding the query — same fake-green class as Epic 19 — in `list-all-tenants-detailed` +
+  `list-tenant-invoices`, hardened to the SQL contract) + 4 mutation proofs. billing 34/34,
+  tenancy 33/33, config 5/5, admin 18/18.
 
 ---
 
