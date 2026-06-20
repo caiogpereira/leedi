@@ -82,6 +82,17 @@ Colunas novas (ex.: `cnpj`, `endereco`) no schema de tenant (migração), com UI
 
 Integração ERP/Bling (OAuth, sync de catálogo, mapeamento de campos) · múltiplos produtos por campanha (N:N) · FAQ/objeções escopadas por produto (`product_id` em `knowledge_base`) · busca semântica/embeddings (pgvector).
 
+## Atualização P2 (2026-06-20, pós-execução do P0) — reframe + decisões
+
+Investigação do P2 revelou padrão idêntico ao P0 ("já existe, órfão"):
+- **P2-7 WhatsApp:** `/settings/whatsapp` **já existe e funciona** (ConnectForm + HealthPanel + RBAC owner-only via server actions `connectWhatsapp`/`triggerHealthCheck` em `@leedi/connection`), mas está **órfão** — há uma árvore paralela `/settings` (whatsapp, uso, team) **não linkada** (nav usa `/configuracoes`; `/settings/uso` duplica `/configuracoes/uso`).
+- **P2-6 Hottok:** storage existe (`gateway_integrations.webhookSecret`, set no passo Gateway do onboarding); falta aba em Configurações.
+- **P2-8 Dados empresa:** onboarding step-1 "Dados da empresa" existe (nome/logo/segmento); `cpfCnpj` vive **só no app admin** (passado ao Asaas em `createTenantAction`, **não persistido no tenant**). CNPJ/endereço no tenant são novos.
+
+**Decisões confirmadas com o usuário:**
+1. **Consolidar tudo em `/configuracoes`**: mover os componentes de `/settings/whatsapp/*` para `/configuracoes/whatsapp/` (imports relativos a `lib/` preservam profundidade), adicionar abas WhatsApp + Hottok/Gateway + Dados da empresa no `configuracoes/layout.tsx`, e **aposentar a árvore órfã `/settings`** (whatsapp/uso/team).
+2. **Dados da empresa**: **colunas novas `cnpj`/`endereco` em `tenants`** (migração via SQL direto, journal dessincronizado — mesmo procedimento do P0/0020).
+
 ## Princípios transversais
 
 - **Reuso primeiro:** estender o que existe (schema, use-cases, tools, componentes como `ArgumentList`) antes de criar novo.
