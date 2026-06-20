@@ -1,4 +1,5 @@
 import { getCurrentTenantContext } from '../../../lib/tenant-context';
+import { listProducts } from '@leedi/knowledge';
 import { CampaignListClient } from './campaign-list-client';
 
 export default async function CampanhasPage() {
@@ -9,6 +10,12 @@ export default async function CampanhasPage() {
   }
 
   const currentTenant = ctx.tenant;
+  const products = await listProducts({ tenantId: currentTenant.tenantId, archived: false });
 
-  return <CampaignListClient tenantId={currentTenant.tenantId} />;
+  return (
+    <CampaignListClient
+      tenantId={currentTenant.tenantId}
+      products={products.map((p) => ({ id: p.id, nome: p.nome }))}
+    />
+  );
 }

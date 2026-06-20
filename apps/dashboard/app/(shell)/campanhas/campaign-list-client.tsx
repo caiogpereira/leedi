@@ -62,19 +62,25 @@ function formatDate(value: string | null): string {
   return new Date(value).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+interface ProductOption {
+  id: string;
+  nome: string;
+}
+
 interface CreateFormState {
   nome: string;
   tipo: Campaign['tipo'] | '';
+  produtoId: string;
   dataInicio: string;
   dataFim: string;
 }
 
-export function CampaignListClient({ tenantId }: { tenantId: string }) {
+export function CampaignListClient({ tenantId, products }: { tenantId: string; products: ProductOption[] }) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState<CreateFormState>({ nome: '', tipo: '', dataInicio: '', dataFim: '' });
+  const [form, setForm] = useState<CreateFormState>({ nome: '', tipo: '', produtoId: '', dataInicio: '', dataFim: '' });
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -101,6 +107,7 @@ export function CampaignListClient({ tenantId }: { tenantId: string }) {
         body: JSON.stringify({
           nome: form.nome,
           tipo: form.tipo,
+          produtoId: form.produtoId || undefined,
           dataInicio: form.dataInicio || undefined,
           dataFim: form.dataFim || undefined,
         }),
@@ -112,7 +119,7 @@ export function CampaignListClient({ tenantId }: { tenantId: string }) {
       }
       const created = await res.json() as Campaign;
       setDialogOpen(false);
-      setForm({ nome: '', tipo: '', dataInicio: '', dataFim: '' });
+      setForm({ nome: '', tipo: '', produtoId: '', dataInicio: '', dataFim: '' });
       window.location.href = `/campanhas/${created.id}`;
     } finally {
       setCreating(false);
@@ -206,6 +213,20 @@ export function CampaignListClient({ tenantId }: { tenantId: string }) {
                 <option value="lancamento">Lançamento</option>
                 <option value="downsell">Downsell</option>
                 <option value="perpetuo">Perpétuo</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="produto">Produto</Label>
+              <select
+                id="produto"
+                value={form.produtoId}
+                onChange={(e) => setForm((f) => ({ ...f, produtoId: e.target.value }))}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">Sem produto vinculado</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>{p.nome}</option>
+                ))}
               </select>
             </div>
             <div className="grid grid-cols-2 gap-3">
