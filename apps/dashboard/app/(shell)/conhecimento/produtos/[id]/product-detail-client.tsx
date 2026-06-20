@@ -98,7 +98,7 @@ export function ProductDetailClient({ product, tenantId }: Props) {
     }
   }
 
-  async function saveMaterial2() {
+  async function saveMaterialLancamento() {
     setSaving(true);
     setError(null);
     setSuccess(null);
@@ -474,7 +474,7 @@ export function ProductDetailClient({ product, tenantId }: Props) {
           />
           <button
             type="button"
-            onClick={saveMaterial2}
+            onClick={saveMaterialLancamento}
             disabled={saving}
             className="self-start inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
