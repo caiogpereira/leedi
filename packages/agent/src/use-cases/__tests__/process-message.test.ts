@@ -16,6 +16,16 @@ vi.mock('@leedi/agent-memory', () => ({
   saveToolCall: mem.saveToolCall,
 }));
 
+// Default to null (organic) at the source so the file-wide hoisted mock never leaks
+// a non-null impl into other tests — vi.clearAllMocks() clears calls, NOT impls, and
+// this removes any dependence on test execution order.
+const dispatchOriginMock = vi.hoisted(() => ({
+  getDispatchOrigin: vi.fn().mockResolvedValue(null),
+}));
+vi.mock('../get-dispatch-origin.js', () => ({
+  getDispatchOrigin: dispatchOriginMock.getDispatchOrigin,
+}));
+
 // withTenant just runs the callback with a fake tx whose query-builder methods
 // return canned context rows. We capture which "table" was selected via a marker.
 const dbState = vi.hoisted(() => ({
@@ -699,5 +709,53 @@ describe('processMessage — sandbox mode (Story 8.1)', () => {
     // Verify the seed was passed: the Anthropic create call should see the seeded messages.
     const firstCall = (create.mock.calls as unknown as Array<[{ messages: Array<{ role: string }> }]>)[0];
     expect(firstCall![0].messages.length).toBeGreaterThanOrEqual(3); // 2 seed + 1 new user
+  });
+});
+
+describe('processMessage — dispatch origin injection', () => {
+  // The top-level beforeEach already resets dbState + mem mocks. Nested beforeEach
+  // runs after it, so default the dispatch-origin lookup to null (organic) here.
+  beforeEach(() => {
+    dispatchOriginMock.getDispatchOrigin.mockResolvedValue(null);
+  });
+
+  function makeDeps(create: ReturnType<typeof vi.fn>): ProcessMessageDeps {
+    return {
+      redis: makeRedis(),
+      anthropic: { messages: { create } } as unknown as ProcessMessageDeps['anthropic'],
+      senderFactory: () => ({ sendText: async () => ({ messageId: 'meta-1' }) }),
+      sleep: async () => {},
+    };
+  }
+
+  it('injects a second uncached system block when the lead replies to a dispatch', async () => {
+    dispatchOriginMock.getDispatchOrigin.mockResolvedValue({
+      templateNome: 'Abertura',
+      templateBody: 'Vagas abertas!',
+      campaignNome: 'Lançamento Junho',
+      produtoNome: 'Curso Alpha',
+    });
+    const create = vi.fn(async (_args: { system: Array<Record<string, unknown>> }) =>
+      assistantTextResponse('oi!')
+    );
+    await processMessage(baseInput, makeDeps(create));
+
+    const system = create.mock.calls[0]![0].system;
+    expect(system).toHaveLength(2);
+    expect(system[0]!.cache_control).toEqual({ type: 'ephemeral' });
+    expect(system[1]!.cache_control).toBeUndefined(); // block 2 is uncached
+    expect(system[1]!.text).toContain('Curso Alpha');
+  });
+
+  it('passes a single cached system block for organic conversations (no dispatch)', async () => {
+    dispatchOriginMock.getDispatchOrigin.mockResolvedValue(null);
+    const create = vi.fn(async (_args: { system: Array<Record<string, unknown>> }) =>
+      assistantTextResponse('oi!')
+    );
+    await processMessage(baseInput, makeDeps(create));
+
+    const system = create.mock.calls[0]![0].system;
+    expect(system).toHaveLength(1);
+    expect(system[0]!.cache_control).toEqual({ type: 'ephemeral' });
   });
 });

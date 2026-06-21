@@ -14,6 +14,8 @@ import {
   type SalesMethodInput,
   type ActiveProductInput,
 } from '../utils/build-system-prompt.js';
+import { getDispatchOrigin } from './get-dispatch-origin.js';
+import { buildDispatchContextBlock } from '../utils/build-dispatch-context-block.js';
 import { buildToolList, routeToolCall } from '../tools/registry.js';
 import type { ToolContext } from '../tools/types.js';
 import { splitResponse } from '../utils/split-response.js';
@@ -352,11 +354,18 @@ export async function processMessage(
       enabledToolIds
     );
 
-    // AC#2: the ENTIRE system prompt is per-message-stable (derived from
-    // config/method/product). One cache breakpoint on the single stable block.
-    // The variable user message goes in `messages`, never in `system`.
+    // AC#2: block 1 (persona/method/product) is per-message-stable and cached —
+    // one cache breakpoint at its end. Block 2 (P1-5) carries the per-lead dispatch
+    // origin: it varies per lead and is INTENTIONALLY uncached. Appending an
+    // uncached block AFTER the breakpoint does not affect block 1's cache hit.
+    // The variable user message stays in `messages`, never in `system`.
+    const dispatchOrigin = await getDispatchOrigin(tenantId, leadId);
+    const dispatchBlock = buildDispatchContextBlock(dispatchOrigin);
     const system = [
       { type: 'text' as const, text: systemPromptText, cache_control: { type: 'ephemeral' as const } },
+      ...(dispatchBlock
+        ? [{ type: 'text' as const, text: dispatchBlock }]
+        : []),
     ];
 
     const model = resolveSalesModel(ctxData.agentConfig.modeloIa, tenantId);
@@ -448,7 +457,7 @@ export async function processMessage(
 interface RunToolLoopArgs {
   anthropic: Pick<Anthropic, 'messages'>;
   model: string;
-  system: Array<{ type: 'text'; text: string; cache_control: { type: 'ephemeral' } }>;
+  system: Array<{ type: 'text'; text: string; cache_control?: { type: 'ephemeral' } }>;
   tools: ReturnType<typeof buildToolList>;
   messages: AnthropicHistoryMessage[];
   tenantId: string;
