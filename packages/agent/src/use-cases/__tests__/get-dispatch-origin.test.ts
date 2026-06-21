@@ -7,7 +7,11 @@ const ops = vi.hoisted(() => ({
   inArray: vi.fn((a: unknown, b: unknown) => ({ _op: 'inArray', a, b })),
   gte: vi.fn((a: unknown, b: unknown) => ({ _op: 'gte', a, b })),
   desc: vi.fn((a: unknown) => ({ _op: 'desc', a })),
+  asc: vi.fn((a: unknown) => ({ _op: 'asc', a })),
 }));
+
+// Records every .limit(n) call so tests can assert the exact limit argument used.
+const limitCalls = vi.hoisted(() => ({ args: [] as unknown[] }));
 
 // Per-table canned rows. Each test sets these; the fake tx returns rows by table.
 const rows = vi.hoisted(() => ({
@@ -29,7 +33,10 @@ function makeFakeTx() {
   };
   b.where = () => b;
   b.orderBy = () => b;
-  b.limit = () => (rows as Record<string, unknown[]>)[table] ?? [];
+  b.limit = (n: unknown) => {
+    limitCalls.args.push(n);
+    return (rows as Record<string, unknown[]>)[table] ?? [];
+  };
   return b;
 }
 
@@ -58,6 +65,7 @@ vi.mock('@leedi/db', () => {
     inArray: ops.inArray,
     gte: ops.gte,
     desc: ops.desc,
+    asc: ops.asc,
   };
 });
 
@@ -77,6 +85,7 @@ describe('getDispatchOrigin', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetRows();
+    limitCalls.args = [];
   });
 
   it('returns null when the lead has no qualifying dispatch target', async () => {
@@ -111,6 +120,7 @@ describe('getDispatchOrigin', () => {
     const { getDispatchOrigin } = await import('../get-dispatch-origin.js');
     await getDispatchOrigin(TENANT, LEAD);
     expect(ops.desc).toHaveBeenCalledWith('dispatchTargets.enviado_em');
+    expect(limitCalls.args[0]).toBe(1);
   });
 
   it('scopes by tenant and lead', async () => {
