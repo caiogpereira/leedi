@@ -13,6 +13,10 @@ const ops = vi.hoisted(() => ({
 // Records every .limit(n) call so tests can assert the exact limit argument used.
 const limitCalls = vi.hoisted(() => ({ args: [] as unknown[] }));
 
+// Control flag for the error-path test: when true, the fake tx's first query
+// step (.limit) throws, simulating a transient DB error (timeout, connection blip).
+const ctl = vi.hoisted(() => ({ throwOnQuery: false }));
+
 // Per-table canned rows. Each test sets these; the fake tx returns rows by table.
 const rows = vi.hoisted(() => ({
   dispatchTargets: [] as unknown[],
@@ -34,6 +38,7 @@ function makeFakeTx() {
   b.where = () => b;
   b.orderBy = () => b;
   b.limit = (n: unknown) => {
+    if (ctl.throwOnQuery) throw new Error('db blip');
     limitCalls.args.push(n);
     return (rows as Record<string, unknown[]>)[table] ?? [];
   };
@@ -86,6 +91,7 @@ describe('getDispatchOrigin', () => {
     vi.clearAllMocks();
     resetRows();
     limitCalls.args = [];
+    ctl.throwOnQuery = false;
   });
 
   it('returns null when the lead has no qualifying dispatch target', async () => {
@@ -168,5 +174,14 @@ describe('getDispatchOrigin', () => {
     const { getDispatchOrigin } = await import('../get-dispatch-origin.js');
     const result = await getDispatchOrigin(TENANT, LEAD);
     expect(result).toBeNull();
+  });
+
+  it('returns null (not a rejection) when the DB lookup throws, and logs a warning', async () => {
+    ctl.throwOnQuery = true;
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { getDispatchOrigin } = await import('../get-dispatch-origin.js');
+    await expect(getDispatchOrigin(TENANT, LEAD)).resolves.toBeNull();
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 });

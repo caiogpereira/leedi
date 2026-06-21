@@ -34,85 +34,99 @@ export async function getDispatchOrigin(
 ): Promise<DispatchOrigin | null> {
   const cutoff = new Date(now.getTime() - DISPATCH_ORIGIN_LOOKBACK_MS);
 
-  return withTenant(tenantId, async (tx) => {
-    const [target] = await tx
-      .select({
-        dispatchJobId: schema.dispatchTargets.dispatchJobId,
-        dispatchRuleId: schema.dispatchTargets.dispatchRuleId,
-      })
-      .from(schema.dispatchTargets)
-      .where(
-        and(
-          eq(schema.dispatchTargets.tenantId, tenantId),
-          eq(schema.dispatchTargets.leadId, leadId),
-          inArray(schema.dispatchTargets.status, [...DELIVERED_STATUSES]),
-          gte(schema.dispatchTargets.enviadoEm, cutoff),
-        ),
-      )
-      .orderBy(desc(schema.dispatchTargets.enviadoEm))
-      .limit(1);
-
-    if (!target) return null;
-
-    // Resolve template + campaign from whichever origin the target carries.
-    let templateId: string | null = null;
-    let campaignId: string | null = null;
-
-    if (target.dispatchJobId) {
-      const [job] = await tx
+  // OPTIONAL enrichment: this lookup runs on every inbound message but its result
+  // is purely additive context for the prompt. `null` is already a valid degraded
+  // state (organic conversation, no recent dispatch), so a DB error (timeout,
+  // connection blip) must degrade the same way rather than abort the agent reply.
+  // This is a deliberate non-fatal guard, not a swallowed-error smell.
+  try {
+    return await withTenant(tenantId, async (tx) => {
+      const [target] = await tx
         .select({
-          templateId: schema.dispatchJobs.templateId,
-          campaignId: schema.dispatchJobs.campaignId,
+          dispatchJobId: schema.dispatchTargets.dispatchJobId,
+          dispatchRuleId: schema.dispatchTargets.dispatchRuleId,
         })
-        .from(schema.dispatchJobs)
-        .where(eq(schema.dispatchJobs.id, target.dispatchJobId))
+        .from(schema.dispatchTargets)
+        .where(
+          and(
+            eq(schema.dispatchTargets.tenantId, tenantId),
+            eq(schema.dispatchTargets.leadId, leadId),
+            inArray(schema.dispatchTargets.status, [...DELIVERED_STATUSES]),
+            gte(schema.dispatchTargets.enviadoEm, cutoff),
+          ),
+        )
+        .orderBy(desc(schema.dispatchTargets.enviadoEm))
         .limit(1);
-      templateId = job?.templateId ?? null;
-      campaignId = job?.campaignId ?? null;
-    } else if (target.dispatchRuleId) {
-      const [rule] = await tx
-        .select({ templateId: schema.dispatchRules.templateId })
-        .from(schema.dispatchRules)
-        .where(eq(schema.dispatchRules.id, target.dispatchRuleId))
-        .limit(1);
-      templateId = rule?.templateId ?? null;
-    }
 
-    if (!templateId) return null;
+      if (!target) return null;
 
-    const [template] = await tx
-      .select({ nome: schema.templates.nome, componentes: schema.templates.componentes })
-      .from(schema.templates)
-      .where(eq(schema.templates.id, templateId))
-      .limit(1);
-    if (!template) return null;
+      // Resolve template + campaign from whichever origin the target carries.
+      let templateId: string | null = null;
+      let campaignId: string | null = null;
 
-    let campaignNome: string | null = null;
-    let produtoNome: string | null = null;
-
-    if (campaignId) {
-      const [campaign] = await tx
-        .select({ nome: schema.campaigns.nome, produtoId: schema.campaigns.produtoId })
-        .from(schema.campaigns)
-        .where(eq(schema.campaigns.id, campaignId))
-        .limit(1);
-      campaignNome = campaign?.nome ?? null;
-
-      if (campaign?.produtoId) {
-        const [product] = await tx
-          .select({ nome: schema.products.nome })
-          .from(schema.products)
-          .where(eq(schema.products.id, campaign.produtoId))
+      if (target.dispatchJobId) {
+        const [job] = await tx
+          .select({
+            templateId: schema.dispatchJobs.templateId,
+            campaignId: schema.dispatchJobs.campaignId,
+          })
+          .from(schema.dispatchJobs)
+          .where(eq(schema.dispatchJobs.id, target.dispatchJobId))
           .limit(1);
-        produtoNome = product?.nome ?? null;
+        templateId = job?.templateId ?? null;
+        campaignId = job?.campaignId ?? null;
+      } else if (target.dispatchRuleId) {
+        const [rule] = await tx
+          .select({ templateId: schema.dispatchRules.templateId })
+          .from(schema.dispatchRules)
+          .where(eq(schema.dispatchRules.id, target.dispatchRuleId))
+          .limit(1);
+        templateId = rule?.templateId ?? null;
       }
-    }
 
-    return {
-      templateNome: template.nome,
-      templateBody: template.componentes?.body?.text ?? '',
-      campaignNome,
-      produtoNome,
-    };
-  });
+      if (!templateId) return null;
+
+      const [template] = await tx
+        .select({ nome: schema.templates.nome, componentes: schema.templates.componentes })
+        .from(schema.templates)
+        .where(eq(schema.templates.id, templateId))
+        .limit(1);
+      if (!template) return null;
+
+      let campaignNome: string | null = null;
+      let produtoNome: string | null = null;
+
+      if (campaignId) {
+        const [campaign] = await tx
+          .select({ nome: schema.campaigns.nome, produtoId: schema.campaigns.produtoId })
+          .from(schema.campaigns)
+          .where(eq(schema.campaigns.id, campaignId))
+          .limit(1);
+        campaignNome = campaign?.nome ?? null;
+
+        if (campaign?.produtoId) {
+          const [product] = await tx
+            .select({ nome: schema.products.nome })
+            .from(schema.products)
+            .where(eq(schema.products.id, campaign.produtoId))
+            .limit(1);
+          produtoNome = product?.nome ?? null;
+        }
+      }
+
+      return {
+        templateNome: template.nome,
+        templateBody: template.componentes?.body?.text ?? '',
+        campaignNome,
+        produtoNome,
+      };
+    });
+  } catch (error) {
+    console.warn('[get-dispatch-origin] lookup failed; continuing without dispatch context', {
+      tenantId,
+      leadId,
+      error,
+    });
+    return null;
+  }
 }
