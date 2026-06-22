@@ -82,6 +82,7 @@ export function TemplateListClient({ tenantId }: { tenantId: string }) {
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-filter-change; load() is a stable useCallback, not a render cascade
     load(activeFilter);
   }, [load, activeFilter]);
 

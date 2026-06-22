@@ -65,6 +65,7 @@ export function TemplateDetailClient({
   }, [tenantId, templateId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount; load() is a stable useCallback, not a render cascade
     load();
   }, [load]);
 

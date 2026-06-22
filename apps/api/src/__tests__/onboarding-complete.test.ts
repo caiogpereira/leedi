@@ -45,7 +45,7 @@ vi.mock('@upstash/qstash', () => {
 });
 
 vi.mock('@leedi/db', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   db: { insert: vi.fn(() => ({ values: vi.fn().mockResolvedValue([]) })) },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   withUser: vi.fn((_uid: string, fn: (tx: any) => Promise<unknown>) => fn({})),

@@ -32,6 +32,7 @@ export function RulesListClient({ tenantId }: { tenantId: string }) {
   }, [tenantId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount; load() is a stable useCallback, not a render cascade
     void load();
   }, [load]);
 

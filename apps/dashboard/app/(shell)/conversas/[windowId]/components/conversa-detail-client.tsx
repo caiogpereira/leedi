@@ -111,6 +111,7 @@ export function ConversaDetailClient({ tenantId, windowId, currentUserId }: Prop
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag for an async fetch; fetchDetail is a stable useCallback, not a render cascade
     setLoading(true);
     fetchDetail().finally(() => setLoading(false));
   }, [fetchDetail]);

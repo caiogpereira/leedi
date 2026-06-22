@@ -129,19 +129,6 @@ export function TemplateBuilderClient({ tenantId, libraryId, editTemplate }: Bui
   );
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
 
-  // Load library template if libraryId is provided
-  useEffect(() => {
-    if (!libraryId) return;
-    fetch(`/api/tenants/${tenantId}/templates/library`)
-      .then((r) => r.json())
-      .then((entries: TemplateLibraryEntry[]) => {
-        const entry = entries.find((e) => e.id === libraryId);
-        if (!entry) return;
-        prefillFromLibrary(entry);
-      })
-      .catch(() => {});
-  }, [libraryId, tenantId]);
-
   const prefillFromLibrary = useCallback((entry: TemplateLibraryEntry) => {
     const comps = entry.componentesSugeridos;
     if (comps.header) {
@@ -155,9 +142,23 @@ export function TemplateBuilderClient({ tenantId, libraryId, editTemplate }: Bui
     setNome(entry.categoriaOcasiao);
   }, []);
 
+  // Load library template if libraryId is provided
+  useEffect(() => {
+    if (!libraryId) return;
+    fetch(`/api/tenants/${tenantId}/templates/library`)
+      .then((r) => r.json())
+      .then((entries: TemplateLibraryEntry[]) => {
+        const entry = entries.find((e) => e.id === libraryId);
+        if (!entry) return;
+        prefillFromLibrary(entry);
+      })
+      .catch(() => {});
+  }, [libraryId, tenantId, prefillFromLibrary]);
+
   // Auto-derive variaveis from body text
   useEffect(() => {
     const indices = extractVariableIndices(bodyText);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derives variable slots from body text while preserving user-entered examples; keyed on bodyText only, not a render cascade
     setVariaveis((prev) => {
       const updated = indices.map((i) => {
         const existing = prev.find((v) => v.index === i);

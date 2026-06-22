@@ -93,6 +93,7 @@ export function CampaignListClient({ tenantId, products }: { tenantId: string; p
     }
   }, [tenantId]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount; load() is a stable useCallback, not a render cascade
   useEffect(() => { load(); }, [load]);
 
   async function handleCreate(e: React.FormEvent) {

@@ -19,10 +19,6 @@ const mockNormalizedPayload = {
   hotmartTransactionId: 'HP12345678901234',
 };
 
-// Shared call-sequence helpers
-let withServiceRoleCallCount = 0;
-let withTenantCallCount = 0;
-
 function buildServiceRoleTx(event: object | null): TxMock {
   return {
     select: vi.fn().mockReturnValue({
@@ -33,31 +29,8 @@ function buildServiceRoleTx(event: object | null): TxMock {
   };
 }
 
-function buildTenantTx(leadRow: object | null, journeyRow: object[] = [], productRow: object | null = null): TxMock {
-  return {
-    select: vi.fn().mockImplementation(() => ({
-      from: () => ({
-        where: () => ({
-          limit: () => {
-            // Each call returns results in order: leads lookup, then journey check, then product lookup
-            // This is a simplified mock; real tests should use call-index tracking
-            return Promise.resolve([]);
-          },
-        }),
-      }),
-    })),
-    insert: vi.fn().mockReturnValue({
-      values: () => ({ onConflictDoNothing: () => ({ returning: () => Promise.resolve(leadRow ? [leadRow] : []) }) }),
-    }),
-    update: vi.fn().mockReturnValue({
-      set: () => ({ where: () => Promise.resolve() }),
-    }),
-  };
-}
-
 vi.mock('@leedi/db', () => ({
   withServiceRole: vi.fn(async (fn: (tx: unknown) => unknown) => {
-    withServiceRoleCallCount++;
     const tx = buildServiceRoleTx({
       id: GATEWAY_EVENT_ID,
       processado: false,
@@ -66,7 +39,6 @@ vi.mock('@leedi/db', () => ({
     return fn(tx);
   }),
   withTenant: vi.fn(async (_id: string, fn: (tx: unknown) => unknown) => {
-    withTenantCallCount++;
     // Track the call count per call
     let selectCallIndex = 0;
     const tx = {
@@ -122,8 +94,6 @@ vi.mock('@leedi/notification', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  withServiceRoleCallCount = 0;
-  withTenantCallCount = 0;
 });
 
 describe('handlePurchaseApproved', () => {

@@ -7,6 +7,7 @@
 export async function registerPushSubscription(tenantId: string): Promise<void> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
+  // eslint-disable-next-line no-restricted-properties -- NEXT_PUBLIC_* must be read via process.env so Next inlines it into the client bundle at build time (J-23/F-44); @leedi/config is Node-only and unavailable in the browser.
   const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   if (!vapidPublicKey) return;
 

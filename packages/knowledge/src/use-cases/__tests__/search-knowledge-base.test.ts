@@ -16,11 +16,7 @@ const mockEntries = [
 ];
 
 vi.mock('@leedi/db', () => {
-  let capturedConditions: unknown[] = [];
-  const where = vi.fn((cond: unknown) => {
-    capturedConditions = Array.isArray(cond) ? cond : [cond];
-    return Promise.resolve(mockEntries);
-  });
+  const where = vi.fn(() => Promise.resolve(mockEntries));
   const from = vi.fn().mockReturnValue({ where });
   const select = vi.fn().mockReturnValue({ from });
   const tx = { select };

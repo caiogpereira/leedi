@@ -101,8 +101,6 @@ vi.mock('@leedi/db', () => ({
   sql: vi.fn((s: TemplateStringsArray, ...args: unknown[]) => s.join('?') + JSON.stringify(args)),
 }));
 
-const TENANT_ID = '00000000-0000-0000-0000-000000000042';
-
 describe('Hotmart webhook — onboarding gateway flag', () => {
   afterEach(() => {
     vi.clearAllMocks();

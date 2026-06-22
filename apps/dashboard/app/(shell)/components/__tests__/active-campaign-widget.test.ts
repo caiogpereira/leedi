@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { daysRemaining } from '../active-campaign-widget.js';
 
-const MS_PER_DAY = 1000 * 60 * 60 * 24;
-
 describe('daysRemaining', () => {
   it('returns null for null dataFim', () => {
     expect(daysRemaining(null)).toBeNull();

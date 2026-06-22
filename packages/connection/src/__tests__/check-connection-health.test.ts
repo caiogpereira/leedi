@@ -9,9 +9,8 @@ vi.mock('@leedi/config', () => ({
   },
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 vi.mock('@leedi/db', () => ({
-  withTenant: vi.fn((_tid: string, fn: (tx: any) => Promise<unknown>) => fn({})),
+  withTenant: vi.fn((_tid: string, fn: (tx: unknown) => Promise<unknown>) => fn({})),
   schema: { whatsappConnections: {} },
   eq: vi.fn(),
 }));

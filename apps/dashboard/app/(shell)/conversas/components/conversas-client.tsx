@@ -116,6 +116,7 @@ export function ConversasClient({ tenantId }: { tenantId: string }) {
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag for an async fetch; fetchInbox is a stable useCallback, not a render cascade
     setLoading(true);
     fetchInbox().finally(() => setLoading(false));
 

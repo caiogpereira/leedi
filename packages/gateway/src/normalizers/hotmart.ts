@@ -44,13 +44,13 @@ const EVENT_MAP: Record<string, GatewayEventoCanonical> = {
   PURCHASE_REFUSED: 'compra_recusada',
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function safeString(v: unknown): string | null {
   if (typeof v === 'string' && v.length > 0) return v;
   return null;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function safeNumber(v: unknown): number | null {
   const n = Number(v);
   return isNaN(n) ? null : n;

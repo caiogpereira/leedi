@@ -24,22 +24,6 @@ vi.mock('../../use-cases/segments/evaluate-segment.js', () => ({
   resolveSegmentLeadIds: vi.fn(async () => segmentLeadIds),
 }));
 
-function makeSelectChain() {
-  const chain: Record<string, unknown> = {};
-  const leaf = () => Promise.resolve(selectResults.shift() ?? []);
-  chain.from = () => chain;
-  chain.where = () => Promise.resolve(selectResults.shift() ?? []);
-  // .limit terminates some chains; provide both forms.
-  chain.limit = leaf;
-  return new Proxy(chain, {
-    get(target, prop) {
-      if (prop in target) return target[prop as string];
-      if (prop === 'then') return undefined;
-      return () => chain;
-    },
-  });
-}
-
 vi.mock('@leedi/db', () => ({
   withTenant: vi.fn((_id: string, fn: (tx: unknown) => unknown) =>
     fn({

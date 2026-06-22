@@ -1,4 +1,4 @@
-import { withTenant, withServiceRole, schema, sql, eq, and, desc } from '@leedi/db';
+import { withTenant, withServiceRole, schema, eq, and, desc } from '@leedi/db';
 import { PLAN_LIMITS } from '../constants.js';
 import { currentPeriod } from './increment-usage.js';
 

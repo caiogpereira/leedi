@@ -1,3 +1,7 @@
+/* eslint-disable no-restricted-properties --
+ * This Playwright config runs inside the test runner, not the app. It reads
+ * CI/harness-injected env vars (CI, E2E_AUTH) that intentionally live OUTSIDE
+ * @leedi/config's validated runtime schema, so raw process.env is correct here. */
 import { defineConfig, devices } from '@playwright/test';
 
 /**

@@ -31,7 +31,7 @@ vi.mock('@leedi/db', () => {
       (_tenantId: string, fn: (tx: any) => Promise<unknown>) =>
         fn({
           select: () => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             let predicate: { col: unknown; val: unknown } | null = null;
             const chain: Record<string, unknown> = {};
             chain.from = () => chain;

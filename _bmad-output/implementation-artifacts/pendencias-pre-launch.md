@@ -174,12 +174,23 @@ these were the **only two** remaining (the sidebar already has a `nav-routes.tes
   - ~~Epic 18 — `@leedi/dashboard` `src/lib/push-registration.ts:24` (TS2322).~~ ✅ FIXED in Epic 18 review (2026-06-11): `urlBase64ToUint8Array` now returns `Uint8Array<ArrayBuffer>` (BufferSource-assignable); `@leedi/dashboard` typecheck green. Also fixed in the same review: the "health VAPID" runtime/test crash (push-provider `setVapidDetails` made lazy).
   *Exit:* `pnpm typecheck` green across the monorepo.
 
-- [ ] **PL-7 · [Code health] `pnpm lint` is RED on `main`.** Real lint debt in later-epic
-  code (Epics 4,6,10,11,12,13,14,15,16,17,18,19) — mostly unused vars / `prefer-const` /
-  `setState`-in-effect, **two substantive (⚠️)**: Epic 12 `template-builder-client.tsx`
-  `no-use-before-define` + missing exhaustive-deps; Epic 18 `push-registration.ts`
-  `no-process-env` (legitimate exception → needs a justified `eslint-disable`). Full list +
-  line numbers: `deferred-work.md` → "Epic 1 lint debt". *Exit:* `pnpm lint` green.
+- [x] **PL-7 · [Code health] `pnpm lint` is RED on `main`.** ✅ **RESOLVIDO 2026-06-21.**
+  `pnpm lint` is now **green (28/28 packages, zero errors and zero warnings)**. Resolution by class:
+  - **Test-file trivia** (api/usage/knowledge/connection) — removed unused vars (`sql`,
+    `capturedConditions`, `TENANT_ID`, `makeSelectChain`, dead `buildTenantTx` + call-count trackers,
+    `MS_PER_DAY`), converted self-referential `let proxy` → `const`, replaced a test `any` → `unknown`.
+  - **The two substantive (⚠️) — actually fixed, not suppressed:** `template-builder-client.tsx`
+    `no-use-before-define` — hoisted the `prefillFromLibrary` `useCallback` above the effect that calls
+    it and added it to the dep array (also clears the `exhaustive-deps` warning).
+  - **Legitimate `process.env` exceptions → justified `eslint-disable`:** `push-registration.ts`
+    (`NEXT_PUBLIC_*` must be read via `process.env` for Next's build-time client-bundle inlining —
+    the J-23/F-44 mechanism; `@leedi/config` is Node-only) and the two `playwright.config.ts` files
+    (test-runner configs reading CI/harness vars outside the validated schema).
+  - **`react-hooks/set-state-in-effect`** (new stricter rule, 13 sites across 12 components) — all are
+    canonical fetch-on-mount loaders (`useEffect(() => void load(), [load])` with `load` a stable
+    `useCallback`) or one derive-effect; none has unstable deps so none is a real render cascade →
+    justified per-line `eslint-disable` (refactoring runtime-verified components for a conservative
+    rule would be high-risk churn). Affected unit tests re-run green. *Exit:* `pnpm lint` green. ✅
 
 - [ ] **PL-8 · [Code health] CI test gate excludes `@leedi/db` and `@leedi/api`.** `ci.yml`
   runs `turbo run test --filter='!@leedi/db' --filter='!@leedi/api'`. `@leedi/db` needs a

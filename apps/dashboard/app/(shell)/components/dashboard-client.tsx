@@ -186,6 +186,7 @@ export function DashboardClient({ tenantId }: { tenantId: string }) {
 
   // Initial load
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flags for async fetches; stable useCallback deps, not a render cascade
     setMetricsLoading(true);
     setObjectionsLoading(true);
     fetchMetrics();
@@ -193,6 +194,7 @@ export function DashboardClient({ tenantId }: { tenantId: string }) {
   }, [fetchMetrics, fetchObjections]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount; stable useCallback deps, not a render cascade
     fetchConnectionHealth();
     fetchActiveCampaign();
     fetchUsage();
