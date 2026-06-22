@@ -62,6 +62,51 @@ describe('Step3', () => {
     await waitFor(() => expect(onAdvance).toHaveBeenCalledWith(4, 3));
   });
 
+  it('saves the HOTTOK and surfaces the returned webhook URL (PL-20)', async () => {
+    mockFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+      if ((url as string).includes('gateway-webhook-url')) {
+        return { ok: true, json: async () => ({ url: null }) };
+      }
+      if ((url as string).includes('gateway-confirmed')) {
+        return { ok: true, json: async () => ({ confirmed: false }) };
+      }
+      if ((url as string).includes('/gateway/hottok')) {
+        if (init?.method === 'PUT') {
+          return {
+            ok: true,
+            json: async () => ({ webhookUrl: 'https://api.leedi.digital/webhooks/hotmart/new-path' }),
+          };
+        }
+        return { ok: true, json: async () => ({ hottokSet: false, webhookUrl: null }) };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+    render(<Step3 tenantId="t1" stepData={{}} onAdvance={() => {}} />);
+
+    const input = await screen.findByPlaceholderText('Cole o hottok do Hotmart');
+    fireEvent.change(input, { target: { value: 'my-real-hottok' } });
+    fireEvent.click(screen.getByText('Salvar'));
+
+    // The PUT body carries the pasted hottok.
+    await waitFor(() => {
+      const putCall = mockFetch.mock.calls.find(
+        (call) =>
+          (call[0] as string).includes('/gateway/hottok') &&
+          (call[1] as RequestInit | undefined)?.method === 'PUT'
+      );
+      expect(putCall).toBeTruthy();
+      expect(JSON.parse((putCall![1] as RequestInit).body as string)).toEqual({ hottok: 'my-real-hottok' });
+    });
+
+    // The webhook URL returned by the save is surfaced for copying.
+    await waitFor(() => {
+      expect(
+        screen.getByDisplayValue('https://api.leedi.digital/webhooks/hotmart/new-path')
+      ).toBeTruthy();
+    });
+  });
+
   it('shows confirmed state when gateway-confirmed returns true', async () => {
     mockFetch.mockImplementation(async (url: string) => {
       if ((url as string).includes('gateway-webhook-url')) {

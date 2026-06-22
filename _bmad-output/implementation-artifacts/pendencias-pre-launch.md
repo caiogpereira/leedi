@@ -379,8 +379,25 @@ these were the **only two** remaining (the sidebar already has a `nav-routes.tes
   unauthenticated request to a protected route redirects to `${BETTER_AUTH_URL}/login`; no
   `localhost:3000` literal remains in dashboard source (only the local-dev fallback).
 
-- [ ] **PL-20 · [Epic 11 / Story 19.3 — Hotmart gateway] No UI to capture the client's Hotmart
-  HOTTOK; the webhook can't authenticate real client deliveries.** Surfaced at **J-22** (2026-06-18)
+> **PL-20 update (2026-06-21).** ✅ **PRIMARY RESOLVED IN CODE (verify in staging); secondary
+> event-map audit still open.** Re-audit corrected the root-cause framing: `create-gateway-
+> integration.ts` (the `randomUUID()` webhookSecret cited below) is **dead code — no callers**. The
+> live path is `upsertGatewayHottok` (`PUT /api/tenants/:id/onboarding/hottok`, owner-only), which
+> stores the client's real HOTTOK as `webhook_secret` (creates the row on first save, else updates),
+> and the webhook validates `hottok === webhook_secret` with the F-40 header fix. The **Configurações
+> → Integrações** screen (`configuracoes/gateway` → `HottokForm`) already captured/rotated the HOTTOK.
+> The **only genuine gap** was the **onboarding step 3** — it showed the webhook URL + polled for
+> confirmation but had **no HOTTOK input**, and `gateway-webhook-url` returns `null` until a row
+> exists (chicken-and-egg). **Fixed:** `apps/dashboard/app/onboarding/_components/step-3.tsx` now has a
+> HOTTOK input that `PUT`s to `/gateway/hottok` (same path as Configurações), surfaces the returned
+> webhook URL on save, and loads existing-HOTTOK status on mount; the dead-end "configure nas
+> configurações" copy was replaced. Tests: step-3 5/5 (incl. a new save→URL-surfaced mutation proof);
+> monorepo typecheck+lint exit 0. *Residual (secondary, lower priority — needs real Hotmart events):*
+> reconcile the long `EVENT_MAP` tail (`PURCHASE_DELAYED/EXPIRED`, `SUBSCRIPTION_*`, `PURCHASE_REFUSED`).
+
+- [x] **PL-20 · [Epic 11 / Story 19.3 — Hotmart gateway] No UI to capture the client's Hotmart
+  HOTTOK; the webhook can't authenticate real client deliveries.** ✅ **PRIMARY FIXED IN CODE
+  2026-06-21 (see the update box above).** Surfaced at **J-22** (2026-06-18)
   against 16 real Hotmart 2.0 deliveries. The webhook validates `hottok === gateway_integrations.
   webhookSecret`, but `apps/api/src/use-cases/gateway/create-gateway-integration.ts:22` sets
   `webhookSecret = randomUUID()` — a value Leedi invents, while Hotmart sends the **account's own

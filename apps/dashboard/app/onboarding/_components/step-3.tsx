@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Button, Input } from '@leedi/ui';
+import { Button, Input, Label } from '@leedi/ui';
 import { CheckCircle, Clock, Copy } from 'lucide-react';
 
 interface Props {
@@ -15,6 +15,10 @@ export function Step3({ tenantId, onAdvance }: Props) {
   const [confirmed, setConfirmed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [hottok, setHottok] = useState('');
+  const [hottokSet, setHottokSet] = useState(false);
+  const [savingHottok, setSavingHottok] = useState(false);
+  const [hottokMsg, setHottokMsg] = useState<string | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -23,6 +27,43 @@ export function Step3({ tenantId, onAdvance }: Props) {
       .then((data) => setWebhookUrl(data.url))
       .catch(() => null);
   }, [tenantId]);
+
+  // Load any HOTTOK already saved (e.g. returning to onboarding). The webhook
+  // URL only exists once a gateway row does, so prefer this URL when present.
+  useEffect(() => {
+    fetch(`/api/tenants/${tenantId}/gateway/hottok`)
+      .then((r) => r.json() as Promise<{ hottokSet?: boolean; webhookUrl?: string | null }>)
+      .then((data) => {
+        if (data.hottokSet) setHottokSet(true);
+        if (data.webhookUrl) setWebhookUrl(data.webhookUrl);
+      })
+      .catch(() => null);
+  }, [tenantId]);
+
+  async function handleSaveHottok() {
+    if (!hottok.trim()) return;
+    setSavingHottok(true);
+    setHottokMsg(null);
+    try {
+      const res = await fetch(`/api/tenants/${tenantId}/gateway/hottok`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hottok: hottok.trim() }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { webhookUrl?: string };
+        setHottokSet(true);
+        // Saving the HOTTOK creates the gateway row, so the webhook URL is now
+        // available — surface it so the user can paste it into Hotmart.
+        if (data.webhookUrl) setWebhookUrl(data.webhookUrl);
+        setHottokMsg('Hottok salvo. Agora configure a URL do webhook no Hotmart.');
+      } else {
+        setHottokMsg('Erro ao salvar o hottok.');
+      }
+    } finally {
+      setSavingHottok(false);
+    }
+  }
 
   useEffect(() => {
     if (confirmed) return;
@@ -93,6 +134,30 @@ export function Step3({ tenantId, onAdvance }: Props) {
           <p className="text-sm font-medium mb-2">Gateway selecionado: <span className="text-primary">Hotmart</span></p>
         </div>
 
+        <div className="space-y-1.5">
+          <Label htmlFor="hottok">Hottok do Hotmart</Label>
+          <p className="text-xs text-muted-foreground">
+            No painel do Hotmart (Ferramentas &gt; Webhook), copie o seu hottok e cole aqui — é o que
+            autentica as entregas do Hotmart na Leedi.
+          </p>
+          <div className="flex gap-2">
+            <Input
+              id="hottok"
+              type="password"
+              value={hottok}
+              onChange={(e) => setHottok(e.target.value)}
+              placeholder={hottokSet ? 'Hottok configurado — cole para atualizar' : 'Cole o hottok do Hotmart'}
+            />
+            <Button variant="outline" onClick={handleSaveHottok} disabled={savingHottok || !hottok.trim()}>
+              {savingHottok ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </div>
+          {hottokSet && !hottokMsg && (
+            <p className="text-sm text-green-600">Hottok configurado.</p>
+          )}
+          {hottokMsg && <p className="text-sm text-muted-foreground">{hottokMsg}</p>}
+        </div>
+
         {webhookUrl ? (
           <div>
             <p className="text-sm mb-2">
@@ -108,7 +173,7 @@ export function Step3({ tenantId, onAdvance }: Props) {
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Configure sua integração Hotmart primeiro nas configurações.
+            Salve seu hottok acima para gerar a URL do webhook.
           </p>
         )}
 
