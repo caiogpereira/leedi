@@ -229,10 +229,17 @@ these were the **only two** remaining (the sidebar already has a `nav-routes.tes
   row: actor = real super-admin, target = tenant). Direct-server-action audit coverage remains a
   separate pre-existing gap.
 
-- [ ] **PL-11 · [Epic 4 / Story 4.4] Inbound webhook rate limiting.** Task 8 deferred — V1
-  relies on HMAC signature + dedup for abuse protection; no `@upstash/ratelimit` on the
-  inbound webhook. Recommended before exposing the public webhook to real traffic. *Exit:*
-  rate limit on the inbound webhook endpoint, or explicit risk-acceptance.
+- [x] **PL-11 · [Epic 4 / Story 4.4] Inbound webhook rate limiting.** ✅ **RESOLVIDO 2026-06-21.**
+  Re-audit found the rate limit was **already wired** (landed after the checklist note): the Meta
+  inbound webhook (`apps/api/src/routes/webhook-meta.ts:148-159`) calls `webhookLimit(phoneNumberId)`
+  — a sliding-window **1000/min keyed by `phone_number_id` (≈ connection, not global)**, **fail-open**
+  on any limiter/network error, returning **429** when exceeded. The check runs *after* HMAC signature
+  verification and *before* the async processing is scheduled (the raw body can only be read once, so
+  it can't be router-level middleware). The generous per-connection window tolerates Meta's legitimate
+  retry bursts. **This pass added regression coverage** (`webhook-meta.test.ts`): a mutation-proof test
+  forcing the limiter to reject asserts 429 + no QStash/Redis side-effects, and a second asserts the
+  signed `phone_number_id` is the limiter key (api 228 tests green). *Exit (met):* rate limit on the
+  inbound webhook endpoint. ✅
 
 - [ ] **PL-12 · [Epic 7 / Story 7.4] Tag-dedup race / missing unique constraint.** `lead_tags`
   has no `(tenant_id, lead_id, tag)` unique constraint; dedup is in-app (query-then-insert),

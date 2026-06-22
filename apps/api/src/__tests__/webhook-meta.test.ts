@@ -293,3 +293,66 @@ describe('POST /webhook/meta — usage blocking (Story 16.3 AC#2/AC#7)', () => {
     await vi.waitFor(() => expect(vi.mocked(resolveConversationWindow)).toHaveBeenCalled());
   });
 });
+
+describe('POST /webhook/meta — rate limiting (NFR8 / PL-11)', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    vi.doUnmock('../middleware/rate-limit.js');
+  });
+
+  it('returns 429 and skips processing when the per-connection webhook limit is exceeded', async () => {
+    // Force the (otherwise test-env-short-circuited) limiter to reject.
+    vi.doMock('../middleware/rate-limit.js', () => ({
+      webhookLimit: vi.fn().mockResolvedValue({ success: false }),
+    }));
+    const { createWebhookMetaRouter } = await import('../routes/webhook-meta.js');
+    const { Hono } = await import('hono');
+    const deps = fakeDeps();
+    const app = new Hono();
+    app.route('/webhook/meta', createWebhookMetaRouter(deps));
+
+    const body = buildWebhookPayload('p1', 'msg-rl-429', '+5511', 'Olá');
+    const res = await app.request('/webhook/meta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-hub-signature-256': buildSignature(body) },
+      body,
+    });
+
+    expect(res.status).toBe(429);
+    // Throttled BEFORE any async processing is scheduled.
+    expect(deps.qstash.publishJSON).not.toHaveBeenCalled();
+    expect(deps.redis.rpush).not.toHaveBeenCalled();
+  });
+
+  it('passes the signed phone_number_id to the webhook limiter (per-connection key)', async () => {
+    const webhookLimit = vi.fn().mockResolvedValue({ success: true });
+    vi.doMock('../middleware/rate-limit.js', () => ({ webhookLimit }));
+    const { createWebhookMetaRouter } = await import('../routes/webhook-meta.js');
+    const { withServiceRole } = await import('@leedi/db');
+    const { Hono } = await import('hono');
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(withServiceRole).mockImplementation(async (fn: (tx: any) => Promise<unknown>) =>
+      fn({
+        select: () => ({
+          from: () => ({
+            where: () => ({ limit: async () => [{ tenantId: 't1', connectionId: 'conn-1' }] }),
+          }),
+        }),
+      })
+    );
+
+    const app = new Hono();
+    app.route('/webhook/meta', createWebhookMetaRouter(fakeDeps()));
+    const body = buildWebhookPayload('phone-42', 'msg-rl-200', '+5511', 'Olá');
+    const res = await app.request('/webhook/meta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-hub-signature-256': buildSignature(body) },
+      body,
+    });
+
+    expect(res.status).toBe(200);
+    expect(webhookLimit).toHaveBeenCalledWith('phone-42');
+  });
+});
