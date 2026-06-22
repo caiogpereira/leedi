@@ -2,6 +2,7 @@ import { requireTenantRouteAccess } from '../../../../lib/tenant-context';
 import { withTenant, schema, eq } from '@leedi/db';
 import { env } from '@leedi/config';
 import { HottokForm } from './hottok-form';
+import { internalApiUrl } from '../../../../lib/internal-api-url';
 
 // Source of truth: apps/api/src/utils/api-public-url.ts resolveApiPublicUrl().
 // Intentionally duplicated (not imported from @leedi/config) because ~43 test files
@@ -13,7 +14,7 @@ import { HottokForm } from './hottok-form';
 // webhook. Keep this algorithm in sync with the API util if it ever changes.
 function resolveApiPublicUrl(): string {
   if (env.API_PUBLIC_URL) return env.API_PUBLIC_URL.replace(/\/+$/, '');
-  return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
+  return internalApiUrl();
 }
 
 export default async function GatewayPage() {

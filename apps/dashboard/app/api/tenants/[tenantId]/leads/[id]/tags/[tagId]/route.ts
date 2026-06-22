@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getSession } from '@leedi/auth';
-import { env } from '@leedi/config';
+import { internalApiUrl } from '../../../../../../../../lib/internal-api-url';
 
 /**
  * Same-origin proxy for removing a tag from a lead (Story 5.4).
@@ -11,7 +11,7 @@ import { env } from '@leedi/config';
  * on an empty body), so we special-case no-content and re-emit a bare 204.
  */
 function apiBaseUrl(): string {
-  return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
+  return internalApiUrl();
 }
 
 export async function DELETE(

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getSession } from '@leedi/auth';
-import { env } from '@leedi/config';
+import { internalApiUrl } from '../../../../../../lib/internal-api-url';
 
 /**
  * Proxies a CSV lead-import upload from the browser to the Hono API (Story 5.3).
@@ -17,7 +17,7 @@ import { env } from '@leedi/config';
  * apps/api/src/routes/webhook-meta.ts (:3000 → :3003).
  */
 function apiBaseUrl(): string {
-  return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
+  return internalApiUrl();
 }
 
 export async function POST(

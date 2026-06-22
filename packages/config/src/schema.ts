@@ -26,6 +26,14 @@ export const schema = z.object({
   // ngrok) breaks it, so for local Tier-1 / staging set this to the tunnel origin
   // that forwards to the API port. This is the PL-14 fix.
   API_PUBLIC_URL: z.string().url('API_PUBLIC_URL must be a valid URL').optional(),
+  // INTERNAL base URL of the API, used by the dashboard's BFF proxy routes for
+  // server-to-server calls into the Hono API. DISTINCT from API_PUBLIC_URL: in
+  // prod the API's internal origin (a private service URL) is plausibly NOT the
+  // public tunnel — routing dashboard→API traffic through the public origin would
+  // hairpin out and back. OPTIONAL: when unset, derived from BETTER_AUTH_URL by
+  // swapping :3000 for :API_PORT (legacy same-host assumption — see
+  // resolveInternalApiUrl). This is the PL-14b fix.
+  INTERNAL_API_URL: z.string().url('INTERNAL_API_URL must be a valid URL').optional(),
   // Super-admin app origin. Used by the dashboard to send an admin back to their
   // admin context when they exit impersonation (the impersonating super_admin has
   // no membership, so landing on the dashboard root shows "Nenhum workspace").

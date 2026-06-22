@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getSession } from '@leedi/auth';
-import { env } from '@leedi/config';
+import { internalApiUrl } from '../../../../../lib/internal-api-url';
 
 /**
  * Same-origin proxy for the agent configuration panel (Story 7.1).
@@ -11,7 +11,7 @@ import { env } from '@leedi/config';
  * GET triggers the default upsert (AC#2); PATCH persists field updates (AC#3).
  */
 function apiBaseUrl(): string {
-  return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
+  return internalApiUrl();
 }
 
 async function forward(request: NextRequest, tenantId: string, method: 'GET' | 'PATCH') {

@@ -1,8 +1,8 @@
 import type { NextRequest } from 'next/server';
-import { env } from '@leedi/config';
+import { internalApiUrl } from '../../../../../lib/internal-api-url';
 
 function apiBaseUrl(): string {
-  return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
+  return internalApiUrl();
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ tenantId: string }> }) {

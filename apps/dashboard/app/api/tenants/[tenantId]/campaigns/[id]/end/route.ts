@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getSession } from '@leedi/auth';
-import { env } from '@leedi/config';
+import { internalApiUrl } from '../../../../../../../lib/internal-api-url';
 
 export async function POST(
   request: NextRequest,
@@ -12,7 +12,7 @@ export async function POST(
     return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
   }
   const { tenantId, id } = await context.params;
-  const base = env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
+  const base = internalApiUrl();
   const cookieHeader = request.headers.get('cookie') ?? '';
   const upstream = await fetch(
     `${base}/api/tenants/${encodeURIComponent(tenantId)}/campaigns/${encodeURIComponent(id)}/end`,

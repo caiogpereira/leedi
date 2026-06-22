@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { getSession } from '@leedi/auth';
-import { env } from '@leedi/config';
+import { internalApiUrl } from '../../../../lib/internal-api-url';
 
 /**
  * Same-origin proxy for the AI text-improvement endpoint used by AIAssistedTextarea
@@ -10,7 +10,7 @@ import { env } from '@leedi/config';
  * plaintext suggestion back unchanged so the component can render tokens progressively.
  */
 function apiBaseUrl(): string {
-  return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
+  return internalApiUrl();
 }
 
 export async function POST(request: NextRequest) {

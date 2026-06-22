@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getSession } from '@leedi/auth';
-import { env } from '@leedi/config';
+import { internalApiUrl } from '../../../../../../../lib/internal-api-url';
 
 /** Same-origin proxy for editing (PATCH) and soft-deleting (DELETE) a knowledge-base entry. */
 function apiBaseUrl(): string {
-  return env.BETTER_AUTH_URL.replace(':3000', `:${env.API_PORT}`);
+  return internalApiUrl();
 }
 
 function upstreamUrl(tenantId: string, id: string): string {

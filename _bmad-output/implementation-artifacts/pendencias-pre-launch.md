@@ -291,15 +291,22 @@ these were the **only two** remaining (the sidebar already has a `nav-routes.tes
   code; verify in staging):* set `API_PUBLIC_URL` to the real API public origin and confirm every
   callback resolves there.
 
-- [ ] **PL-14b · [cross-cutting] Dashboard→API BFF proxy URL derivation (server-to-server).**
-  ~50 Next route handlers under `apps/dashboard/app/api/tenants/[tenantId]/…/route.ts` forward
-  dashboard requests to the Hono API using the SAME `BETTER_AUTH_URL.replace(':3000', \`:${env.API_PORT}\`)`
-  hack → same no-op-in-prod break. **NOT a Tier-1 blocker** (local single-host works) and **NOT
-  fixable with `API_PUBLIC_URL`:** this is a server-to-server call from the dashboard process to the
-  API, whose prod origin is plausibly an INTERNAL service URL, not the public tunnel — routing it
-  through `API_PUBLIC_URL` would hairpin the dashboard out through the public origin. **Fix:**
-  introduce a distinct `INTERNAL_API_URL` / `API_ORIGIN` env var and route the ~50 proxies through
-  it (a dashboard-side helper, mirroring PL-14a's pattern). Pre-launch, before the first real
+- [x] **PL-14b · [cross-cutting] Dashboard→API BFF proxy URL derivation (server-to-server).**
+  ✅ **FIXED IN CODE 2026-06-21 (set var + verify in a multi-origin deploy).** The discriminating audit
+  (`grep "replace(':3000'"`) found **58 sites** — all the `apps/dashboard/app/api/.../route.ts` BFF
+  proxies plus `configuracoes/gateway/page.tsx`, `app/api/ai/improve-text`, `app/api/sales-methods` —
+  using the **identical** `env.BETTER_AUTH_URL.replace(':3000', \`:${env.API_PORT}\`)` hack (no-op in a
+  prod `BETTER_AUTH_URL` with no `:3000`). **Fix (mirrors PL-14a exactly):** new optional
+  `INTERNAL_API_URL` env var (`packages/config/src/schema.ts`) + a pure, unit-tested resolver
+  `resolveInternalApiUrl` and a singleton `internalApiUrl()` in `apps/dashboard/lib/internal-api-url.ts`
+  (set → wins, trailing slash stripped; unset → legacy derivation, back-compat). Distinct from
+  `API_PUBLIC_URL` on purpose: the dashboard→API call is server-to-server to a plausibly *internal*
+  origin, so routing it through the public tunnel would hairpin. A codemod replaced all 58 inline
+  expressions with `internalApiUrl()` and removed the now-unused `@leedi/config` import from 57 files
+  (1 keeps it for other env use). Drift-guard test asserts the legacy fallback stays byte-identical to
+  the original inline expression. `.env.example` documents the var. **Verified:** dashboard typecheck
+  + lint exit 0, dashboard 94/94 tests, full monorepo typecheck+lint exit 0, resolver 5/5. *Exit (met
+  in code):* set `INTERNAL_API_URL` to the API's internal origin and confirm the proxies reach it in a
   multi-origin deploy.
 
 - [x] **PL-16 · [Epic 8 / Stories 8.1 & 8.2] End-to-end playground smoke test.** ✅ **VERIFIED END-TO-END
