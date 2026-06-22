@@ -33,7 +33,7 @@ beforeAll(async () => {
     .insert(schema.workspaces)
     .values({ name: `Test WS ${suffix}` })
     .returning();
-  workspaceId = ws.id;
+  workspaceId = ws!.id;
 
   const [ta] = await db
     .insert(schema.tenants)
@@ -51,8 +51,8 @@ beforeAll(async () => {
       slug: `tb-${suffix}`,
     })
     .returning();
-  tenantAId = ta.id;
-  tenantBId = tb.id;
+  tenantAId = ta!.id;
+  tenantBId = tb!.id;
 
   const [ua] = await db
     .insert(schema.users)
@@ -68,8 +68,8 @@ beforeAll(async () => {
       passwordHash: 'hash',
     })
     .returning();
-  userAId = ua.id;
-  userBId = ub.id;
+  userAId = ua!.id;
+  userBId = ub!.id;
 
   await db
     .insert(schema.memberships)

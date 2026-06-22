@@ -153,15 +153,21 @@ these were the **only two** remaining (the sidebar already has a `nav-routes.tes
 
 ## B. P1 — Strongly recommended before launch
 
-- [ ] **PL-6 · [Code health] `pnpm typecheck` is RED on `main`.** Later-epic code carries
+- [x] **PL-6 · [Code health] `pnpm typecheck` is RED on `main`.** ✅ **RESOLVIDO 2026-06-21.**
+  Full-monorepo `pnpm typecheck --continue` is now **green (25/25 packages)**. Re-measured this pass:
+  every later-epic error listed below was already stale/fixed; the **only** remaining failure was
+  `packages/db/src/__tests__/rls.test.ts` (5× TS18048 — `.returning()` destructure possibly-undefined
+  on `ws`/`ta`/`tb`/`ua`/`ub`), fixed with non-null assertions (guaranteed single-row inserts in test
+  setup). Historical detail below.
+  Later-epic code carried
   typecheck errors caught during the Epic 2 review (all registered to their owning epic, to
   be fixed in that epic's review):
   - ~~Epic 6 — `@leedi/dashboard` `product-detail-client.tsx` (`@/` alias unconfigured, TS2307;
     `ArgumentList.tsx` TS2345)~~ ✅ STALE — `@leedi/dashboard` `tsc --noEmit` is now **green (exit 0)**,
     verified 2026-06-21 during the P0 pass. The `@leedi/api` `knowledge-base.ts:26` (TS2379) line stays
     until an `@leedi/api` typecheck reconfirms.
-  - Epic 7 — `@leedi/agent` `tools/transferir-humano.ts:216` missing `@leedi/notification` (TS2307).
-  - Epic 10 — `@leedi/api` `campaign-phase-transition.test.ts:86` (TS2532).
+  - ~~Epic 7 — `@leedi/agent` `tools/transferir-humano.ts:216` missing `@leedi/notification` (TS2307).~~ ✅ STALE — `@leedi/agent` typecheck green (2026-06-21).
+  - ~~Epic 10 — `@leedi/api` `campaign-phase-transition.test.ts:86` (TS2532).~~ ✅ STALE — `@leedi/api` typecheck green (2026-06-21).
   - ~~Epic 12 — `@leedi/dashboard` `templates/new/page.tsx:29` (TS2375).~~ ✅ STALE — `@leedi/dashboard`
     typecheck green (exit 0), verified 2026-06-21.
   - ~~Epic 17 — `@leedi/api` `jobs/daily-billing-check.ts:24` (TS2344).~~ ✅ STALE — verified during the Epic 18 review (2026-06-11): full `@leedi/api` `tsc --noEmit` is clean, so this was already fixed (Epic 17 review per memory). No longer RED.
