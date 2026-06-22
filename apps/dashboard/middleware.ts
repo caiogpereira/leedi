@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { hasSessionCookie } from '@leedi/auth/edge';
+import { isForbiddenCrossOrigin } from './lib/csrf-origin';
 
 // Routes that don't require authentication.
 const PUBLIC_PATHS = ['/api/health'];
@@ -32,6 +33,24 @@ export function middleware(request: NextRequest) {
   // Allow public paths.
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
+  }
+
+  // CSRF defense-in-depth (PL-5): reject cross-origin state-changing requests to
+  // the custom `/api/*` Route Handlers (impersonation, tenant switch, the
+  // `/api/tenants/*` proxies) — they are not Server Actions, so Next's built-in
+  // Origin check does not cover them. Scoped to `/api/` so page-route Server
+  // Action POSTs (already Origin-checked by Next) are untouched. Runs before the
+  // auth gate so a forged cross-origin mutation is refused regardless of session.
+  if (
+    pathname.startsWith('/api/') &&
+    isForbiddenCrossOrigin({
+      method: request.method,
+      host: request.nextUrl.host,
+      origin: request.headers.get('origin'),
+      secFetchSite: request.headers.get('sec-fetch-site'),
+    })
+  ) {
+    return NextResponse.json({ error: 'Origem não permitida' }, { status: 403 });
   }
 
   if (!hasSessionCookie(request)) {

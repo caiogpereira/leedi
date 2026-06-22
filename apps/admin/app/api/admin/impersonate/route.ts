@@ -29,6 +29,25 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * own (NOT renewable without re-auth — fail-closed to admin context).
  */
 export async function POST(request: NextRequest) {
+  // CSRF defense-in-depth (PL-5): this state-changing Route Handler is not a
+  // Server Action, so reject positive cross-origin evidence before doing any
+  // work. The admin UI calls this same-origin; `SameSite=Lax` stays the primary
+  // control. (Inlined, not shared — the admin app has no middleware and the
+  // dashboard helper lives in a different app; same conservative logic.)
+  const secFetchSite = request.headers.get('sec-fetch-site');
+  const origin = request.headers.get('origin');
+  let crossOrigin = secFetchSite === 'cross-site';
+  if (!crossOrigin && origin) {
+    try {
+      crossOrigin = new URL(origin).host !== request.nextUrl.host;
+    } catch {
+      crossOrigin = true;
+    }
+  }
+  if (crossOrigin) {
+    return NextResponse.json({ error: 'Origem não permitida' }, { status: 403 });
+  }
+
   const session = await getSession(request.headers);
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });

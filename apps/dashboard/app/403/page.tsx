@@ -15,7 +15,7 @@ export default function ForbiddenPage() {
         <h1 className="text-4xl font-bold text-gray-900">{t("code")}</h1>
         <p className="mt-2 text-lg text-gray-600">{t("message")}</p>
         <Link
-          href="/dashboard"
+          href="/"
           className="mt-4 inline-block text-indigo-600 hover:underline"
         >
           {t("back")}

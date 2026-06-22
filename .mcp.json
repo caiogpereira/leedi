@@ -4,6 +4,10 @@
       "type": "http",
       "url": "https://mcp.supabase.com/mcp?project_ref=rmhttrkfjktbjdzehiwk"
     },
+    "supabase-e2e": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=gxucpaepwvaghinwerml"
+    },
     "bmad-method": {
       "type": "http",
       "url": "https://gitmcp.io/bmad-code-org/BMAD-METHOD"

@@ -79,7 +79,7 @@ export function ActiveCampaignWidget({
         <p className="mb-2 text-sm font-semibold">Campanha ativa</p>
         <p className="mb-3 text-sm text-muted-foreground">Nenhuma campanha ativa.</p>
         <Link
-          href="/campanhas/nova"
+          href="/campanhas"
           className="inline-block rounded bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
         >
           Criar campanha

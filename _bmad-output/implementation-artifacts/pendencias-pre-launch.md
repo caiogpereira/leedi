@@ -22,7 +22,51 @@
 > - **P2 — V2 / post-launch.** Explicitly descoped from V1. Listed so nothing is forgotten,
 >   not expected before launch.
 >
-> Last updated: 2026-06-20.
+> Last updated: 2026-06-21.
+
+---
+
+## 0. P0 decision pass — 2026-06-21 (Caio + Claude)
+
+> A "pente-fino" review went through every P0 launch blocker and ruled each one
+> **fechar agora** (close now) vs **aceitar o risco por escrito** (accept the risk in
+> writing). The 404 dashboard sweep is folded in at the bottom. Author = Claude (Opus 4.8);
+> the two *accept-risk* verdicts (PL-3, PL-4) are **recommendations pending Caio's written
+> ratification** — sign on the line below each. Verdicts:
+
+| Item | Owner | Verdict | One-line rationale |
+|------|-------|---------|--------------------|
+| **PL-1** rotate leaked secrets | Caio (provider) | **FECHAR AGORA — não aceitável** | Live credential leak in a *public* repo; risk-acceptance is not an option, rotate at Better Stack + Sentry. |
+| **PL-2** real prod secrets | Caio (ops) | **FECHAR AGORA — pré-requisito** | Not a risk, a prerequisite: webhooks/billing/push simply don't function with placeholders. |
+| **PL-3** DB-level RLS (Supabase Pro) | Caio (infra) | **✅ RISCO ACEITO 2026-06-21** | Compensating control in place (`withTenant` + no-inline-tenant guard test). Caio assina Supabase Pro ao fechar o 1º/2º pagante. |
+| **PL-4** dedicated E2E Supabase | Caio (infra) | **✅ RESOLVIDO 2026-06-21** | Projeto "leedi E2E" (`gxucpaepwvaghinwerml`) provisionado; MCP `supabase-e2e` no `.mcp.json`. |
+| **PL-5** CSRF defense-in-depth | Claude | **✅ FECHADO NESTE PASSE (código)** | Conservative same-origin assertion added to dashboard middleware (all `/api` mutations) + admin impersonate route + unit test. Verify in staging. |
+| **PL-15** messages-partition maintenance | Claude (via MCP) | **✅ RESOLVIDO 2026-06-21** | `pg_cron` job (`create-message-partitions`, dia 20 às 03:00 UTC) + função `create_future_message_partitions` deployados em prod; partições agora cobrem até 2026-10-31. Migration `0022` versionada. |
+
+**PL-3 risk-acceptance — ✅ RATIFICADO por Caio 2026-06-21:** "Aceito operar com isolamento de
+tenant apenas na camada de aplicação (`withTenant` + teste-guarda contra resolução inline de
+tenant) por enquanto. Ao fechar o primeiro ou segundo cliente pagante, assino o Supabase Pro
+(Dedicated Pooler), que habilitará a RLS no nível do banco (migração 0018, já aplicada e
+dormente)." — Caio, 2026-06-21.
+
+**PL-4 — ✅ RESOLVIDO 2026-06-21 (não mais accept-risk):** Caio provisionou um projeto Supabase
+dedicado para E2E — **"leedi E2E"** (`gxucpaepwvaghinwerml`, região `sa-east-1`). MCP adicionado
+ao `.mcp.json` como `supabase-e2e`. Testes futuros (E2E/integração, e o nightly do PL-9) rodam
+contra esse banco, nunca contra produção. *Resta:* apontar `E2E_DATABASE_URL` para ele ao ligar
+o gate do PL-9.
+
+**Net:** of the 6 P0s, **1 closed in code now (PL-5)**, **3 are non-negotiable must-dos that
+only Caio can close (PL-1, PL-2, PL-15-by-Aug-31)**, and **2 are legitimate accept-risk
+(PL-3, PL-4)** pending Caio's signature. No P0 is blocked on more engineering except PL-15's
+deploy (code/spec already exists, owned by Epic 16).
+
+**404 dashboard sweep (closed this pass).** Two dead links found + fixed; a full cross-reference
+of every `<Link>`/`router.push`/`redirect` target against the real `app/(shell)` routes confirms
+these were the **only two** remaining (the sidebar already has a `nav-routes.test.ts` guard):
+- `app/403/page.tsx` "Voltar" → `/dashboard` (no such route; home is `/`) → **fixed to `/`**.
+- `components/active-campaign-widget.tsx` "Criar campanha" → `/campanhas/nova` (collided with the
+  `/campanhas/[id]` route → `id="nova"` → invalid-uuid error, not a real page) → **fixed to
+  `/campanhas`** (the list page carries the create dialog).
 
 ---
 
@@ -65,14 +109,37 @@
   `[E2E]` namespace, but a separate project is the correct isolation. *Exit:* E2E points at
   a non-prod Supabase; prod credentials never used by tests.
 
-- [ ] **PL-5 · [Cross-cutting / Epic 2] CSRF defense-in-depth on state-changing routes.**
-  Custom state-changing JSON routes (impersonate / switch-tenant / stop-impersonation, and
-  any future mutating JSON endpoints) rely solely on `SameSite=Lax` — no CSRF token / Origin
-  check / `Content-Type` assertion. Add at least an Origin/Content-Type assertion (or CSRF
-  token) before launch. Source: `deferred-work.md` (Epic 2 cross-cutting). *Exit:* mutating
-  routes reject cross-origin/forged requests beyond SameSite alone.
+- [x] **PL-5 · [Cross-cutting / Epic 2] CSRF defense-in-depth on state-changing routes.**
+  ✅ **FECHADO EM CÓDIGO 2026-06-21.** Custom state-changing JSON routes (impersonate /
+  switch-tenant / stop-impersonation, and every `/api/tenants/[tenantId]/…` proxy) are Route
+  Handlers, **not** Server Actions, so Next's built-in Server-Action Origin check never covered
+  them — they relied solely on `SameSite=Lax`. **Fix:** a pure, unit-tested helper
+  `isForbiddenCrossOrigin` (`apps/dashboard/lib/csrf-origin.ts`, 8 tests) wired into the
+  **dashboard middleware** — whose `matcher` already covers `/api/*` — gated on mutating methods
+  (POST/PUT/PATCH/DELETE) over `/api/`, plus an inlined twin guard in the **admin** app's
+  `api/admin/impersonate/route.ts` (the admin app has no middleware; start-impersonation lives
+  there). The check is **deliberately conservative**: it rejects only on *positive* cross-origin
+  evidence — `Sec-Fetch-Site: cross-site` (a browser-set, script-unforgeable header) or an
+  `Origin` host ≠ request host — and allows when no signal is present, so legitimate same-origin
+  calls never break and `SameSite=Lax` stays the primary control. Page-route Server Action POSTs
+  are untouched (scoped to `/api/`). **Note:** the `Origin`-host-vs-`request.nextUrl.host`
+  comparison is a *fallback* that fires **only when `Sec-Fetch-Site` is absent** (old clients);
+  modern browsers short-circuit via `Sec-Fetch-Site`. The admin guard is **inlined** (no admin
+  middleware), so a *future* admin `/api` mutating route won't be auto-covered — add a guard test
+  or an admin middleware when the next one lands. *Exit (met in code; verify in staging):* a forged
+  cross-origin POST to a mutating `/api/*` route is refused (403) while the dashboard's own
+  same-origin mutations and the admin impersonation flow keep working **in the proxied prod
+  topology** (confirm `nextUrl.host` vs public `Origin` doesn't false-positive the fallback path).
 
-- [ ] **PL-15 · [Epic 5 / Story 5.5 → Epic 16] Rolling `messages` partition maintenance.**
+- [x] **PL-15 · [Epic 5 / Story 5.5 → Epic 16] Rolling `messages` partition maintenance.**
+  ✅ **RESOLVIDO 2026-06-21 (deployado em prod via MCP + verificado).** Em vez da Edge Function
+  originalmente planejada, optou-se por **`pg_cron` + função plpgsql** (roda 100% no Postgres, sem
+  hop HTTP que pudesse falhar em silêncio). Migration `0022_messages_partition_maintenance.sql`
+  (versionada): cria `public.create_future_message_partitions(months_ahead)` (idempotente, `CREATE
+  TABLE IF NOT EXISTS`) + agenda o job `create-message-partitions` (`0 3 20 * *` — dia 20, 03:00 UTC,
+  cria os 2 meses seguintes) + seed imediato. **Verificado:** partições agora vão de `messages_2026_06`
+  até `messages_2026_10` (cobrem até 2026-10-31); `cron.job` ativo. Novas partições herdam RLS +
+  trigger `updated_at` do parent automaticamente. *Original:* 
   Migration `0006` created partitions for `2026_06`/`2026_07`/`2026_08` **only**. An inbound
   message with `created_at >= 2026-09-01` has no partition → the insert throws and
   `processMessage(...).catch(captureException)` swallows it = **silent message loss** after
@@ -89,11 +156,14 @@
 - [ ] **PL-6 · [Code health] `pnpm typecheck` is RED on `main`.** Later-epic code carries
   typecheck errors caught during the Epic 2 review (all registered to their owning epic, to
   be fixed in that epic's review):
-  - Epic 6 — `@leedi/dashboard` `product-detail-client.tsx` (`@/` alias unconfigured, TS2307;
-    `ArgumentList.tsx` TS2345) + `@leedi/api` `knowledge-base.ts:26` (TS2379).
+  - ~~Epic 6 — `@leedi/dashboard` `product-detail-client.tsx` (`@/` alias unconfigured, TS2307;
+    `ArgumentList.tsx` TS2345)~~ ✅ STALE — `@leedi/dashboard` `tsc --noEmit` is now **green (exit 0)**,
+    verified 2026-06-21 during the P0 pass. The `@leedi/api` `knowledge-base.ts:26` (TS2379) line stays
+    until an `@leedi/api` typecheck reconfirms.
   - Epic 7 — `@leedi/agent` `tools/transferir-humano.ts:216` missing `@leedi/notification` (TS2307).
   - Epic 10 — `@leedi/api` `campaign-phase-transition.test.ts:86` (TS2532).
-  - Epic 12 — `@leedi/dashboard` `templates/new/page.tsx:29` (TS2375).
+  - ~~Epic 12 — `@leedi/dashboard` `templates/new/page.tsx:29` (TS2375).~~ ✅ STALE — `@leedi/dashboard`
+    typecheck green (exit 0), verified 2026-06-21.
   - ~~Epic 17 — `@leedi/api` `jobs/daily-billing-check.ts:24` (TS2344).~~ ✅ STALE — verified during the Epic 18 review (2026-06-11): full `@leedi/api` `tsc --noEmit` is clean, so this was already fixed (Epic 17 review per memory). No longer RED.
   - ~~Epic 18 — `@leedi/dashboard` `src/lib/push-registration.ts:24` (TS2322).~~ ✅ FIXED in Epic 18 review (2026-06-11): `urlBase64ToUint8Array` now returns `Uint8Array<ArrayBuffer>` (BufferSource-assignable); `@leedi/dashboard` typecheck green. Also fixed in the same review: the "health VAPID" runtime/test crash (push-provider `setVapidDetails` made lazy).
   *Exit:* `pnpm typecheck` green across the monorepo.
@@ -328,7 +398,7 @@
 
 - **Epic 1 — Foundation:** PL-1 (rotate secrets, P0). Lint/test-gate mechanism is correct;
   the RED state is later-epic debt → PL-6/PL-7/PL-8.
-- **Epic 2 — Identity & Access:** PL-3 (RLS activation, P0), PL-5 (CSRF, P0), PL-10
+- **Epic 2 — Identity & Access:** PL-3 (RLS activation, P0), PL-5 (CSRF, P0 — ✅ fixed 2026-06-21), PL-10
   (impersonation audit staging, P1); P2: 2.6 invite polish, 2.8 hardening, 2.5 floor guard.
   *Code-complete per the 2026-06-08 review; remaining = deployed-env validation + the cross-cutting CSRF.*
 - **Epic 3 — Design System & UI Shell:** PL-9 (nightly E2E/axe CI gate, P1). All 4 stories
@@ -339,7 +409,7 @@
   2026-06-10** (`epic-4-code-review-report.md`): all 5 stories `done`; HIGH enum-mapping bug (Meta
   `GREEN`/`TIER_1K` → pt-BR pgEnums, `22P02`) fixed + 3 minor patches; Finding 5 deferred → PL-14
   (later split into PL-14a/14b on 2026-06-17).
-- **Epic 5 — Lead Management:** PL-15 (messages-partition maintenance, P0). **Reviewed 2026-06-10**
+- **Epic 5 — Lead Management:** PL-15 (messages-partition maintenance, P0 — ✅ resolved 2026-06-21 via `pg_cron`, migration `0022`). **Reviewed 2026-06-10**
   (stories 5.1–5.5 + epic-5 `done`): fixed `conversationCount` (5.2) + webhook stale-mocks (5.5); the
   partition-window finding (F4) → PL-15.
 - **Epic 6 — Knowledge Base:** PL-6 (typecheck), PL-13 (6.1 RLS tests); P2: pgvector. **Reviewed
