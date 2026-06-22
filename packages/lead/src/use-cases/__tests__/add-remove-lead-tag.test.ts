@@ -3,15 +3,24 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 /**
  * Mock @leedi/db for the tag use cases.
  *
- * addLeadTag:    tx.insert(lead_tags).values({...}).returning({...}) -> [row]
- * removeLeadTag: tx.delete(lead_tags).where(and(eq,eq,eq))           -> void
+ * addLeadTag:    tx.insert(lead_tags).values({...}).onConflictDoNothing({...}).returning({...})
+ *                -> [row] (or [] on conflict, then select(...).limit(1) -> [existing])
+ * removeLeadTag: tx.delete(lead_tags).where(and(eq,eq,eq)) -> void
  *
  * We capture the values handed to insert() and the condition handed to where()
  * so we can assert origemTag === 'manual' and the triple (id + lead_id +
- * tenant_id) delete scope.
+ * tenant_id) delete scope. `simulateConflict` flips the insert to return no rows
+ * (ON CONFLICT DO NOTHING) so the idempotent fetch-existing fallback runs.
  */
 const insertedValues: unknown[] = [];
 const deleteWheres: unknown[] = [];
+let simulateConflict = false;
+
+const existingRow = {
+  id: 'existing-tag-id',
+  tag: 'vip',
+  createdAt: new Date('2026-05-01T00:00:00Z'),
+};
 
 vi.mock('@leedi/db', () => {
   return {
@@ -26,14 +35,26 @@ vi.mock('@leedi/db', () => {
               chain.__values = v;
               return chain;
             };
+            chain.onConflictDoNothing = () => chain;
             chain.returning = () =>
-              Promise.resolve([
-                {
-                  id: 'new-tag-id',
-                  tag: (chain.__values as { tag: string }).tag,
-                  createdAt: new Date('2026-06-01T12:00:00Z'),
-                },
-              ]);
+              Promise.resolve(
+                simulateConflict
+                  ? []
+                  : [
+                      {
+                        id: 'new-tag-id',
+                        tag: (chain.__values as { tag: string }).tag,
+                        createdAt: new Date('2026-06-01T12:00:00Z'),
+                      },
+                    ]
+              );
+            return chain;
+          },
+          select: () => {
+            const chain: Record<string, unknown> = {};
+            chain.from = () => chain;
+            chain.where = () => chain;
+            chain.limit = () => Promise.resolve([existingRow]);
             return chain;
           },
           delete: () => {
@@ -65,6 +86,7 @@ describe('addLeadTag', () => {
   beforeEach(() => {
     insertedValues.length = 0;
     deleteWheres.length = 0;
+    simulateConflict = false;
     vi.clearAllMocks();
   });
 
@@ -93,6 +115,23 @@ describe('addLeadTag', () => {
     await addLeadTag({ tenantId: 'tenant-1', leadId: 'lead-1', tag: '  promo  ' });
 
     expect((insertedValues[0] as { tag: string }).tag).toBe('promo');
+  });
+
+  it('is idempotent — returns the pre-existing row on conflict (PL-12)', async () => {
+    simulateConflict = true;
+    const { addLeadTag } = await import('../add-lead-tag.js');
+
+    const result = await addLeadTag({ tenantId: 'tenant-1', leadId: 'lead-1', tag: 'vip' });
+
+    // The insert was attempted (ON CONFLICT DO NOTHING) but returned no row, so
+    // the existing row is fetched and returned instead of throwing.
+    expect(insertedValues).toHaveLength(1);
+    expect(result).toEqual({
+      id: 'existing-tag-id',
+      tag: 'vip',
+      origemTag: 'manual',
+      createdAt: existingRow.createdAt,
+    });
   });
 
   it('scopes the write to the tenant via withTenant', async () => {

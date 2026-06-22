@@ -241,11 +241,21 @@ these were the **only two** remaining (the sidebar already has a `nav-routes.tes
   signed `phone_number_id` is the limiter key (api 228 tests green). *Exit (met):* rate limit on the
   inbound webhook endpoint. ✅
 
-- [ ] **PL-12 · [Epic 7 / Story 7.4] Tag-dedup race / missing unique constraint.** `lead_tags`
-  has no `(tenant_id, lead_id, tag)` unique constraint; dedup is in-app (query-then-insert),
-  leaving a residual intra-turn race that can create duplicate tags. Add the DB constraint
-  (then simplify to `ON CONFLICT`). Data-integrity item. See 7.4 Completion Notes. *Exit:*
-  unique constraint in place; dedup relies on it.
+- [x] **PL-12 · [Epic 7 / Story 7.4] Tag-dedup race / missing unique constraint.** ✅ **FIXED IN
+  CODE 2026-06-21 (apply + verify in staging).** Added a DB-level `UNIQUE (tenant_id, lead_id, tag)`
+  on `lead_tags` and switched both insert paths to `ON CONFLICT DO NOTHING`, closing the intra-turn
+  race. Changes: (a) schema — `unique('lead_tags_tenant_lead_tag_unique')` in `packages/db/src/schema/
+  lead.ts`; (b) migration `0023_lead_tags_unique.sql` (hand-written SQL, same convention as 0017–0022)
+  that **dedups existing rows first** (keeps the earliest per group via `ROW_NUMBER()`) so the
+  `ADD CONSTRAINT` can't fail on pre-existing duplicates; (c) `packages/agent/.../adicionar-tag.ts` —
+  dropped the query-then-insert, now a single `onConflictDoNothing` insert (removed the residual race);
+  (d) `packages/lead/.../add-lead-tag.ts` — the manual path had **no** dedup (a duplicate would now hit
+  the constraint → 23505), so made it idempotent: `onConflictDoNothing` + fetch-existing fallback (no
+  500, returns the pre-existing row). Tests updated to ON-CONFLICT semantics + mutation-proofs (lead
+  6/6, agent adicionar-tag 3/3; db/lead/agent typecheck+lint exit 0). **NOT applied to any DB** —
+  prod/staging write is the operator's call. *Exit (met in code):* unique constraint defined + migration
+  written; **residual:** apply `0023` and verify under the `leedi_app` role in staging (a concurrent
+  double-tag yields one row).
 
 - [ ] **PL-13 · [Epics 4,6,10] Behavioral RLS / integration tests deferred to a real env.**
   Several isolation/integration tests were skipped because MCP `execute_sql` runs privileged

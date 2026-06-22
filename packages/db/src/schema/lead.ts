@@ -44,16 +44,22 @@ export const leads = pgTable(
   (t) => [unique('leads_tenant_id_telefone_unique').on(t.tenantId, t.telefone)]
 );
 
-export const leadTags = pgTable('lead_tags', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  leadId: uuid('lead_id')
-    .references(() => leads.id, { onDelete: 'cascade' })
-    .notNull(),
-  tenantId: uuid('tenant_id').notNull(),
-  tag: text('tag').notNull(),
-  origemTag: leadTagOrigemEnum('origem_tag').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+export const leadTags = pgTable(
+  'lead_tags',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    leadId: uuid('lead_id')
+      .references(() => leads.id, { onDelete: 'cascade' })
+      .notNull(),
+    tenantId: uuid('tenant_id').notNull(),
+    tag: text('tag').notNull(),
+    origemTag: leadTagOrigemEnum('origem_tag').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  // PL-12: enforce tag idempotency at the DB level so inserts can rely on
+  // ON CONFLICT DO NOTHING instead of an in-app query-then-insert (race-prone).
+  (t) => [unique('lead_tags_tenant_lead_tag_unique').on(t.tenantId, t.leadId, t.tag)]
+);
 
 export const leadJourneyEvents = pgTable('lead_journey_events', {
   id: uuid('id').primaryKey().defaultRandom(),

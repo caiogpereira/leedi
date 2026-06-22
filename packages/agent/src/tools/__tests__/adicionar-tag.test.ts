@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const state = vi.hoisted(() => ({
-  existing: undefined as Record<string, unknown> | undefined,
   inserts: [] as Record<string, unknown>[],
+  lastConflictTarget: undefined as unknown,
   // captures the args passed to anthropic.messages.create
   createMock: vi.fn(async (_params: { model: string }) => ({
     content: [{ type: 'text', text: 'lead quente' }],
@@ -12,21 +12,30 @@ const state = vi.hoisted(() => ({
 vi.mock('@leedi/db', () => {
   function makeTx() {
     const b: Record<string, (...a: unknown[]) => unknown> = {};
-    b.select = () => b;
-    b.from = () => b;
-    b.where = () => b;
-    b.limit = () => (state.existing ? [state.existing] : []);
+    // Idempotency is now delegated to the DB UNIQUE constraint via
+    // ON CONFLICT DO NOTHING — the insert is always issued.
     b.insert = () => ({
       values: (row: Record<string, unknown>) => {
         state.inserts.push(row);
-        return Promise.resolve();
+        return {
+          onConflictDoNothing: (cfg?: { target?: unknown }) => {
+            state.lastConflictTarget = cfg?.target;
+            return Promise.resolve();
+          },
+        };
       },
     });
     return b;
   }
   return {
     withTenant: vi.fn((_id: string, fn: (tx: unknown) => unknown) => fn(makeTx())),
-    schema: { leadTags: { _marker: 'leadTags' } },
+    schema: {
+      leadTags: {
+        tenantId: 'lead_tags.tenant_id',
+        leadId: 'lead_tags.lead_id',
+        tag: 'lead_tags.tag',
+      },
+    },
     eq: vi.fn(),
     and: vi.fn(),
   };
@@ -43,14 +52,14 @@ const ctx = { tenantId: 't1', leadId: 'lead-1' };
 describe('adicionarTag', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    state.existing = undefined;
     state.inserts = [];
+    state.lastConflictTarget = undefined;
     state.createMock = vi.fn(async (_params: { model: string }) => ({
       content: [{ type: 'text', text: 'lead quente' }],
     }));
   });
 
-  it("inserts the tag with origem_tag='agente' (AC#3)", async () => {
+  it("inserts the tag with origem_tag='agente', guarded by ON CONFLICT (AC#3/AC#4)", async () => {
     const { adicionarTag } = await import('../adicionar-tag.js');
     const res = await adicionarTag({ tagText: 'interessado' }, ctx);
 
@@ -61,15 +70,13 @@ describe('adicionarTag', () => {
       tag: 'interessado',
       origemTag: 'agente',
     });
-    expect(res).toEqual({ tagged: true, tag: 'interessado' });
-  });
-
-  it('is idempotent — no duplicate insert when the tag already exists (AC#4)', async () => {
-    state.existing = { id: 'tag-1' };
-    const { adicionarTag } = await import('../adicionar-tag.js');
-    const res = await adicionarTag({ tagText: 'interessado' }, ctx);
-
-    expect(state.inserts).toHaveLength(0);
+    // AC#4 — idempotency delegated to the DB UNIQUE (tenant_id, lead_id, tag)
+    // constraint via ON CONFLICT DO NOTHING (PL-12).
+    expect(state.lastConflictTarget).toEqual([
+      'lead_tags.tenant_id',
+      'lead_tags.lead_id',
+      'lead_tags.tag',
+    ]);
     expect(res).toEqual({ tagged: true, tag: 'interessado' });
   });
 
@@ -91,14 +98,19 @@ describe('adicionarTag', () => {
     expect(res).toEqual({ tagged: true, tag: 'lead quente' });
   });
 
-  it('deduplicates on the refined tag when context is provided', async () => {
-    state.existing = { id: 'tag-1' };
+  it('guards the refined-tag insert with ON CONFLICT DO NOTHING (AC#4)', async () => {
     const { adicionarTag } = await import('../adicionar-tag.js');
     const res = await adicionarTag(
       { tagText: 'interesse', conversationContext: 'comprar agora' },
       ctx
     );
-    expect(state.inserts).toHaveLength(0);
+    expect(state.inserts).toHaveLength(1);
+    expect(state.inserts[0]).toMatchObject({ tag: 'lead quente', origemTag: 'agente' });
+    expect(state.lastConflictTarget).toEqual([
+      'lead_tags.tenant_id',
+      'lead_tags.lead_id',
+      'lead_tags.tag',
+    ]);
     expect(res).toEqual({ tagged: true, tag: 'lead quente' });
   });
 });

@@ -7,17 +7,14 @@
 // Flow (AC#3–#5):
 //   1. If conversationContext is provided, ask Claude Haiku to refine the tag
 //      into the most appropriate label (AC#5).
-//   2. In-app idempotency: query (tenant_id, lead_id, tag) FIRST; if it already
-//      exists, return success WITHOUT inserting a duplicate (AC#4). The
-//      lead_tags table has NO DB-level UNIQUE constraint on
-//      (tenant_id, lead_id, tag), so ON CONFLICT DO NOTHING is unavailable —
-//      the dedup is enforced in-app here. A follow-up migration can add the
-//      constraint and let this fall back to a DB upsert.
+//   2. Idempotency (AC#4): the lead_tags table has a DB-level UNIQUE constraint
+//      on (tenant_id, lead_id, tag) (migration 0023), so the insert uses
+//      ON CONFLICT DO NOTHING — a re-tag is a silent no-op with no race window.
 //   3. Insert with origem_tag='agente' (AC#3).
 //   4. Return { tagged: true, tag }.
 
 import Anthropic from '@anthropic-ai/sdk';
-import { withTenant, schema, eq, and } from '@leedi/db';
+import { withTenant, schema } from '@leedi/db';
 import { modelIdForTask } from '../config/model-routing.js';
 import type { ToolContext } from './types.js';
 
@@ -49,30 +46,19 @@ export async function adicionarTag(
     : input.tagText.trim();
 
   return withTenant(ctx.tenantId, async (tx) => {
-    // AC#4 — idempotency: no DB UNIQUE constraint exists on
-    // (tenant_id, lead_id, tag), so dedup in-app before inserting.
-    const [existing] = await tx
-      .select({ id: schema.leadTags.id })
-      .from(schema.leadTags)
-      .where(
-        and(
-          eq(schema.leadTags.tenantId, ctx.tenantId),
-          eq(schema.leadTags.leadId, ctx.leadId),
-          eq(schema.leadTags.tag, tag)
-        )
-      )
-      .limit(1);
-
-    if (existing) {
-      return { tagged: true, tag };
-    }
-
-    await tx.insert(schema.leadTags).values({
-      tenantId: ctx.tenantId,
-      leadId: ctx.leadId,
-      tag,
-      origemTag: 'agente',
-    });
+    // AC#4 — idempotency enforced by the DB UNIQUE (tenant_id, lead_id, tag)
+    // constraint (migration 0023); ON CONFLICT DO NOTHING makes a re-tag a no-op.
+    await tx
+      .insert(schema.leadTags)
+      .values({
+        tenantId: ctx.tenantId,
+        leadId: ctx.leadId,
+        tag,
+        origemTag: 'agente',
+      })
+      .onConflictDoNothing({
+        target: [schema.leadTags.tenantId, schema.leadTags.leadId, schema.leadTags.tag],
+      });
 
     return { tagged: true, tag };
   });
