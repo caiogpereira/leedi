@@ -258,25 +258,24 @@ these were the **only two** remaining (the sidebar already has a `nav-routes.tes
   (d) `packages/lead/.../add-lead-tag.ts` — the manual path had **no** dedup (a duplicate would now hit
   the constraint → 23505), so made it idempotent: `onConflictDoNothing` + fetch-existing fallback (no
   500, returns the pre-existing row). Tests updated to ON-CONFLICT semantics + mutation-proofs (lead
-  6/6, agent adicionar-tag 3/3; db/lead/agent typecheck+lint exit 0). **NOT applied to any DB** —
-  prod/staging write is the operator's call. *Exit (met in code):* unique constraint defined + migration
-  written; **residual:** apply `0023` and verify under the `leedi_app` role in staging (a concurrent
-  double-tag yields one row).
+  6/6, agent adicionar-tag 3/3; db/lead/agent typecheck+lint exit 0). Migration `0023` **✅ APPLIED TO
+  PROD 2026-06-22** (project `rmhttrkfjktbjdzehiwk`, via MCP; removed 1 pre-existing duplicate row, 2→1;
+  constraint verified present). *Exit (met):* unique constraint in place + both insert paths on
+  `ON CONFLICT`. *Residual (optional):* re-verify the concurrent-double-tag→one-row behavior under the
+  `leedi_app` role once PL-3 lands.
 
-> **⚠️ DEPLOY-ORDERING GATE — migrations `0023` (PL-12) + `0024` (PL-17), 2026-06-21.** These two code
-> changes **throw at runtime against a DB without the migration applied first** — NOT optional "verify
-> later" polish: **PL-12** → `ON CONFLICT (tenant_id,lead_id,tag)` raises `42P10` on *every* tag insert
-> until the UNIQUE constraint exists (breaks agent + manual tagging); **PL-17** → the `SET
-> status='enviando'` claim raises `22P02` (invalid enum) on *every* dispatch batch and propagates (NOT
-> inside the try/catch) → 500 → QStash retries forever → **all dispatch sends dead** until `0024` is
-> applied. **The deploy pipeline will NOT apply them automatically:** `migrate:run` (`src/migrate.ts`)
-> uses drizzle's **journal-based** migrator, but `migrations/meta/_journal.json` stops at idx 16 —
-> `0017`–`0024` are absent from the journal (the known desync), so they were/are applied **manually via
-> Supabase MCP `apply_migration`** (the path `0017`–`0022` took). **Action:** apply `0023` then `0024`
-> via MCP `apply_migration` (`0024`'s `ALTER TYPE ADD VALUE` is add-only/standalone, so a single
-> `apply_migration` is safe) **before or atomically with shipping `redesign/v2-gemini`**, or fold the two
-> SQL files into the journal so `migrate:run` covers them. Until applied, the new tagging + dispatch code
-> must not be live in prod.
+> **✅ DEPLOY-ORDERING GATE CLEARED — migrations `0023` (PL-12) + `0024` (PL-17) APPLIED TO PROD
+> 2026-06-22** (via Supabase MCP `apply_migration`, project `rmhttrkfjktbjdzehiwk`). Verified:
+> `lead_tags_tenant_lead_tag_unique` constraint present; `dispatch_target_status` now =
+> `pendente, enviando, enviado, entregue, respondido, falhou, excluido`; the `0023` dedup removed 1
+> pre-existing duplicate `lead_tags` row (2 → 1, 0 duplicate groups remain). Prod schema is now ahead
+> of / ready for the `redesign/v2-gemini` code. **Context (why this was a gate):** the code throws
+> against a DB lacking these — PL-12 → `42P10` on `ON CONFLICT` (every tag insert); PL-17 → `22P02`
+> invalid enum on the `enviando` claim (every dispatch batch → 500 → infinite QStash retry). And
+> `migrate:run` (`src/migrate.ts`) is drizzle's **journal-based** migrator while `meta/_journal.json`
+> stops at idx 16, so `0017`–`0024` are NOT auto-applied — they're applied **manually via MCP**, which
+> is what was done here (same path as `0017`–`0022`). E2E/staging project (`gxucpaepwvaghinwerml`) will
+> get these when it's next used.
 
 - [ ] **PL-13 · [Epics 4,6,10] Behavioral RLS / integration tests deferred to a real env.**
   Several isolation/integration tests were skipped because MCP `execute_sql` runs privileged
@@ -370,10 +369,11 @@ these were the **only two** remaining (the sidebar already has a `nav-routes.tes
     `enviando` renders fine; no UI change needed.
   - Tests: process-dispatch-batch 6/6 incl. a **mutation proof** (claim returns 0 rows → `sendTemplate`
     not called, `sent===0`); dispatch trio (process-batch + run-job + resume-job) 13/13 run together to
-    catch `@leedi/api` cross-mock pollution; monorepo typecheck+lint exit 0. **NOT applied to any DB.**
-    *Exit (met in code):* a target is claimed (`pendente → enviando`) before the send and only a
-    successful send flips it to `enviado`; **residual:** apply `0024` and force a mid-batch redelivery in
-    staging to confirm no re-send. **Original:**
+    catch `@leedi/api` cross-mock pollution; monorepo typecheck+lint exit 0. Migration `0024` **✅ APPLIED
+    TO PROD 2026-06-22** (project `rmhttrkfjktbjdzehiwk`, via MCP; `dispatch_target_status` now includes
+    `enviando`). *Exit (met):* a target is claimed (`pendente → enviando`) before the send and only a
+    successful send flips it to `enviado`. *Residual (optional):* force a mid-batch redelivery in staging
+    to observe no re-send end-to-end. **Original:**
   `process-dispatch-batch` selects `pendente` targets, sends each template, then
   marks `enviado` in a *separate* transaction. The Epic 13 review reduced the duplication surface
   (added a `deduplicationId` on the chained QStash publish, an atomic compare-and-set claim in
