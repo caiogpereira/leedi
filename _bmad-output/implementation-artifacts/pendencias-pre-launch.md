@@ -263,6 +263,21 @@ these were the **only two** remaining (the sidebar already has a `nav-routes.tes
   written; **residual:** apply `0023` and verify under the `leedi_app` role in staging (a concurrent
   double-tag yields one row).
 
+> **⚠️ DEPLOY-ORDERING GATE — migrations `0023` (PL-12) + `0024` (PL-17), 2026-06-21.** These two code
+> changes **throw at runtime against a DB without the migration applied first** — NOT optional "verify
+> later" polish: **PL-12** → `ON CONFLICT (tenant_id,lead_id,tag)` raises `42P10` on *every* tag insert
+> until the UNIQUE constraint exists (breaks agent + manual tagging); **PL-17** → the `SET
+> status='enviando'` claim raises `22P02` (invalid enum) on *every* dispatch batch and propagates (NOT
+> inside the try/catch) → 500 → QStash retries forever → **all dispatch sends dead** until `0024` is
+> applied. **The deploy pipeline will NOT apply them automatically:** `migrate:run` (`src/migrate.ts`)
+> uses drizzle's **journal-based** migrator, but `migrations/meta/_journal.json` stops at idx 16 —
+> `0017`–`0024` are absent from the journal (the known desync), so they were/are applied **manually via
+> Supabase MCP `apply_migration`** (the path `0017`–`0022` took). **Action:** apply `0023` then `0024`
+> via MCP `apply_migration` (`0024`'s `ALTER TYPE ADD VALUE` is add-only/standalone, so a single
+> `apply_migration` is safe) **before or atomically with shipping `redesign/v2-gemini`**, or fold the two
+> SQL files into the journal so `migrate:run` covers them. Until applied, the new tagging + dispatch code
+> must not be live in prod.
+
 - [ ] **PL-13 · [Epics 4,6,10] Behavioral RLS / integration tests deferred to a real env.**
   Several isolation/integration tests were skipped because MCP `execute_sql` runs privileged
   (bypasses RLS) and Redis/BullMQ weren't running locally: 10.1 (cross-tenant `campaigns` read
