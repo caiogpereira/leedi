@@ -153,6 +153,26 @@ export async function processDispatchBatch(
       break;
     }
 
+    // PL-17 — atomic claim BEFORE the send: pendente -> enviando, conditional on
+    // the row still being pendente. A QStash redelivery (or a concurrent worker)
+    // that already claimed this row gets 0 affected rows and skips it, so a
+    // successful send is never repeated. A row left `enviando` (claimed but the
+    // process died before/around the send) is deliberately NOT auto-retried — it
+    // has no wamid to reconcile and re-sending would re-introduce the duplicate.
+    const claimed = await withTenant(tenantId, async (tx) =>
+      tx
+        .update(schema.dispatchTargets)
+        .set({ status: 'enviando' })
+        .where(
+          and(
+            eq(schema.dispatchTargets.id, target.id),
+            eq(schema.dispatchTargets.status, 'pendente')
+          )
+        )
+        .returning({ id: schema.dispatchTargets.id })
+    );
+    if (claimed.length === 0) continue;
+
     const telefone = phoneByLead.get(target.leadId);
     if (!provider || !telefone || !templateName) {
       await withTenant(tenantId, async (tx) => {

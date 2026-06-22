@@ -330,8 +330,30 @@ these were the **only two** remaining (the sidebar already has a `nav-routes.tes
   same-role turns per claude-api guidance, but confirm against the live model — and that
   lead_com_objecao's first agent turn engages the "preço" objection (AC#2).
 
-- [ ] **PL-17 · [Epic 13 / Story 13.2] Residual at-least-once duplicate-send window in the dispatch
-  batch worker.** `process-dispatch-batch` selects `pendente` targets, sends each template, then
+- [x] **PL-17 · [Epic 13 / Story 13.2] Residual at-least-once duplicate-send window in the dispatch
+  batch worker.** ✅ **FIXED IN CODE 2026-06-21 (apply migration + force a mid-batch redelivery in
+  staging).** Added the `enviando` claim state and an atomic compare-and-set claim before each send:
+  - migration `0024_dispatch_target_status_enviando.sql` — sole-statement
+    `ALTER TYPE dispatch_target_status ADD VALUE IF NOT EXISTS 'enviando' BEFORE 'enviado'` (add-only,
+    not used in the same file, so the PG `ADD VALUE` in-tx footgun is moot; the worker that *uses* it
+    ships separately); enum value also added to `packages/db/src/schema/dispatch.ts`.
+  - `process-dispatch-batch.ts` — before `sendTemplate`, an atomic
+    `UPDATE … SET status='enviando' WHERE id=? AND status='pendente' RETURNING id`; if 0 rows claimed
+    (a redelivery/concurrent worker already took it) the target is **skipped**. Only a successful send
+    flips it to `enviado`. The claim runs **after** the per-iteration pause/quality check, so a graceful
+    pause leaves the in-flight row `pendente` (resume stays correct with no reset).
+  - **Deliberate non-reset:** a row stuck `enviando` (claimed, then crash before/around the send) is
+    **not** auto-retried — it has no `wamid` to reconcile and re-sending would re-introduce the duplicate
+    (per the exit: "a redelivered batch never re-sends an already-claimed target"). The old over-send
+    window becomes a strictly-better rare under-send. The detail UI's `targetCounts` is a dynamic map, so
+    `enviando` renders fine; no UI change needed.
+  - Tests: process-dispatch-batch 6/6 incl. a **mutation proof** (claim returns 0 rows → `sendTemplate`
+    not called, `sent===0`); dispatch trio (process-batch + run-job + resume-job) 13/13 run together to
+    catch `@leedi/api` cross-mock pollution; monorepo typecheck+lint exit 0. **NOT applied to any DB.**
+    *Exit (met in code):* a target is claimed (`pendente → enviando`) before the send and only a
+    successful send flips it to `enviado`; **residual:** apply `0024` and force a mid-batch redelivery in
+    staging to confirm no re-send. **Original:**
+  `process-dispatch-batch` selects `pendente` targets, sends each template, then
   marks `enviado` in a *separate* transaction. The Epic 13 review reduced the duplication surface
   (added a `deduplicationId` on the chained QStash publish, an atomic compare-and-set claim in
   `run-dispatch-job`, and per-iteration pause/quality re-checks), but a narrow window remains: if the

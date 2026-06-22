@@ -31,6 +31,9 @@ export const dispatchStatusEnum = pgEnum('dispatch_status', [
 
 export const dispatchTargetStatusEnum = pgEnum('dispatch_target_status', [
   'pendente',
+  // PL-17: atomic claim state set BEFORE the send (pendente -> enviando) so a
+  // redelivered/concurrent batch never re-sends an already-claimed target.
+  'enviando',
   'enviado',
   'entregue',
   'respondido',
