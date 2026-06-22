@@ -192,11 +192,17 @@ these were the **only two** remaining (the sidebar already has a `nav-routes.tes
     justified per-line `eslint-disable` (refactoring runtime-verified components for a conservative
     rule would be high-risk churn). Affected unit tests re-run green. *Exit:* `pnpm lint` green. ✅
 
-- [ ] **PL-8 · [Code health] CI test gate excludes `@leedi/db` and `@leedi/api`.** `ci.yml`
-  runs `turbo run test --filter='!@leedi/db' --filter='!@leedi/api'`. `@leedi/db` needs a
-  non-BYPASSRLS `leedi_app` role + live DB (ties to PL-3); `@leedi/api` has cross-file
-  test-state pollution (suites pass alone, fail together). Re-include each once fixed.
-  Source: `epic-1-test-ci-backlog.md`. *Exit:* both packages back in the CI test gate, green.
+- [ ] **PL-8 · [Code health] CI test gate excludes `@leedi/db` and `@leedi/api`.** ⏳ **`@leedi/api`
+  HALF RESOLVED 2026-06-21; `@leedi/db` half still blocked on PL-3.** `ci.yml` now runs
+  `turbo run test --filter='!@leedi/db'` (only `@leedi/db` excluded). The `@leedi/api` cross-file
+  test-state pollution was resolved over Epics 13–20; the full suite (**236 tests / 45 files**) is now
+  stable run together — verified **3× green** in isolation and the whole gate **36/36 green** under
+  `turbo … --concurrency=3`. (Note: an *unbounded* local `turbo run test` on Windows can flake with
+  vitest "Failed to start forks worker" — a fork-spawn resource limit hitting `@leedi/ui`/`@leedi/api`
+  alike — a local-environment artifact, NOT a CI/correctness issue; constrained concurrency is clean.)
+  `@leedi/db` stays excluded: its 2 RLS suites need a non-BYPASSRLS `leedi_app` role + live DB (ties to
+  **PL-3**, Caio). Source: `epic-1-test-ci-backlog.md`. *Exit:* both packages back in the CI test gate,
+  green — **`@leedi/api` done**; `@leedi/db` re-include lands with PL-3.
 
 - [ ] **PL-9 · [Epic 3 / Story 3.4] Wire the nightly E2E + axe CI gate.** The authed E2E
   suites + the axe sweep are **green locally** (dashboard auth 13/13, admin 3/3), but the

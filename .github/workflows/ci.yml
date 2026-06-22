@@ -183,14 +183,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # SCOPED test gate (code review 2026-06-04). Runs the currently-green suites.
-      # @leedi/db and @leedi/api are intentionally EXCLUDED for now — see
+      # SCOPED test gate (code review 2026-06-04; @leedi/api re-included 2026-06-21, PL-8).
+      # Only @leedi/db stays EXCLUDED — see
       # _bmad-output/implementation-artifacts/epic-1-test-ci-backlog.md:
-      #   - @leedi/db: 2 RLS suites need a non-BYPASSRLS `leedi_app` role + live DB (deferred Epic 2 infra)
-      #   - @leedi/api: cross-file test-state pollution (suites pass alone, fail together)
-      # Re-include each package here once its backlog item is resolved.
-      - name: Test (scoped — excludes @leedi/db, @leedi/api)
-        run: pnpm exec turbo run test --filter='!@leedi/db' --filter='!@leedi/api'
+      #   - @leedi/db: 2 RLS suites need a non-BYPASSRLS `leedi_app` role + live DB (deferred → PL-3).
+      # @leedi/api's cross-file test-state pollution was resolved over Epics 13–20; the full suite
+      # (236 tests / 45 files) is now stable when run together (verified 3× green, 2026-06-21).
+      - name: Test (scoped — excludes @leedi/db)
+        run: pnpm exec turbo run test --filter='!@leedi/db'
         env:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
