@@ -7,4 +7,6 @@ export type { UsageCounter, GetUsageCounterInput } from './use-cases/get-usage-c
 export { checkUsageBlock } from './use-cases/check-usage-block.js';
 export type { UsageBlockResult } from './use-cases/check-usage-block.js';
 
+export { updateCurrentPeriodLimit } from './use-cases/update-current-period-limit.js';
+
 export { PLAN_LIMITS, OVERAGE_PRICE_BRL, USAGE_ALERT_THRESHOLDS } from './constants.js';

@@ -89,6 +89,7 @@ function makeProvider(overrides?: Partial<PaymentProvider>): PaymentProvider {
       proximoVencimento: new Date('2026-07-03'),
     }),
     cancelarAssinatura: vi.fn().mockResolvedValue(undefined),
+    atualizarAssinatura: vi.fn().mockResolvedValue(undefined),
     verificarWebhook: vi.fn().mockReturnValue(true),
     ...overrides,
   };

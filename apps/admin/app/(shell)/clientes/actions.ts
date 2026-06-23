@@ -12,7 +12,13 @@ import {
   getTenantFullDetail,
   type TenantInvoice,
 } from '@leedi/tenancy';
-import { AsaasProvider, createBillingForTenant, isValidCpfCnpj } from '@leedi/billing';
+import {
+  AsaasProvider,
+  createBillingForTenant,
+  changeTenantPlan,
+  isValidCpfCnpj,
+} from '@leedi/billing';
+import { updateCurrentPeriodLimit } from '@leedi/usage';
 import { env } from '@leedi/config';
 
 /**
@@ -164,6 +170,71 @@ export async function retryBillingAction(
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Falha ao configurar a cobrança';
     return { ok: false, error: msg };
+  }
+
+  revalidatePath('/clientes');
+  revalidatePath(`/clientes/${tenantId}`);
+  return { ok: true };
+}
+
+const changePlanSchema = z.object({
+  tenantId: z.string().uuid(),
+  novoPlano: z.enum(['starter', 'pro', 'enterprise']),
+  valorEnterprise: z.number().positive().optional(),
+});
+
+export type ChangePlanActionResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Changes a tenant's plan (Asaas subscription value + our records) and applies
+ * the new conversation limit to the current period immediately. Orchestrates
+ * `changeTenantPlan` (@leedi/billing) + `updateCurrentPeriodLimit` (@leedi/usage),
+ * mirroring the createTenant → createBilling apps-layer composition.
+ */
+export async function changePlanAction(
+  input: z.infer<typeof changePlanSchema>
+): Promise<ChangePlanActionResult> {
+  const { userId, workspaceId } = await requireSuperAdmin();
+
+  const parsed = changePlanSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Dados inválidos' };
+  }
+  const { tenantId, novoPlano, valorEnterprise } = parsed.data;
+
+  if (novoPlano === 'enterprise' && !valorEnterprise) {
+    return { ok: false, error: 'Informe o valor mensal para o plano Enterprise' };
+  }
+
+  let result;
+  try {
+    const provider = new AsaasProvider(env.ASAAS_API_KEY, env.ASAAS_SANDBOX);
+    result = await changeTenantPlan(
+      {
+        tenantId,
+        novoPlano,
+        workspaceId,
+        actorUserId: userId,
+        ...(valorEnterprise !== undefined ? { valorEnterprise } : {}),
+      },
+      provider
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Falha ao atualizar a assinatura no Asaas';
+    return { ok: false, error: msg };
+  }
+
+  if (!result.success) {
+    return { ok: false, error: result.error };
+  }
+
+  // Apply the new limit to the current period (the plan/subscription write
+  // already succeeded; a limit-sync failure must not surface as a plan-change
+  // failure, so it is best-effort).
+  try {
+    await updateCurrentPeriodLimit(tenantId, novoPlano);
+  } catch {
+    /* next increment self-heals the limit */
   }
 
   revalidatePath('/clientes');

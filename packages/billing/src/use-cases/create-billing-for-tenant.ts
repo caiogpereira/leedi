@@ -2,7 +2,7 @@ import { withServiceRole, schema, eq, sql } from '@leedi/db';
 import type { PaymentProvider } from '../ports/payment-provider.js';
 import { isValidCpfCnpj, normalizeCpfCnpj } from '../lib/cpf-cnpj.js';
 
-const PLAN_VALUES: Record<'starter' | 'pro', number> = {
+export const PLAN_VALUES: Record<'starter' | 'pro', number> = {
   starter: 697.0,
   pro: 1497.0,
 };
@@ -21,7 +21,7 @@ export interface CreateBillingInput {
   valorEnterprise?: number;
 }
 
-function resolvePlanValue(
+export function resolvePlanValue(
   plano: 'starter' | 'pro' | 'enterprise',
   valorEnterprise?: number
 ): number {

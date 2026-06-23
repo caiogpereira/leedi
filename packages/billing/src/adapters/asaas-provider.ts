@@ -33,9 +33,13 @@ export class AsaasProvider implements PaymentProvider {
       : 'https://api.asaas.com/api/v3';
   }
 
-  private async request<T>(path: string, body: unknown): Promise<T> {
+  private async request<T>(
+    path: string,
+    body: unknown,
+    method: 'POST' | 'PUT' = 'POST'
+  ): Promise<T> {
     const res = await fetch(`${this.baseUrl}${path}`, {
-      method: 'POST',
+      method,
       headers: {
         'Content-Type': 'application/json',
         access_token: this.apiKey,
@@ -84,6 +88,23 @@ export class AsaasProvider implements PaymentProvider {
       subscriptionId: sub.id,
       proximoVencimento: new Date(sub.nextDueDate),
     };
+  }
+
+  async atualizarAssinatura(subscriptionId: string, _plano: string, valor: number): Promise<void> {
+    // PUT /v3/subscriptions/{id}. `updatePendingPayments: true` propagates the new
+    // value to already-generated pending charges (Asaas docs). The new value takes
+    // effect from the next billing cycle. cycle/billingType kept consistent with
+    // criarAssinatura (MONTHLY/BOLETO).
+    await this.request<AsaasSubscriptionResponse>(
+      `/subscriptions/${subscriptionId}`,
+      {
+        value: valor,
+        billingType: 'BOLETO',
+        cycle: 'MONTHLY',
+        updatePendingPayments: true,
+      },
+      'PUT'
+    );
   }
 
   async cancelarAssinatura(subscriptionId: string): Promise<void> {

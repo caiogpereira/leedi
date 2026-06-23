@@ -50,6 +50,9 @@ importers:
       '@leedi/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@leedi/usage':
+        specifier: workspace:*
+        version: link:../../packages/usage
       lucide-react:
         specifier: ^1.17.0
         version: 1.17.0(react@19.2.6)

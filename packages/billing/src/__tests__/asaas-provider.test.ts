@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { AsaasProvider } from '../adapters/asaas-provider.js';
 
 const SANDBOX_KEY = 'test-api-key';
@@ -31,5 +31,31 @@ describe('AsaasProvider.verificarWebhook', () => {
     // Near-miss tokens (differ by one char / length) must still return false.
     expect(provider.verificarWebhook(TOKEN.slice(0, -1), TOKEN)).toBe(false);
     expect(provider.verificarWebhook(TOKEN + 'x', TOKEN)).toBe(false);
+  });
+});
+
+describe('AsaasProvider.atualizarAssinatura', () => {
+  it('PUTs the new value to /subscriptions/{id} with updatePendingPayments', async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fetchMock = vi.fn(async (url: string, init: RequestInit) => {
+      calls.push({ url, init });
+      return {
+        ok: true,
+        json: async () => ({ id: 'asaas-sub-1', nextDueDate: '2026-07-01' }),
+      } as Response;
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const provider = new AsaasProvider(SANDBOX_KEY, true);
+    await provider.atualizarAssinatura('asaas-sub-1', 'pro', 1497);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toContain('/subscriptions/asaas-sub-1');
+    expect(calls[0]!.init.method).toBe('PUT');
+    const body = JSON.parse(String(calls[0]!.init.body));
+    expect(body.value).toBe(1497);
+    expect(body.updatePendingPayments).toBe(true);
+
+    vi.unstubAllGlobals();
   });
 });

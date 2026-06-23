@@ -35,6 +35,7 @@
         "@leedi/tailwind-config": "workspace:*",
         "@leedi/tenancy": "workspace:*",
         "@leedi/ui": "workspace:*",
+        "@leedi/usage": "workspace:*",
         "lucide-react": "^1.17.0",
         "next": "^15.5.18",
         "next-intl": "^4.13.0",

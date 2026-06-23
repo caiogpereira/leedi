@@ -2,6 +2,11 @@ export type { PaymentProvider } from './ports/payment-provider.js';
 export { AsaasProvider, BillingProviderError } from './adapters/asaas-provider.js';
 export { createBillingForTenant } from './use-cases/create-billing-for-tenant.js';
 export type { CreateBillingInput } from './use-cases/create-billing-for-tenant.js';
+export { changeTenantPlan } from './use-cases/change-tenant-plan.js';
+export type {
+  ChangeTenantPlanInput,
+  ChangeTenantPlanResult,
+} from './use-cases/change-tenant-plan.js';
 export { isValidCpfCnpj, normalizeCpfCnpj } from './lib/cpf-cnpj.js';
 export { getFinancialHealth } from './use-cases/get-financial-health.js';
 export type { FinancialHealth, Delinquent } from './use-cases/get-financial-health.js';

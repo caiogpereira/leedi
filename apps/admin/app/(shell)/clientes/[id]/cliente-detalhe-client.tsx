@@ -20,7 +20,7 @@ import type { BadgeProps } from '@leedi/ui';
 import { ChevronLeft, AlertTriangle } from 'lucide-react';
 import type { TenantFullDetail, TenantInvoice } from '@leedi/tenancy';
 import { ImpersonateButton } from '../ImpersonateButton';
-import { retryBillingAction } from '../actions';
+import { retryBillingAction, changePlanAction } from '../actions';
 
 const STATUS_INTENT: Record<string, NonNullable<BadgeProps['variant']>> = {
   trial: 'info',
@@ -75,6 +75,7 @@ export function ClienteDetalheClient({
   const t = useTranslations('clienteDetalhe');
   const tc = useTranslations('clientes');
   const [retryOpen, setRetryOpen] = useState(false);
+  const [changePlanOpen, setChangePlanOpen] = useState(false);
 
   const sub = detail.subscription;
   const usage = detail.usage;
@@ -152,6 +153,13 @@ export function ClienteDetalheClient({
         {billingPending ? (
           <div className="mt-4">
             <Button onClick={() => setRetryOpen(true)}>{t('plano.retry')}</Button>
+          </div>
+        ) : null}
+        {sub ? (
+          <div className="mt-4">
+            <Button variant="outline" onClick={() => setChangePlanOpen(true)}>
+              {t('plano.changePlan')}
+            </Button>
           </div>
         ) : null}
       </Card>
@@ -266,7 +274,102 @@ export function ClienteDetalheClient({
           onClose={() => setRetryOpen(false)}
         />
       ) : null}
+
+      {changePlanOpen ? (
+        <ChangePlanDialog
+          tenantId={detail.id}
+          currentPlano={detail.plan}
+          onClose={() => setChangePlanOpen(false)}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function ChangePlanDialog({
+  tenantId,
+  currentPlano,
+  onClose,
+}: {
+  tenantId: string;
+  currentPlano: string;
+  onClose: () => void;
+}) {
+  const t = useTranslations('clienteDetalhe');
+  const router = useRouter();
+  const [novoPlano, setNovoPlano] = useState<'starter' | 'pro' | 'enterprise'>(
+    currentPlano === 'pro' || currentPlano === 'enterprise' ? currentPlano : 'starter'
+  );
+  const [valorEnterprise, setValorEnterprise] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    startTransition(async () => {
+      const result = await changePlanAction({
+        tenantId,
+        novoPlano,
+        valorEnterprise:
+          novoPlano === 'enterprise' && valorEnterprise ? Number(valorEnterprise) : undefined,
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      onClose();
+      router.refresh();
+    });
+  }
+
+  return (
+    <Dialog open onOpenChange={(open) => (!open ? onClose() : undefined)}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t('changePlanDialog.title')}</DialogTitle>
+          <DialogDescription>{t('changePlanDialog.description')}</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="change-plano">{t('changePlanDialog.plan')}</Label>
+            <select
+              id="change-plano"
+              value={novoPlano}
+              onChange={(e) => setNovoPlano(e.target.value as 'starter' | 'pro' | 'enterprise')}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="starter">Starter</option>
+              <option value="pro">Pro</option>
+              <option value="enterprise">Enterprise</option>
+            </select>
+          </div>
+          {novoPlano === 'enterprise' ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="change-valor">{t('changePlanDialog.enterpriseValue')}</Label>
+              <Input
+                id="change-valor"
+                type="number"
+                min="1"
+                step="0.01"
+                value={valorEnterprise}
+                onChange={(e) => setValorEnterprise(e.target.value)}
+                required
+              />
+            </div>
+          ) : null}
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose}>
+              {t('changePlanDialog.cancel')}
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? t('changePlanDialog.saving') : t('changePlanDialog.submit')}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
