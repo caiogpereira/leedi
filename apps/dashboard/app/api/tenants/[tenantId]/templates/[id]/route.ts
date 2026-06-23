@@ -3,13 +3,28 @@ import type { NextRequest } from 'next/server';
 import { getSession } from '@leedi/auth';
 import { internalApiUrl } from '../../../../../../lib/internal-api-url';
 
-/** Same-origin proxy for editing (PATCH) and deleting (DELETE) a template. */
+/** Same-origin proxy for reading (GET), editing (PATCH) and deleting (DELETE) a template. */
 function apiBaseUrl(): string {
   return internalApiUrl();
 }
 
 function upstreamUrl(tenantId: string, id: string): string {
   return `${apiBaseUrl()}/api/tenants/${encodeURIComponent(tenantId)}/templates/${encodeURIComponent(id)}`;
+}
+
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ tenantId: string; id: string }> }
+) {
+  const session = await getSession(request.headers);
+  if (!session?.user?.id)
+    return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+  const { tenantId, id } = await context.params;
+  const upstream = await fetch(upstreamUrl(tenantId, id), {
+    headers: { cookie: request.headers.get('cookie') ?? '' },
+  });
+  const payload = await upstream.json().catch(() => ({ error: 'Resposta inválida da API.' }));
+  return NextResponse.json(payload, { status: upstream.status });
 }
 
 export async function PATCH(
