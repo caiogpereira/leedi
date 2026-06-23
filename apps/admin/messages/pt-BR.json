@@ -115,6 +115,7 @@
       "status": "Status",
       "value": "Valor/mês",
       "overage": "Excedente (mês ant.)",
+      "margin": "Margem (mês)",
       "lastPayment": "Último pagamento",
       "actions": "Ações"
     },
@@ -176,6 +177,74 @@
         "status": "Status",
         "paidAt": "Pago em"
       }
+    }
+  },
+  "clienteDetalhe": {
+    "back": "Clientes",
+    "owner": "Responsável",
+    "createdAt": "Criado em",
+    "notFound": "Cliente não encontrado.",
+    "plano": {
+      "title": "Plano & Cobrança",
+      "plan": "Plano",
+      "value": "Valor mensal",
+      "subStatus": "Assinatura",
+      "nextDue": "Próximo vencimento",
+      "none": "Nenhuma assinatura configurada.",
+      "pending": "Configuração de cobrança pendente — a assinatura no Asaas não foi criada.",
+      "retry": "Configurar cobrança",
+      "changePlan": "Mudar plano"
+    },
+    "subStatus": {
+      "ativa": "Ativa",
+      "atrasada": "Atrasada",
+      "cancelada": "Cancelada",
+      "trial": "Trial"
+    },
+    "uso": {
+      "title": "Uso & Margem (mês atual)",
+      "conversations": "Conversas",
+      "overage": "Excedente",
+      "aiCost": "Custo IA",
+      "aiCostBrl": "≈ {brl} (câmbio {rate})",
+      "margin": "Margem estimada do cliente",
+      "marginNa": "—  (sem assinatura ativa)",
+      "none": "Sem uso registrado neste mês."
+    },
+    "conexao": {
+      "title": "Saúde do número",
+      "none": "Número não conectado.",
+      "status": "Status",
+      "quality": "Qualidade"
+    },
+    "quality": {
+      "verde": "Verde",
+      "amarelo": "Amarelo",
+      "vermelho": "Vermelho"
+    },
+    "faturas": {
+      "title": "Faturas",
+      "loading": "Carregando faturas...",
+      "empty": "Nenhuma fatura gerada ainda."
+    },
+    "retryDialog": {
+      "title": "Configurar cobrança no Asaas",
+      "description": "Informe novamente o CPF/CNPJ do cliente para criar a assinatura no Asaas.",
+      "cpfCnpj": "CPF ou CNPJ",
+      "cpfCnpjPlaceholder": "Somente números",
+      "enterpriseValue": "Valor mensal (R$)",
+      "cancel": "Cancelar",
+      "submit": "Configurar",
+      "saving": "Configurando..."
+    },
+    "changePlanDialog": {
+      "title": "Mudar plano",
+      "description": "Atualiza o plano e o valor da assinatura no Asaas. A mudança vale a partir do próximo ciclo.",
+      "plan": "Novo plano",
+      "enterpriseValue": "Valor mensal (R$)",
+      "cancel": "Cancelar",
+      "submit": "Confirmar mudança",
+      "saving": "Atualizando..."
     }
   }
 }

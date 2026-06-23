@@ -41,6 +41,7 @@ describe('listAllTenantsDetailed', () => {
         billing_status: null,
         subscription_valor: '1497.00',
         overage_valor: '120.50',
+        custo_ia_usd: '12.3400',
         ultimo_pagamento: '2026-06-05T10:00:00.000Z',
       },
       {
@@ -66,6 +67,7 @@ describe('listAllTenantsDetailed', () => {
       billingStatus: null,
       subscriptionValor: 1497,
       overageValor: 120.5,
+      custoIaUsd: 12.34,
     });
     expect(result[0]?.lastPayment).toBeInstanceOf(Date);
     expect(result[0]?.createdAt).toBeInstanceOf(Date);
@@ -76,6 +78,7 @@ describe('listAllTenantsDetailed', () => {
       billingStatus: 'pendente_configuracao',
       subscriptionValor: null,
       overageValor: 0,
+      custoIaUsd: 0,
       lastPayment: null,
     });
   });
@@ -91,6 +94,12 @@ describe('listAllTenantsDetailed', () => {
     // AC#1 "overage last month": usage_counters joined on the PREVIOUS month.
     expect(querySql).toContain("CURRENT_DATE - INTERVAL '1 month'");
     expect(querySql).toContain('overage_valor');
+    // Current-month AI cost lives on a SEPARATE aliased join (uc_cur) so it does
+    // not clobber the previous-month overage join (uc_prev).
+    expect(querySql).toContain('uc_prev');
+    expect(querySql).toContain('uc_cur');
+    expect(querySql).toContain("TO_CHAR(CURRENT_DATE, 'YYYY-MM')");
+    expect(querySql).toContain('custo_ia_usd');
     // Last payment = max invoice pago_em.
     expect(querySql).toContain('MAX(pago_em)');
     expect(querySql).toContain('billing_status');

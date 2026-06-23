@@ -14,6 +14,8 @@ export interface TenantDetail {
   subscriptionValor: number | null;
   /** Overage value billed for the PREVIOUS month (BRL) — AC#1 "overage last month". */
   overageValor: number;
+  /** Accumulated Anthropic AI cost for the CURRENT month (USD), 0 when none. */
+  custoIaUsd: number;
   /** Most recent invoice payment timestamp, or null if never paid. */
   lastPayment: Date | null;
 }
@@ -64,7 +66,8 @@ export async function listAllTenantsDetailed(): Promise<TenantDetail[]> {
         t.created_at,
         t.config->>'billing_status' AS billing_status,
         s.valor AS subscription_valor,
-        uc.overage_valor,
+        uc_prev.overage_valor,
+        uc_cur.custo_ia_usd,
         lp.ultimo_pagamento
       FROM tenants t
       LEFT JOIN LATERAL (
@@ -74,9 +77,12 @@ export async function listAllTenantsDetailed(): Promise<TenantDetail[]> {
         ORDER BY created_at DESC
         LIMIT 1
       ) s ON true
-      LEFT JOIN usage_counters uc
-        ON uc.tenant_id = t.id
-        AND uc.periodo = TO_CHAR(CURRENT_DATE - INTERVAL '1 month', 'YYYY-MM')
+      LEFT JOIN usage_counters uc_prev
+        ON uc_prev.tenant_id = t.id
+        AND uc_prev.periodo = TO_CHAR(CURRENT_DATE - INTERVAL '1 month', 'YYYY-MM')
+      LEFT JOIN usage_counters uc_cur
+        ON uc_cur.tenant_id = t.id
+        AND uc_cur.periodo = TO_CHAR(CURRENT_DATE, 'YYYY-MM')
       LEFT JOIN LATERAL (
         SELECT MAX(pago_em) AS ultimo_pagamento
         FROM invoices
@@ -93,6 +99,7 @@ export async function listAllTenantsDetailed(): Promise<TenantDetail[]> {
       billing_status: string | null;
       subscription_valor: unknown;
       overage_valor: unknown;
+      custo_ia_usd: unknown;
       ultimo_pagamento: unknown;
     }>;
 
@@ -106,6 +113,7 @@ export async function listAllTenantsDetailed(): Promise<TenantDetail[]> {
       billingStatus: row.billing_status ?? null,
       subscriptionValor: toNullableNumber(row.subscription_valor),
       overageValor: toNumber(row.overage_valor),
+      custoIaUsd: toNumber(row.custo_ia_usd),
       lastPayment: toNullableDate(row.ultimo_pagamento),
     }));
   });

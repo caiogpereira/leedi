@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   Button,
   Input,
@@ -18,14 +19,16 @@ import {
 } from '@leedi/ui';
 import type { BadgeProps } from '@leedi/ui';
 import { AlertTriangle, Plus, Search } from 'lucide-react';
-import type { TenantDetail, TenantInvoice } from '@leedi/tenancy';
+import type { TenantDetail } from '@leedi/tenancy';
 import { ImpersonateButton } from './ImpersonateButton';
 import {
   createTenantAction,
   blockTenantAction,
   unblockTenantAction,
-  getTenantInvoicesAction,
 } from './actions';
+
+/** A tenant row augmented with the per-client margin computed on the server. */
+type TenantRow = TenantDetail & { marginPct: number | null };
 
 const STATUS_INTENT: Record<string, NonNullable<BadgeProps['variant']>> = {
   trial: 'info',
@@ -34,16 +37,14 @@ const STATUS_INTENT: Record<string, NonNullable<BadgeProps['variant']>> = {
   cancelled: 'neutral',
 };
 
-const INVOICE_STATUS_INTENT: Record<string, NonNullable<BadgeProps['variant']>> = {
-  pago: 'success',
-  pendente: 'warning',
-  atrasado: 'danger',
-  cancelado: 'neutral',
-};
-
 function formatBRL(value: number | null): string {
   if (value === null) return '—';
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function formatPct(value: number | null): string {
+  if (value === null) return '—';
+  return `${value.toFixed(1)}%`;
 }
 
 function formatDate(value: Date | string | null): string {
@@ -57,7 +58,7 @@ export function ClientesClient({
   tenants,
   dashboardUrl,
 }: {
-  tenants: TenantDetail[];
+  tenants: TenantRow[];
   dashboardUrl: string;
 }) {
   const t = useTranslations('clientes');
@@ -65,10 +66,9 @@ export function ClientesClient({
 
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
-  const [blockTarget, setBlockTarget] = useState<{ tenant: TenantDetail; mode: 'block' | 'unblock' } | null>(
+  const [blockTarget, setBlockTarget] = useState<{ tenant: TenantRow; mode: 'block' | 'unblock' } | null>(
     null
   );
-  const [historyTarget, setHistoryTarget] = useState<TenantDetail | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -113,6 +113,7 @@ export function ClientesClient({
                 <th className="py-2 pr-4 font-medium">{t('columns.status')}</th>
                 <th className="py-2 pr-4 text-right font-medium">{t('columns.value')}</th>
                 <th className="py-2 pr-4 text-right font-medium">{t('columns.overage')}</th>
+                <th className="py-2 pr-4 text-right font-medium">{t('columns.margin')}</th>
                 <th className="py-2 pr-4 font-medium">{t('columns.lastPayment')}</th>
                 <th className="py-2 pr-4 font-medium">{t('columns.actions')}</th>
               </tr>
@@ -121,9 +122,8 @@ export function ClientesClient({
               {filtered.map((tenant) => (
                 <tr key={tenant.id} className="border-b hover:bg-surface-2">
                   <td className="py-3 pr-4">
-                    <button
-                      type="button"
-                      onClick={() => setHistoryTarget(tenant)}
+                    <Link
+                      href={`/clientes/${tenant.id}`}
                       className="flex items-center gap-2 font-medium hover:underline"
                     >
                       <Avatar name={tenant.name} size="sm" />
@@ -136,7 +136,7 @@ export function ClientesClient({
                           />
                         </span>
                       ) : null}
-                    </button>
+                    </Link>
                   </td>
                   <td className="py-3 pr-4 capitalize text-muted-foreground">{tenant.plan}</td>
                   <td className="py-3 pr-4">
@@ -147,6 +147,9 @@ export function ClientesClient({
                   <td className="py-3 pr-4 text-right">{formatBRL(tenant.subscriptionValor)}</td>
                   <td className="py-3 pr-4 text-right text-muted-foreground">
                     {formatBRL(tenant.overageValor)}
+                  </td>
+                  <td className="py-3 pr-4 text-right text-muted-foreground">
+                    {formatPct(tenant.marginPct)}
                   </td>
                   <td className="py-3 pr-4 text-muted-foreground">{formatDate(tenant.lastPayment)}</td>
                   <td className="py-3 pr-4">
@@ -199,10 +202,6 @@ export function ClientesClient({
             router.refresh();
           }}
         />
-      ) : null}
-
-      {historyTarget ? (
-        <HistoryDialog tenant={historyTarget} onClose={() => setHistoryTarget(null)} />
       ) : null}
     </div>
   );
@@ -409,74 +408,6 @@ function BlockDialog({
             {pending ? t('block.saving') : isBlock ? t('actions.block') : t('actions.unblock')}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function HistoryDialog({ tenant, onClose }: { tenant: TenantDetail; onClose: () => void }) {
-  const t = useTranslations('clientes');
-  const [invoices, setInvoices] = useState<TenantInvoice[] | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    getTenantInvoicesAction(tenant.id)
-      .then((result) => {
-        if (active) setInvoices(result);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [tenant.id]);
-
-  return (
-    <Dialog open onOpenChange={(open) => (!open ? onClose() : undefined)}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{t('history.title', { name: tenant.name })}</DialogTitle>
-        </DialogHeader>
-        {loading && invoices === null ? (
-          <p className="text-sm text-muted-foreground">{t('history.loading')}</p>
-        ) : invoices && invoices.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t('history.empty')}</p>
-        ) : (
-          <div className="max-h-[60vh] overflow-auto">
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="py-2 pr-4 font-medium">{t('history.columns.date')}</th>
-                  <th className="py-2 pr-4 font-medium">{t('history.columns.dueDate')}</th>
-                  <th className="py-2 pr-4 text-right font-medium">{t('history.columns.value')}</th>
-                  <th className="py-2 pr-4 text-right font-medium">{t('history.columns.overage')}</th>
-                  <th className="py-2 pr-4 font-medium">{t('history.columns.status')}</th>
-                  <th className="py-2 pr-4 font-medium">{t('history.columns.paidAt')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoices?.map((inv) => (
-                  <tr key={inv.id} className="border-b">
-                    <td className="py-3 pr-4 text-muted-foreground">{formatDate(inv.createdAt)}</td>
-                    <td className="py-3 pr-4 text-muted-foreground">{formatDate(inv.vencimento)}</td>
-                    <td className="py-3 pr-4 text-right">{formatBRL(inv.valor)}</td>
-                    <td className="py-3 pr-4 text-right text-muted-foreground">
-                      {formatBRL(inv.valorOverage)}
-                    </td>
-                    <td className="py-3 pr-4">
-                      <Badge variant={INVOICE_STATUS_INTENT[inv.status] ?? 'neutral'}>
-                        {inv.status}
-                      </Badge>
-                    </td>
-                    <td className="py-3 pr-4 text-muted-foreground">{formatDate(inv.pagoEm)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );

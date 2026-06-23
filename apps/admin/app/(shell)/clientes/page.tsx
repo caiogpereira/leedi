@@ -1,4 +1,5 @@
 import { listAllTenantsDetailed } from '@leedi/tenancy';
+import { computeMarginPct } from '@leedi/billing';
 import { env } from '@leedi/config';
 import { ClientesClient } from './ClientesClient';
 
@@ -20,5 +21,16 @@ export const dynamic = 'force-dynamic';
  */
 export default async function ClientesPage() {
   const tenants = await listAllTenantsDetailed();
-  return <ClientesClient tenants={tenants} dashboardUrl={env.DASHBOARD_URL} />;
+  const rate = env.USD_TO_BRL_RATE;
+  // Per-tenant margin uses the SAME formula + rate as the Operacional aggregate
+  // (computeMarginPct). Null when there is no active subscription value, so the
+  // column shows "—" rather than a misleading 0%.
+  const tenantsWithMargin = tenants.map((tenant) => ({
+    ...tenant,
+    marginPct:
+      tenant.subscriptionValor && tenant.subscriptionValor > 0
+        ? computeMarginPct(tenant.subscriptionValor, tenant.custoIaUsd, rate)
+        : null,
+  }));
+  return <ClientesClient tenants={tenantsWithMargin} dashboardUrl={env.DASHBOARD_URL} />;
 }

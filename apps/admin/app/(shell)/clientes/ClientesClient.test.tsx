@@ -12,6 +12,12 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
 
+vi.mock('next/link', () => ({
+  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
+    <a href={href}>{children}</a>
+  ),
+}));
+
 vi.mock('./actions', () => ({
   createTenantAction: vi.fn(),
   blockTenantAction: vi.fn(),
@@ -49,7 +55,9 @@ vi.mock('@leedi/ui', () => ({
   Avatar: ({ name }: { name: string }) => <span aria-label={name} />,
 }));
 
-function makeTenant(overrides: Partial<TenantDetail>): TenantDetail {
+type TenantRow = TenantDetail & { marginPct: number | null };
+
+function makeTenant(overrides: Partial<TenantRow>): TenantRow {
   return {
     id: 'id',
     name: 'Tenant',
@@ -60,6 +68,8 @@ function makeTenant(overrides: Partial<TenantDetail>): TenantDetail {
     billingStatus: null,
     subscriptionValor: 1497,
     overageValor: 0,
+    custoIaUsd: 0,
+    marginPct: 100,
     lastPayment: null,
     ...overrides,
   };
@@ -68,7 +78,7 @@ function makeTenant(overrides: Partial<TenantDetail>): TenantDetail {
 afterEach(cleanup);
 
 describe('ClientesClient', () => {
-  const tenants: TenantDetail[] = [
+  const tenants: TenantRow[] = [
     makeTenant({ id: 't-1', name: 'Acme', status: 'active' }),
     makeTenant({ id: 't-2', name: 'Beta', status: 'blocked' }),
   ];
@@ -100,7 +110,7 @@ describe('ClientesClient', () => {
   });
 
   it('renders a billing-pending warning only when billing_status flags it', () => {
-    const flagged: TenantDetail[] = [
+    const flagged: TenantRow[] = [
       makeTenant({ id: 't-3', name: 'Gamma', billingStatus: 'pendente_configuracao' }),
     ];
     render(<ClientesClient tenants={flagged} dashboardUrl="http://localhost:3001" />);

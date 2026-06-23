@@ -28,3 +28,5 @@ export { writeAuditLog } from './use-cases/write-audit-log.js';
 export type { AuditLogEntry } from './use-cases/write-audit-log.js';
 export { getTenantById } from './use-cases/get-tenant-by-id.js';
 export type { TenantBasic } from './use-cases/get-tenant-by-id.js';
+export { getTenantFullDetail } from './use-cases/get-tenant-full-detail.js';
+export type { TenantFullDetail } from './use-cases/get-tenant-full-detail.js';

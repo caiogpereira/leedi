@@ -9,6 +9,7 @@ import {
   blockTenant,
   unblockTenant,
   getTenantInvoices,
+  getTenantFullDetail,
   type TenantInvoice,
 } from '@leedi/tenancy';
 import { AsaasProvider, createBillingForTenant, isValidCpfCnpj } from '@leedi/billing';
@@ -101,6 +102,73 @@ export async function createTenantAction(
 
   revalidatePath('/clientes');
   return { ok: true, tenantId: created.tenantId, billingFailed };
+}
+
+const retryBillingSchema = z.object({
+  tenantId: z.string().uuid(),
+  cpfCnpj: z.string().trim().refine(isValidCpfCnpj, 'CPF ou CNPJ inválido'),
+  valorEnterprise: z.number().positive().optional(),
+});
+
+export type RetryBillingActionResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Retries Asaas billing setup for a tenant flagged `pendente_configuracao`
+ * (Story 17.1 failure path). `createBillingForTenant` is idempotent on the
+ * subscription row (`existingSubscription`) and clears the flag on success.
+ *
+ * cpfCnpj is re-collected because it is never persisted on our side (only sent
+ * to Asaas at creation). KNOWN LIMITATION: if the original failure happened
+ * AFTER the Asaas customer was created (subscription step failed → no sub row),
+ * a retry calls `criarCliente` again and can create a duplicate Asaas customer.
+ */
+export async function retryBillingAction(
+  input: z.infer<typeof retryBillingSchema>
+): Promise<RetryBillingActionResult> {
+  await requireSuperAdmin();
+
+  const parsed = retryBillingSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Dados inválidos' };
+  }
+  const { tenantId, cpfCnpj, valorEnterprise } = parsed.data;
+
+  const detail = await getTenantFullDetail(tenantId);
+  if (!detail) {
+    return { ok: false, error: 'Cliente não encontrado' };
+  }
+  if (!detail.ownerEmail) {
+    return {
+      ok: false,
+      error: 'O owner precisa aceitar o convite antes de configurar a cobrança.',
+    };
+  }
+  const plano = detail.plan as 'starter' | 'pro' | 'enterprise';
+  if (plano === 'enterprise' && !valorEnterprise) {
+    return { ok: false, error: 'Informe o valor mensal para o plano Enterprise' };
+  }
+
+  try {
+    const provider = new AsaasProvider(env.ASAAS_API_KEY, env.ASAAS_SANDBOX);
+    await createBillingForTenant(
+      {
+        tenantId,
+        nome: detail.name,
+        ownerEmail: detail.ownerEmail,
+        cpfCnpj,
+        plano,
+        ...(valorEnterprise !== undefined ? { valorEnterprise } : {}),
+      },
+      provider
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Falha ao configurar a cobrança';
+    return { ok: false, error: msg };
+  }
+
+  revalidatePath('/clientes');
+  revalidatePath(`/clientes/${tenantId}`);
+  return { ok: true };
 }
 
 const blockSchema = z.object({

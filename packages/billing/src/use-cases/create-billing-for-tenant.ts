@@ -106,9 +106,10 @@ export async function createBillingForTenant(
     throw err;
   }
 
-  // Persist subscription row
-  await withServiceRole((tx) =>
-    tx.insert(schema.subscriptions).values({
+  // Persist subscription row + clear any prior `pendente_configuracao` flag (so a
+  // successful retry removes the warning a previous failed attempt left behind).
+  await withServiceRole(async (tx) => {
+    await tx.insert(schema.subscriptions).values({
       tenantId,
       asaasCustomerId,
       asaasSubscriptionId: subscriptionId,
@@ -117,6 +118,9 @@ export async function createBillingForTenant(
       ciclo: 'mensal',
       status: 'ativa',
       proximoVencimento: proximoVencimento.toISOString().split('T')[0],
-    })
-  );
+    });
+    await tx.execute(
+      sql`UPDATE "tenants" SET "config" = "config" - 'billing_status' WHERE "id" = ${tenantId}::uuid`
+    );
+  });
 }
