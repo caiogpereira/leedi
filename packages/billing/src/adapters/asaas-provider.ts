@@ -29,6 +29,17 @@ interface AsaasPaymentResponse {
   bankSlipUrl?: string;
 }
 
+/**
+ * Late-payment penalties applied to every charge (subscriptions + one-off
+ * overage). 10% fine + 2%/month interest — standard in BR. Asaas applies them
+ * automatically once a boleto goes overdue, and propagates subscription fees to
+ * each generated payment.
+ */
+const LATE_FEES = {
+  fine: { value: 10, type: 'PERCENTAGE' as const },
+  interest: { value: 2 },
+} as const;
+
 export class AsaasProvider implements PaymentProvider {
   private readonly baseUrl: string;
   private readonly apiKey: string;
@@ -89,6 +100,7 @@ export class AsaasProvider implements PaymentProvider {
       cycle: 'MONTHLY',
       value: valor,
       nextDueDate: nextDueDateStr,
+      ...LATE_FEES,
     });
 
     return {
@@ -109,6 +121,7 @@ export class AsaasProvider implements PaymentProvider {
         billingType: 'BOLETO',
         cycle: 'MONTHLY',
         updatePendingPayments: true,
+        ...LATE_FEES,
       },
       'PUT'
     );
@@ -129,6 +142,7 @@ export class AsaasProvider implements PaymentProvider {
       description: input.descricao,
       // Idempotency/reconciliation handle on the Asaas side.
       externalReference: input.externalReference,
+      ...LATE_FEES,
     });
     return {
       paymentId: payment.id,

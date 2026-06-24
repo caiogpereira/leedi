@@ -22,6 +22,7 @@ interface OverdueOverageRow {
   tenantName: string;
   periodo: string;
   overageValor: string;
+  conversasLimite: number;
   asaasCustomerId: string | null;
 }
 
@@ -30,8 +31,8 @@ export interface ChargeOverageResult {
   considered: number;
   /** Charges actually issued at Asaas. */
   charged: number;
-  /** Periods forgiven for being below the minimum. */
-  forgiven: number;
+  /** Periods below the minimum, rolled into the next month instead of charged. */
+  carriedForward: number;
   /** Skipped because the tenant has no Asaas customer. */
   skippedNoCustomer: number;
 }
@@ -39,6 +40,13 @@ export interface ChargeOverageResult {
 /** Previous calendar month as 'YYYY-MM'. */
 export function previousPeriod(now: Date = new Date()): string {
   const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  return d.toISOString().slice(0, 7);
+}
+
+/** The calendar month after a 'YYYY-MM' string, as 'YYYY-MM'. */
+export function nextPeriodOf(periodo: string): string {
+  const [y, m] = periodo.split('-').map(Number);
+  const d = new Date(Date.UTC(y!, m!, 1)); // m is 1-based; Date month is 0-based → m == next month
   return d.toISOString().slice(0, 7);
 }
 
@@ -69,7 +77,7 @@ export async function chargeMonthlyOverage(
   const result: ChargeOverageResult = {
     considered: 0,
     charged: 0,
-    forgiven: 0,
+    carriedForward: 0,
     skippedNoCustomer: 0,
   };
 
@@ -80,6 +88,7 @@ export async function chargeMonthlyOverage(
         t.name AS "tenantName",
         uc.periodo AS periodo,
         uc.overage_valor AS "overageValor",
+        uc.conversas_limite AS "conversasLimite",
         s.asaas_customer_id AS "asaasCustomerId"
       FROM usage_counters uc
       JOIN tenants t ON t.id = uc.tenant_id
@@ -106,11 +115,13 @@ export async function chargeMonthlyOverage(
     const valor = Math.round(parseFloat(row.overageValor) * 100) / 100;
 
     try {
-      // Below the minimum: forgive (mark processed so it is never retried). Calendar
-      // periods don't carry forward, so nothing accumulates across months.
+      // Below the minimum: don't charge (Asaas rejects sub-R$5 boletos). Roll the
+      // amount into the NEXT month's counter so it accumulates until it crosses the
+      // threshold and gets billed — then mark this period processed so it is not
+      // re-carried on the next run.
       if (valor < MIN_OVERAGE_CHARGE_BRL) {
-        await markCharged(row.tenantId, row.periodo);
-        result.forgiven += 1;
+        await carryForward(row.tenantId, row.periodo, valor, row.conversasLimite);
+        result.carriedForward += 1;
         continue;
       }
 
@@ -172,4 +183,33 @@ async function markCharged(tenantId: string, periodo: string): Promise<void> {
       WHERE "tenant_id" = ${tenantId}::uuid AND "periodo" = ${periodo}
     `)
   );
+}
+
+/**
+ * Rolls a below-minimum overage into the next month's counter (creating it if
+ * needed), then marks the source period processed. Both run in one service-role
+ * tx so a partial carry can't drop money.
+ */
+async function carryForward(
+  tenantId: string,
+  periodo: string,
+  valor: number,
+  conversasLimite: number
+): Promise<void> {
+  const next = nextPeriodOf(periodo);
+  await withServiceRole(async (tx) => {
+    await tx.execute(sql`
+      INSERT INTO "usage_counters"
+        ("tenant_id", "periodo", "conversas_usadas", "conversas_limite", "overage_valor", "updated_at")
+      VALUES (${tenantId}::uuid, ${next}, 0, ${conversasLimite}, ${String(valor)}::numeric, now())
+      ON CONFLICT ("tenant_id", "periodo") DO UPDATE SET
+        "overage_valor" = "usage_counters"."overage_valor" + ${String(valor)}::numeric,
+        "updated_at" = now()
+    `);
+    await tx.execute(sql`
+      UPDATE "usage_counters"
+      SET "overage_cobrado_em" = now()
+      WHERE "tenant_id" = ${tenantId}::uuid AND "periodo" = ${periodo}
+    `);
+  });
 }

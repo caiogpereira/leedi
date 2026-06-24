@@ -10,9 +10,9 @@ export const OVERAGE_PRICE_BRL = 0.65;
 
 /**
  * Minimum accumulated overage (BRL) worth issuing a charge for. Asaas rejects
- * boletos below ~R$5, and a sub-R$5 cobrança avulsa isn't worth the fee. Periods
- * below this are marked processed (forgiven) — calendar-month counters don't
- * carry forward, so nothing accumulates across months.
+ * boletos below ~R$5. Periods below this are NOT forgiven — the overage job rolls
+ * the amount into the next month's counter so it accumulates until it crosses the
+ * threshold, then gets billed.
  */
 export const MIN_OVERAGE_CHARGE_BRL = 5.0;
 

@@ -56,6 +56,7 @@ function row(over: Partial<Record<string, unknown>>) {
     tenantName: 'Tenant A',
     periodo: '2026-05',
     overageValor: '10.00',
+    conversasLimite: 500,
     asaasCustomerId: 'cus_1',
     ...over,
   };
@@ -84,13 +85,13 @@ describe('chargeMonthlyOverage', () => {
         externalReference: 'overage:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa:2026-05',
       })
     );
-    expect(res).toMatchObject({ considered: 1, charged: 1, forgiven: 0, skippedNoCustomer: 0 });
+    expect(res).toMatchObject({ considered: 1, charged: 1, carriedForward: 0, skippedNoCustomer: 0 });
     // Invoice insert + the overage_cobrado_em mark both ran.
     expect(state.executed.some((s) => s.includes('INSERT INTO "invoices"'))).toBe(true);
     expect(state.executed.some((s) => s.includes('overage_cobrado_em" = now()'))).toBe(true);
   });
 
-  it('forgives (marks, does not charge) overage below the minimum', async () => {
+  it('carries a below-minimum overage into the next month instead of charging', async () => {
     state.rows = [row({ overageValor: '3.20' })];
     const { chargeMonthlyOverage } = await import('../charge-monthly-overage.js');
     const provider = makeProvider();
@@ -98,7 +99,13 @@ describe('chargeMonthlyOverage', () => {
     const res = await chargeMonthlyOverage(provider, { periodo: '2026-05' });
 
     expect(provider.criarCobrancaAvulsa).not.toHaveBeenCalled();
-    expect(res).toMatchObject({ charged: 0, forgiven: 1 });
+    expect(res).toMatchObject({ charged: 0, carriedForward: 1 });
+    // Rolled into the next month's counter (upsert) AND the source period marked.
+    expect(
+      state.executed.some(
+        (s) => s.includes('INSERT INTO "usage_counters"') && s.includes('2026-06')
+      )
+    ).toBe(true);
     expect(state.executed.some((s) => s.includes('overage_cobrado_em" = now()'))).toBe(true);
   });
 

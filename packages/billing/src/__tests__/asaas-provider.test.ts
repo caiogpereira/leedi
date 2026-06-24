@@ -95,6 +95,9 @@ describe('AsaasProvider.criarCobrancaAvulsa', () => {
       value: 12.5,
       dueDate: '2026-07-10',
       externalReference: 'overage:tenant-1:2026-05',
+      // Late-payment penalties applied to every charge (10% fine + 2%/mo interest).
+      fine: { value: 10, type: 'PERCENTAGE' },
+      interest: { value: 2 },
     });
     expect(res).toEqual({
       paymentId: 'pay_123',
