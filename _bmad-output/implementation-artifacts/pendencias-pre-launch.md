@@ -72,12 +72,14 @@ these were the **only two** remaining (the sidebar already has a `nav-routes.tes
 
 ## A. P0 — Launch blockers
 
-- [ ] **PL-1 · [Epic 1] Rotate leaked secrets in git history.** Better Stack / Sentry
-  tokens were committed and the repo is public; the history purge (`460a15c`) does not
-  un-leak already-exposed values. **Rotate** every token that ever touched the repo
-  (Better Stack source token, Sentry DSNs/auth tokens) and confirm the old ones are
-  revoked. Source: `project_epic1_code_review` memory + `epic-1-code-review-report.md`.
-  *Exit:* old tokens revoked at the provider; new tokens only in host/CI secret store.
+- [x] **PL-1 · [Epic 1] Rotate leaked secrets in git history.** ✅ **RISK ACCEPTED / DOWNGRADED
+  2026-06-24 (Caio).** Re-assessment of the two leaked values: (1) the **Better Stack source
+  token** is **read-only and low-risk** (ingest-only telemetry token, no account/data access);
+  (2) the **Sentry DSNs are public by design** — a DSN is meant to ship in client bundles and only
+  permits event ingestion, so it is **not a secret** and rotation buys nothing. No private Sentry
+  auth token was leaked. **Decision:** no rotation required; PL-1 closed. Source:
+  `project_epic1_code_review` memory + `epic-1-code-review-report.md`. *Exit (met by decision):*
+  the only exposed values are non-sensitive (read-only ingest token + public DSN).
 
 - [ ] **PL-2 · [Config] Replace all placeholder secrets with real production values.**
   `.env.example` ships placeholders for `WHATSAPP_APP_SECRET`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN`,
