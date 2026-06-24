@@ -13,6 +13,19 @@ export interface PaymentProvider {
    */
   atualizarAssinatura(subscriptionId: string, plano: string, valor: number): Promise<void>;
   /**
+   * Creates a one-off charge (cobrança avulsa) — used to bill accumulated
+   * conversation overage at the end of a period. Maps to `POST /v3/payments`.
+   * `externalReference` is an idempotency/reconciliation handle on the Asaas side
+   * (e.g. `overage:{tenantId}:{periodo}`).
+   */
+  criarCobrancaAvulsa(input: {
+    customerId: string;
+    valor: number;
+    descricao: string;
+    vencimento: string;
+    externalReference: string;
+  }): Promise<{ paymentId: string; vencimento: string; invoiceUrl: string | null }>;
+  /**
    * Constant-time comparison of the token Asaas sends in the `asaas-access-token`
    * HTTP header against the expected webhook token. Returns false when the
    * incoming token is missing.

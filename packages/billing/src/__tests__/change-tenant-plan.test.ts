@@ -70,6 +70,11 @@ function makeProvider(overrides?: Partial<PaymentProvider>): PaymentProvider {
     criarAssinatura: vi.fn(),
     cancelarAssinatura: vi.fn(),
     atualizarAssinatura: vi.fn().mockResolvedValue(undefined),
+    criarCobrancaAvulsa: vi.fn().mockResolvedValue({
+      paymentId: 'pay-1',
+      vencimento: '2026-07-10',
+      invoiceUrl: null,
+    }),
     verificarWebhook: vi.fn(),
     ...overrides,
   };

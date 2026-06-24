@@ -6,7 +6,15 @@ export const PLAN_LIMITS: Record<string, number> = {
 };
 
 /** Price per overage conversation in BRL. */
-export const OVERAGE_PRICE_BRL = 0.30;
+export const OVERAGE_PRICE_BRL = 0.65;
+
+/**
+ * Minimum accumulated overage (BRL) worth issuing a charge for. Asaas rejects
+ * boletos below ~R$5, and a sub-R$5 cobrança avulsa isn't worth the fee. Periods
+ * below this are marked processed (forgiven) — calendar-month counters don't
+ * carry forward, so nothing accumulates across months.
+ */
+export const MIN_OVERAGE_CHARGE_BRL = 5.0;
 
 /** Threshold percentages that trigger usage alerts. */
 export const USAGE_ALERT_THRESHOLDS = [80, 95, 100] as const;

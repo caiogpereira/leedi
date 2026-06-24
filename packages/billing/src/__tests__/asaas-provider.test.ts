@@ -59,3 +59,49 @@ describe('AsaasProvider.atualizarAssinatura', () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe('AsaasProvider.criarCobrancaAvulsa', () => {
+  it('POSTs a one-off boleto to /payments with the externalReference handle', async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fetchMock = vi.fn(async (url: string, init: RequestInit) => {
+      calls.push({ url, init });
+      return {
+        ok: true,
+        json: async () => ({
+          id: 'pay_123',
+          dueDate: '2026-07-10',
+          invoiceUrl: 'https://asaas/i/pay_123',
+        }),
+      } as Response;
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const provider = new AsaasProvider(SANDBOX_KEY, true);
+    const res = await provider.criarCobrancaAvulsa({
+      customerId: 'cus_1',
+      valor: 12.5,
+      descricao: 'Excedente de conversas — 2026-05',
+      vencimento: '2026-07-10',
+      externalReference: 'overage:tenant-1:2026-05',
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toContain('/payments');
+    expect(calls[0]!.init.method).toBe('POST');
+    const body = JSON.parse(String(calls[0]!.init.body));
+    expect(body).toMatchObject({
+      customer: 'cus_1',
+      billingType: 'BOLETO',
+      value: 12.5,
+      dueDate: '2026-07-10',
+      externalReference: 'overage:tenant-1:2026-05',
+    });
+    expect(res).toEqual({
+      paymentId: 'pay_123',
+      vencimento: '2026-07-10',
+      invoiceUrl: 'https://asaas/i/pay_123',
+    });
+
+    vi.unstubAllGlobals();
+  });
+});

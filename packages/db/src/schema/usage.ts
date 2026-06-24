@@ -26,6 +26,12 @@ export const usageCounters = pgTable(
     custoIaUsd: numeric('custo_ia_usd', { precision: 10, scale: 4 }).notNull().default('0'),
     /** Sent alert thresholds: ['80', '95', '100', 'overage_brl_100', ...] */
     alertasEnviados: jsonb('alertas_enviados').$type<string[]>().notNull().default([]),
+    /**
+     * When the accumulated overage for this period was charged (one-off Asaas
+     * cobrança). NULL = not yet processed by the monthly overage-charge job.
+     * Set even when the amount is below the minimum (forgiven) to prevent reprocessing.
+     */
+    overageCobradoEm: timestamp('overage_cobrado_em', { withTimezone: true }),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   },
   (t) => [uniqueIndex('usage_counters_tenant_periodo_uniq').on(t.tenantId, t.periodo)]

@@ -22,6 +22,13 @@ interface AsaasSubscriptionResponse {
   nextDueDate: string;
 }
 
+interface AsaasPaymentResponse {
+  id: string;
+  dueDate: string;
+  invoiceUrl?: string;
+  bankSlipUrl?: string;
+}
+
 export class AsaasProvider implements PaymentProvider {
   private readonly baseUrl: string;
   private readonly apiKey: string;
@@ -105,6 +112,29 @@ export class AsaasProvider implements PaymentProvider {
       },
       'PUT'
     );
+  }
+
+  async criarCobrancaAvulsa(input: {
+    customerId: string;
+    valor: number;
+    descricao: string;
+    vencimento: string;
+    externalReference: string;
+  }): Promise<{ paymentId: string; vencimento: string; invoiceUrl: string | null }> {
+    const payment = await this.request<AsaasPaymentResponse>('/payments', {
+      customer: input.customerId,
+      billingType: 'BOLETO',
+      value: input.valor,
+      dueDate: input.vencimento,
+      description: input.descricao,
+      // Idempotency/reconciliation handle on the Asaas side.
+      externalReference: input.externalReference,
+    });
+    return {
+      paymentId: payment.id,
+      vencimento: payment.dueDate,
+      invoiceUrl: payment.invoiceUrl ?? payment.bankSlipUrl ?? null,
+    };
   }
 
   async cancelarAssinatura(subscriptionId: string): Promise<void> {

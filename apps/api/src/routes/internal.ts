@@ -21,6 +21,8 @@ import { sendFollowup } from '../jobs/send-followup.js';
 import type { SendFollowupPayload } from '../jobs/send-followup.js';
 import { processBillingEvent } from '../jobs/process-billing-event.js';
 import { runDailyBillingCheck } from '../jobs/daily-billing-check.js';
+import { chargeMonthlyOverage } from '../jobs/charge-monthly-overage.js';
+import { AsaasProvider } from '@leedi/billing';
 import { processMessage } from '@leedi/agent';
 import type { RedisLock } from '@leedi/agent';
 import { captureException } from '@leedi/observability';
@@ -373,6 +375,39 @@ export function createInternalRouter(
     if (!(await verifyQStash(c))) return c.json({ error: 'Unauthorized' }, 401);
 
     const result = await runDailyBillingCheck().catch((err) => {
+      captureException(err);
+      throw err;
+    });
+
+    return c.json(result);
+  });
+
+  /**
+   * POST /api/internal/billing/charge-overage
+   *
+   * Charges accumulated conversation overage for the previous calendar month
+   * (one-off Asaas cobrança per tenant). Idempotent via usage_counters.
+   * overage_cobrado_em + the UNIQUE invoice.asaas_payment_id.
+   *
+   * Body (optional, for a targeted single-shot run): { tenantId?, periodo? }.
+   *
+   * Register in QStash console (daily; previous-month target makes it retry-safe):
+   *   URL:      https://<api-domain>/api/internal/billing/charge-overage
+   *   Schedule: 0 13 * * * (daily at 13:00 UTC = 10:00 BRT)
+   */
+  router.post('/billing/charge-overage', async (c) => {
+    if (!(await verifyQStash(c))) return c.json({ error: 'Unauthorized' }, 401);
+
+    const body = (await c.req.json().catch(() => ({}))) as {
+      tenantId?: string;
+      periodo?: string;
+    };
+
+    const provider = new AsaasProvider(env.ASAAS_API_KEY, env.ASAAS_SANDBOX);
+    const result = await chargeMonthlyOverage(provider, {
+      ...(body.tenantId ? { tenantId: body.tenantId } : {}),
+      ...(body.periodo ? { periodo: body.periodo } : {}),
+    }).catch((err) => {
       captureException(err);
       throw err;
     });
