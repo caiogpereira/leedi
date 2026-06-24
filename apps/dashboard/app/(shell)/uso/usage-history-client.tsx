@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { BarChart3 } from 'lucide-react';
 
 interface UsageRecord {
   periodo: string;
@@ -63,7 +64,10 @@ export function UsageHistoryClient({ tenantId }: { tenantId: string }) {
       )}
 
       {!loading && !error && history.length === 0 && (
-        <p className="text-sm text-muted-foreground">Nenhum registro de uso encontrado.</p>
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-12 text-center text-muted-foreground">
+          <BarChart3 className="h-10 w-10 opacity-30" />
+          <p className="text-sm">Nenhum registro de uso ainda. Seu consumo mensal aparecerá aqui.</p>
+        </div>
       )}
 
       {!loading && !error && history.length > 0 && (

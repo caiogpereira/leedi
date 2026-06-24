@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Check, Users } from "lucide-react";
 import { getCurrentTenantContext } from "../../../lib/tenant-context";
 import { listLeads, type LeadTemperatura, type LeadStatus } from "@leedi/lead";
 import { LeadsFilters } from "./leads-filters";
@@ -148,8 +148,15 @@ export default async function LeadsPage({
           <tbody>
             {leads.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                  Nenhum lead encontrado.
+                <td colSpan={6} className="px-4 py-16">
+                  <div className="flex flex-col items-center gap-3 text-center text-muted-foreground">
+                    <Users className="h-10 w-10 opacity-30" />
+                    <p className="text-sm">
+                      {temperatura || status
+                        ? "Nenhum lead corresponde aos filtros."
+                        : "Nenhum lead ainda. Importe um CSV para começar."}
+                    </p>
+                  </div>
                 </td>
               </tr>
             ) : (
